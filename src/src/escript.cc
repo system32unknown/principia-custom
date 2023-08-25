@@ -923,6 +923,22 @@ extern "C" {
         return 0;
     }
 
+    /** 
+     * Added in 1.5.2
+     * world:set_gravity(x, y)
+     **/
+    static int l_world_set_gravity(lua_State *L)
+    {
+        //TODO: change this to LEVEL_VERSION_1_5_2 / "1.5.2" after release
+        ESCRIPT_VERSION_ERROR(L, "world:set_gravity", "1.5.1", LEVEL_VERSION_1_5_1);
+
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+        W->set_gravity(x, y);
+
+        return 0;
+    }
+
     /* id = world:get_adventure_id()
      * Added in 1.5
      *
@@ -1050,6 +1066,55 @@ extern "C" {
         G->tmp_ambientdiffuse.y = i;
 
         return 0;
+    }
+
+    /** 
+     * Added in 1.5.2
+     * world:emit(g_id, [id])
+     * 
+     * EXPERIMENTAL:
+     * 
+     * Returns:
+     * Newly created entity in case of success
+     **/
+    static int l_world_emit(lua_State *L)
+    {
+        //TODO: change this to LEVEL_VERSION_1_5_2 / "1.5.2" after release
+        ESCRIPT_VERSION_ERROR(L, "world:emit", "1.5.1", LEVEL_VERSION_1_5_1);
+
+        p_gid g_id = luaL_checkinteger(L, 2);
+
+        entity* ent;
+
+        //Create entity
+        if (lua_gettop(L) > 2) {
+            p_id id = luaL_checkinteger(L, 3);
+            //Check if ID is already used
+            if (W->get_entity_by_id(id)) {
+                return 0;
+            }
+            ent = of::create_with_id(g_id, id);
+        } else {
+            ent = of::create(g_id);
+        }
+
+        //Check for null entity
+        if (ent == 0) {
+            return 0;
+        }
+
+        //Emit entity
+        //XXX: Should post_emit be used here instead?
+        //XXX: do we actually need to commit all pending emits here? 
+        //XXX: Likely yes (scripts expect valid, spawned entities)
+        G->emit(ent); 
+        W->emit_all(); 
+
+        //Return entity
+        entity **ee = static_cast<entity**>(lua_newuserdata(L, sizeof(entity*)));
+        *(ee) = ent;
+        luaL_setmetatable(L, "EntityMT");
+        return 1;
     }
 
     // This is a secret function!
@@ -1609,11 +1674,128 @@ extern "C" {
         return 2; // We return two values with this function
     }
 
+    /** 
+     * entity:get_angle()
+     *
+     * Example usage:
+     * angle = entity:get_angle()
+     *
+     * Returns:
+     * The angle of the entity
+     **/
     static int l_entity_get_angle(lua_State *L)
     {
         entity *e = *(static_cast<entity**>(luaL_checkudata(L, 1, "EntityMT")));
         lua_pushnumber(L, e->get_angle());
         return 1;
+    }
+
+    /** 
+     * added in 1.5.2
+     * entity:set_fixed_rotation(bool)
+     *
+     * Example usage:
+     * entity:set_fixed_rotation(true)
+     *
+     * EXPERIMENTAL: Prevents entity from rotating.
+     **/
+    static int l_entity_set_fixed_rotation(lua_State *L)
+    {
+        //TODO: change this to LEVEL_VERSION_1_5_2 / "1.5.2" after release
+        ESCRIPT_VERSION_ERROR(L, "entity:set_fixed_rotation", "1.5.1", LEVEL_VERSION_1_5_1);
+
+        entity *e = *(static_cast<entity**>(luaL_checkudata(L, 1, "EntityMT")));
+
+        //TODO: check if argument exists? (default to true?)
+        bool is_fixed = lua_toboolean(L, 2); 
+
+        b2Body *b = e->get_body(0);
+
+        if (b) {
+          //XXX: SetFixedRotation resets mass???
+          b->SetFixedRotation(is_fixed); 
+        }
+
+        return 0;
+    }
+
+    /** 
+     * added in 1.5.2
+     * entity:is_fixed_rotation()
+     *
+     * Example usage:
+     * x = entity:is_fixed_rotation()
+     *
+     * EXPERIMENTAL: Returns true if the given socket has fixed rotation enabled.
+     **/
+    static int l_entity_is_fixed_rotation(lua_State *L)
+    {
+        //TODO: change this to LEVEL_VERSION_1_5_2 / "1.5.2" after release
+        ESCRIPT_VERSION_ERROR(L, "entity:is_fixed_rotation", "1.5.1", LEVEL_VERSION_1_5_1);
+
+        entity *e = *(static_cast<entity**>(luaL_checkudata(L, 1, "EntityMT")));
+
+        b2Body *b = e->get_body(0);
+
+        if (b) {
+            lua_pushboolean(L, b->IsFixedRotation());
+            return 1;
+        }
+
+        return 0;
+    }
+
+    /** 
+     * added in 1.5.2
+     * entity:set_gravity_scale(number)
+     *
+     * Example usage:
+     * entity:set_gravity_scale(0.5)
+     * 
+     * Set the gravity scale of the given object
+     **/
+    static int l_entity_set_gravity_scale(lua_State *L)
+    {
+        //TODO: change this to LEVEL_VERSION_1_5_2 / "1.5.2" after release
+        ESCRIPT_VERSION_ERROR(L, "entity:set_gravity_scale", "1.5.1", LEVEL_VERSION_1_5_1);
+
+        entity *e = *(static_cast<entity**>(luaL_checkudata(L, 1, "EntityMT")));
+
+        float new_gravity_scale = luaL_checknumber(L, 2);
+
+        b2Body *b = e->get_body(0);
+
+        if (b) {
+          b->SetGravityScale(new_gravity_scale);
+        }
+
+        return 0;
+    }
+
+    /** 
+     * added in 1.5.2
+     * entity:get_gravity_scale()
+     *
+     * Example usage:
+     * x = entity:get_gravity_scale()
+     * 
+     * Get the gravity scale of the given object
+     **/
+    static int l_entity_get_gravity_scale(lua_State *L)
+    {
+        //TODO: change this to LEVEL_VERSION_1_5_2 / "1.5.2" after release
+        ESCRIPT_VERSION_ERROR(L, "entity:get_gravity_scale", "1.5.1", LEVEL_VERSION_1_5_1);
+
+        entity *e = *(static_cast<entity**>(luaL_checkudata(L, 1, "EntityMT")));
+
+        b2Body *b = e->get_body(0);
+
+        if (b) {
+            lua_pushnumber(L, b->GetGravityScale());
+            return 1;
+        }
+
+        return 0;
     }
 
     /* entity:set_angle(angle)
@@ -1652,6 +1834,15 @@ extern "C" {
         return 2;
     }
 
+    /** 
+     * entity:velocity()
+     *
+     * Example usage:
+     * vel_a = entity:get_angular_velocity()
+     *
+     * Returns:
+     * The angular velocity of the entity
+     **/
     static int l_entity_get_angular_velocity(lua_State *L)
     {
         entity *e = *(static_cast<entity**>(luaL_checkudata(L, 1, "EntityMT")));
@@ -1825,6 +2016,44 @@ extern "C" {
         return 0;
     }
 
+    /** 
+     * Added in 1.5.2
+     * entity:apply_force(x, y, [point_x, point_y])
+     * 
+     * Apply force x,y at point point_x, point_y (optional)
+     **/
+    static int l_entity_apply_force(lua_State *L)
+    {   
+        //TODO: change this to LEVEL_VERSION_1_5_2 / "1.5.2" after release
+        ESCRIPT_VERSION_ERROR(L, "entity:apply_force", "1.5.1", LEVEL_VERSION_1_5_1);
+
+        entity *e = *(static_cast<entity**>(luaL_checkudata(L, 1, "EntityMT")));
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+        float px, py;
+        if (lua_gettop(L) > 3) {
+            px = luaL_checknumber(L, 4);
+            py = luaL_checknumber(L, 5);
+        }
+
+        b2Vec2 force(x, y);
+        b2Vec2 point(x, y);
+
+        for (uint32_t x = 0; x < e->get_num_bodies(); ++x) {
+            b2Body *b = e->get_body(x);
+
+            if (b) {
+                if (lua_gettop(L) > 3) {
+                    b->ApplyForce(force, point);
+                } else {
+                    b->ApplyForceToCenter(force);
+                }
+            }
+        }
+
+        return 0;
+    }
+
     /* entity:set_velocity(x, y)
      * Added in 1.5
      *
@@ -1852,12 +2081,46 @@ extern "C" {
 
                 if (b) {
                     b->SetLinearVelocity(vel);
+                    b->SetAwake(true);
                 }
             }
         }
 
         delete loop;
 
+        return 0;
+    }
+
+    /** 
+     * Added in 1.5.2
+     * entity:set_angular_velocity(v)
+     *
+     * Sets the angular velocity of the given entity.
+     **/
+    static int l_entity_set_angular_velocity(lua_State *L)
+    {
+        //TODO: change this to LEVEL_VERSION_1_5_2 / "1.5.2" after release
+        ESCRIPT_VERSION_ERROR(L, "entity:set_angular_velocity", "1.5.1", LEVEL_VERSION_1_5_1);
+
+        entity *e = *(static_cast<entity**>(luaL_checkudata(L, 1, "EntityMT")));
+        float vel = luaL_checknumber(L, 2);
+
+        std::set<entity*> *loop = new std::set<entity*>();
+
+        e->gather_connected_entities(loop, false, true);
+
+        for (std::set<entity*>::iterator it = loop->begin(); it != loop->end(); ++it) {
+            entity *ie = static_cast<entity*>(*it);
+
+            for (uint32_t x = 0; x < ie->get_num_bodies(); ++x) {
+                b2Body *b = ie->get_body(x);
+                if (b) {
+                    b->SetAngularVelocity(vel);
+                    b->SetAwake(true);
+                }
+            }
+        }
+        delete loop;
         return 0;
     }
 
@@ -3563,16 +3826,7 @@ escript::init()
     luaopen_base(this->L);
     lua_pop(this->L, 1);
 
-    luaL_requiref(this->L, "os", luaopen_os, 1);
-    lua_pop(this->L, 1);
-
-    luaL_requiref(this->L, "io", luaopen_io, 1);
-    lua_pop(this->L, 1);
-
     luaL_requiref(this->L, "coroutine", luaopen_coroutine, 1);
-    lua_pop(this->L, 1);
-
-    luaL_requiref(this->L, "pkg", luaopen_package, 1);
     lua_pop(this->L, 1);
 
     luaL_requiref(this->L, "math", luaopen_math, 1);
@@ -3749,6 +4003,8 @@ static const luaL_Reg world_methods[] = {
     {"set_ambient_light",       l_world_set_ambient_light}, // 1.5
     {"set_diffuse_light",       l_world_set_diffuse_light}, // 1.5
 
+    {"emit", l_world_emit}, // 1.5.2 (oss)
+
     // private! ;-)
     {"___persist_entity",       l_world_unpersist_entity},    // 1.5
 
@@ -3878,6 +4134,10 @@ static const luaL_Reg entity_methods[] = {
     {"get_position",            l_entity_get_position},
     {"get_angle",               l_entity_get_angle},
     {"set_angle",               l_entity_set_angle},            // 1.5.2
+    {"set_fixed_rotation",      l_entity_set_fixed_rotation},	// 1.5.2 (oss) 
+    {"is_fixed_rotation",       l_entity_is_fixed_rotation},	// 1.5.2 (oss) 
+    {"set_gravity_scale",       l_entity_set_gravity_scale},	// 1.5.2 (oss) 
+    {"get_gravity_scale",       l_entity_get_gravity_scale},	// 1.5.2 (oss)
     {"get_velocity",            l_entity_get_velocity},
     {"get_angular_velocity",    l_entity_get_angular_velocity},
     {"get_bbox",                l_entity_get_bbox},
@@ -3891,6 +4151,8 @@ static const luaL_Reg entity_methods[] = {
     {"absorb",                  l_entity_absorb},               // 1.5
     {"apply_torque",            l_entity_apply_torque},         // 1.5
     {"set_velocity",            l_entity_set_velocity},         // 1.5
+    {"set_angular_velocity",    l_entity_set_angular_velocity}, // 1.5.2 (oss)
+    {"apply_force",             l_entity_apply_force},          // 1.5.2 (oss)
     {"warp",                    l_entity_warp},                 // 1.5
     {"show",                    l_entity_show},                 // 1.5
     {"hide",                    l_entity_hide},                 // 1.5
