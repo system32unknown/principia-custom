@@ -367,7 +367,7 @@ struct decoration_info decorations[NUM_DECORATIONS] = {
         false,
     },
     
-    /*{
+    {
         "Banner",
         {.4f, 1.2f},
         {
@@ -381,8 +381,7 @@ struct decoration_info decorations[NUM_DECORATIONS] = {
         &mesh_factory::models[MODEL_BANNER].mesh,
         true,
         false,
-    },*/
-
+    }
 };
 
 decoration::decoration()

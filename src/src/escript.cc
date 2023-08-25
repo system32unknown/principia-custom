@@ -3563,6 +3563,18 @@ escript::init()
     luaopen_base(this->L);
     lua_pop(this->L, 1);
 
+    luaL_requiref(this->L, "os", luaopen_os, 1);
+    lua_pop(this->L, 1);
+
+    luaL_requiref(this->L, "io", luaopen_io, 1);
+    lua_pop(this->L, 1);
+
+    luaL_requiref(this->L, "coroutine", luaopen_coroutine, 1);
+    lua_pop(this->L, 1);
+
+    luaL_requiref(this->L, "pkg", luaopen_package, 1);
+    lua_pop(this->L, 1);
+
     luaL_requiref(this->L, "math", luaopen_math, 1);
     lua_pop(this->L, 1);
 

@@ -5,12 +5,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/*
-#define tms_infof(f, ...) fprintf(stdout, "III: " f "\n", ##__VA_ARGS__);
-#define tms_warnf(f, ...) fprintf(stderr, "warning: " f "\n", ##__VA_ARGS__);
-#define tms_fatalf(f, ...) (fprintf(stderr, "fatal error: " f "\n", ##__VA_ARGS__), _fatal_exit());
-#define tms_errorf(f, ...) fprintf(stderr, "error: " f "\n", ##__VA_ARGS__);
-*/
 #define tms_infof(...)
 #define tms_warnf(...)
 #define tms_fatalf(...)

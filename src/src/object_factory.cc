@@ -643,7 +643,6 @@ static int c0_ids[] = {
     O_PLASTIC_BOX,
     O_PLASTIC_POLYGON,
     //O_SEPARATOR,
-    //O_ROOM,
     O_PIXEL,
     O_TPIXEL,
     O_DUMMY,
@@ -683,7 +682,9 @@ static int c1_ids[] = {
     O_MAGNET,
     O_ELECTROMAGNET,
     // put here because of lack of space in Basic categ
-    O_SEPARATOR
+    O_SEPARATOR,
+    O_RACK,
+    O_ROOM
 };
 
 /* Electronics */

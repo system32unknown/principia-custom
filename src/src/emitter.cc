@@ -271,10 +271,12 @@ emitter::update()
         this->M[14] = this->prio * LAYER_DEPTH-.5f;
         tmat4_scale(this->M, this->emitter_w*2.f, this->emitter_h*2.f, .2f);
     } else {
-        tmat4_load_identity(this->M);
-        tmat4_translate(this->M, this->_pos.x, this->_pos.y, 0);
-        tmat4_rotate(this->M, this->_angle * (180.f/M_PI), 0, 0, -1);
-        tmat3_copy_mat4_sub3x3(this->N, this->M);
+        if (this->M != O_STICKY_NOTE) {
+            tmat4_load_identity(this->M);
+            tmat4_translate(this->M, this->_pos.x, this->_pos.y, 0);
+            tmat4_rotate(this->M, this->_angle * (180.f/M_PI), 0, 0, -1);
+            tmat3_copy_mat4_sub3x3(this->N, this->M);
+        }
     }
 }
 
@@ -547,63 +549,7 @@ emitter::solve_electronics()
 bool
 emitter::can_handle(entity *e) const
 {
-    if (this->size == TYPE_MINI) { /* mini emitter */
-        switch (e->g_id) {
-            case O_BALL:
-            case O_METAL_BALL:
-            case O_CORNER:
-            case O_LAND_MINE:
-            case O_BOMB:
-            case O_INTERACTIVE_BALL:
-
-            /* special case for boxes and cylinders, we force their size to the smallest size */
-            case O_INTERACTIVE_BOX:
-            case O_BOX:
-            case O_CYLINDER:
-            case O_INTERACTIVE_CYLINDER:
-                return true;
-
-            case O_PLASTIC_BOX:
-                return W->level.version >= LEVEL_VERSION_1_5;
-
-            case O_RESOURCE:
-                return W->level.version >= LEVEL_VERSION_1_5;
-        }
-    } else { /* emitter */
-        switch (e->g_id) {
-            case O_BALL:
-            case O_METAL_BALL:
-            case O_CYLINDER:
-            case O_INTERACTIVE_CYLINDER:
-            case O_INTERACTIVE_BOX:
-            case O_INTERACTIVE_BALL:
-            case O_ROBOT:
-            case O_ANIMAL:
-            case O_CORNER:
-            case O_DUMMY:
-            case O_LAND_MINE:
-            case O_BOMB:
-            case O_BOX:
-            case O_WEIGHT:
-                return true;
-
-            case O_LOBBER:
-            case O_BOMBER:
-            case O_SPIKEBOT:
-            case O_PLASTIC_BOX:
-                return W->level.version >= LEVEL_VERSION_1_4;
-
-            case O_ITEM:
-            case O_RESOURCE:
-                return W->level.version >= LEVEL_VERSION_1_5;
-        }
-
-        if (e->is_creature()) {
-            return W->level.version >= LEVEL_VERSION_1_5_1;
-        }
-    }
-
-    return false;
+    return true;
 }
 
 void

@@ -234,6 +234,7 @@ enum {
     O_MEGASPLITTER          = 223,
     O_LADDER_STEP           = 224,
     O_MINI_SPIKEBOT         = 225,
+    O_RACK                  = 226,
 
     MAX_OF_ID,
 };
