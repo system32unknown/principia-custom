@@ -11,17 +11,26 @@ rack::rack()
     this->rackbody = 0;
     this->joint = 0;
     this->type = ENTITY_RACK;
+    this->set_flag(ENTITY_IS_DEV, true);
     this->menu_scale = 1.f/6.f;
 
     this->limits[0] = -4.f;
     this->limits[1] = 4.f;
 
-    this->set_mesh(mesh_factory::get_mesh(MODEL_RACK));
+    this->set_mesh(mesh_factory::get_mesh(MODEL_RACKHOUSE));
     this->set_material(&m_rackhouse);
 
     tmat4_load_identity(this->M);
     tmat3_load_identity(this->N);
 
+    this->rackent = tms_entity_alloc();
+    tms_entity_init(this->rackent);
+    tms_entity_set_mesh(this->rackent, mesh_factory::get_mesh(MODEL_RACK)); /* XXX */
+    tms_entity_set_material(this->rackent, &m_rack);
+    tms_entity_set_uniform4f(this->rackent, "~color", 0.5f, .5f, .5f, 1.f);
+    tmat4_load_identity(this->rackent->M);
+    tmat3_load_identity(this->rackent->N);
+    tms_entity_add_child(static_cast<struct tms_entity*>(this), this->rackent);
     this->set_num_properties(2);
 
     this->properties[0].v.f = 0.f;
@@ -32,6 +41,7 @@ void
 rack::update(void)
 {
     entity::update();
+    tmat4_copy(this->rackent->M, this->M);
 
     if (this->joint) {
         float p = this->joint->GetJointTranslation();
@@ -39,6 +49,9 @@ rack::update(void)
         /* even if the shit goes outside, make sure it doesnt visually */
         if (p < this->limits[0]) p = this->limits[0];
         else if (p > this->limits[1]) p = this->limits[1];
+
+        tmat4_translate(this->rackent->M, p, 0, 0);
+        tmat3_copy_mat4_sub3x3(this->rackent->N, this->rackent->M);
     }
 }
 

@@ -448,65 +448,6 @@ GLSL(
     }
 )
 };
-/*
-static const char *src_wheel[] = {
-GLSL(
-    attribute vec3 position;
-    attribute vec3 normal;
-    attribute vec2 texcoord;
-
-    varying lowp vec2 FS_diffuse;
-    varying lowp vec2 FS_texcoord;
-    VARYINGS
-
-    uniform mat4 MVP;
-    uniform mat4 MV;
-    uniform mat3 N;
-    UNIFORMS
-
-    varying lowp vec3 FS_normal;
-    varying lowp vec3 FS_eye;
-
-    void main(void)
-    {
-        vec3 nor = N*normal;
-        vec4 pos = MVP*vec4(position, 1.);
-
-        SET_SHADOW
-        SET_AMBIENT_OCCL
-
-        FS_texcoord = texcoord;
-        FS_diffuse = vec2(clamp(dot(LIGHT, nor)*_DIFFUSE, 0., 1.), .05*nor.z);
-
-        FS_normal = nor;
-        FS_eye = (MV*vec4(position, 1.)).xyz;
-
-        gl_Position = pos;
-    }
-),
-GLSL(
-    uniform sampler2D tex_0;
-    UNIFORMS
-
-    varying lowp vec2 FS_diffuse;
-    varying lowp vec2 FS_texcoord;
-    varying lowp vec3 FS_normal;
-    varying lowp vec3 FS_eye;
-    VARYINGS
-
-    void main(void)
-    {
-        vec4 color = texture2D(tex_0, FS_texcoord);
-        vec3 n = normalize(FS_normal);
-        vec3 e = normalize(FS_eye);
-        vec3 R = normalize(reflect(LIGHT, n));
-        float specular = pow(clamp(dot(R, e), .0, 1.), 6.);
-        gl_FragColor = SHADOW * (color + color*specular) * FS_diffuse.x + color.a * color * (_AMBIENT + FS_diffuse.y)*AMBIENT_OCCL
-                        ;
-    }
-)
-};
-*/
 
 void
 material_factory::upload_all()
@@ -2883,23 +2824,6 @@ material_factory::init_materials(bool is_shitty)
     m_spikes.restitution = .1f;
     m_spikes.type = TYPE_METAL;
 
-/*
-    tms_progressf("+");
-    m_rackhouse.pipeline[0].program = shader_pv_textured_ao->get_program(0);
-    tms_progressf(".");
-    tms_progressf("+");
-    m_rackhouse.pipeline[1].program = shader_gi->get_program(1);
-    tms_progressf(".");
-    tms_progressf("+");
-    m_rackhouse.pipeline[2].program = shader_pv_textured_m->get_program(2);
-    tms_progressf(".");
-    m_rackhouse.pipeline[0].texture[0] = static_cast<tms_texture*>(tex_rackhouse);
-    m_rackhouse.pipeline[2].texture[0] = static_cast<tms_texture*>(tex_rackhouse);
-    tms_progressf("+");
-    m_rackhouse.pipeline[3].program = shader_ao->get_program(3);
-    tms_progressf(".");
-    */
-
     tms_progressf("+");
     if (settings["texture_quality"]->v.u8 < 2 || is_shitty || !(m_rackhouse.pipeline[0].program = shader_shiny->get_program(0)))
         m_rackhouse.pipeline[0].program = shader_pv_textured->get_program(0);
@@ -3235,23 +3159,6 @@ material_factory::init_materials(bool is_shitty)
     m_robot_tinted_light.density = m_robot.density*.5;
     m_robot_tinted_light.restitution = m_robot.restitution;
     m_robot_tinted_light.type = TYPE_SHEET_METAL;
-
-/*
-    m_robot_armor.pipeline[0].program = shader_pv_textured_ao->get_program(0);
-    //m_robot_armor.pipeline[0].program = shader_colored->get_program(0);
-    m_robot_armor.pipeline[1].program = shader_gi->get_program(1);
-    m_robot_armor.pipeline[2].program = shader_pv_textured_m->get_program(2);
-    m_robot_armor.pipeline[0].texture[0] = static_cast<tms_texture*>(tex_robot_armor);
-    m_robot_armor.pipeline[2].texture[0] = static_cast<tms_texture*>(tex_robot_armor);
-    if (shadow_ao_combine) {
-        m_robot_armor.pipeline[3].program = 0;
-    } else {
-        m_robot_armor.pipeline[3].program = shader_ao_norot->get_program(3);
-    }
-    m_robot_armor.friction = .7f;
-    m_robot_armor.density = .5f*M_DENSITY*ROBOT_DENSITY_MUL;
-    m_robot_armor.restitution = .1f;
-    m_robot_armor.type = TYPE_SHEET_METAL;*/
 
     m_robot_armor.pipeline[0].program = shader_pv_textured_ao_tinted->get_program(0);
     m_robot_armor.pipeline[1].program = shader_gi->get_program(1);
