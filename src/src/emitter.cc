@@ -154,10 +154,6 @@ emitter::emitter(int size)
 void
 emitter::on_touch(b2Fixture *my, b2Fixture *other)
 {
-    /*
-    entity *o = other->GetUserData();
-    if (o && )
-    */
     if (!other->IsSensor()) {
         this->num_in_field ++;
     }
@@ -166,10 +162,6 @@ emitter::on_touch(b2Fixture *my, b2Fixture *other)
 void
 emitter::on_untouch(b2Fixture *my, b2Fixture *other)
 {
-    /*
-    entity *o = other->GetUserData();
-    if (o && )
-    */
     if (!other->IsSensor()) {
         this->num_in_field --;
         if (this->num_in_field <0) this->num_in_field = 0;
@@ -271,12 +263,10 @@ emitter::update()
         this->M[14] = this->prio * LAYER_DEPTH-.5f;
         tmat4_scale(this->M, this->emitter_w*2.f, this->emitter_h*2.f, .2f);
     } else {
-        if (this->M != O_STICKY_NOTE) {
-            tmat4_load_identity(this->M);
-            tmat4_translate(this->M, this->_pos.x, this->_pos.y, 0);
-            tmat4_rotate(this->M, this->_angle * (180.f/M_PI), 0, 0, -1);
-            tmat3_copy_mat4_sub3x3(this->N, this->M);
-        }
+        tmat4_load_identity(this->M);
+        tmat4_translate(this->M, this->_pos.x, this->_pos.y, 0);
+        tmat4_rotate(this->M, this->_angle * (180.f/M_PI), 0, 0, -1);
+        tmat3_copy_mat4_sub3x3(this->N, this->M);
     }
 }
 
@@ -321,30 +311,23 @@ emitter::recreate_multiemitter_shape()
 
     (f_frame = this->body->CreateFixture(&frame_fd))->SetUserData(this);
     (f = this->body->CreateFixture(&fd))->SetUserData(this);
-
 }
 
 void
 emitter::update_effects()
 {
     b2Vec2 p = this->get_position();
-    tmat4_load_identity(field->M);
-    tmat4_translate(field->M, p.x, p.y, this->get_layer());
-    tmat4_rotate(field->M, this->_angle * (180.f/M_PI), 0, 0, -1);
-    tmat4_scale(field->M, 2.f, 2.f, 1.f);
+    if (field->id != O_STICKY_NOTE) {
+        tmat4_load_identity(field->M);
+        tmat4_translate(field->M, p.x, p.y, this->get_layer());
+        tmat4_rotate(field->M, this->_angle * (180.f/M_PI), 0, 0, -1);
+        tmat4_scale(field->M, 2.f, 2.f, 1.f);
+    }
 
-    //tms_entity_set_uniform4f(this, "~color", .2f+this->field_life*.5f, .2f+this->field_life*.5f, .2f+this->field_life*.5f, 1.f);
     tms_entity_set_uniform4f(this->field, "~color", 0.8f, 1.f, 0.8f, 0.1f+this->field_life*this->field_life);
 
-    this->field_life -= _tms.dt*4.f;
+    this->field_life -= _tms.dt * 4.f;
     if (this->field_life < 0.f) this->field_life = 0.f;
-    else {
-        /*
-        spritebuffer::add(p.x, p.y, this->get_layer()+1.f,
-                1.f, 1.f, 1.f, this->field_life*this->field_life*.5f,
-                6, 6 ,2);
-                */
-    }
 }
 
 void

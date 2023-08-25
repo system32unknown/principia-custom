@@ -315,76 +315,15 @@ absorber::update_effects()
     tmat4_rotate(field->M, this->_angle * (180.f/M_PI), 0, 0, -1);
     tmat4_scale(field->M, 2.f, 2.f, 1.f);
 
-    //tms_entity_set_uniform4f(this, "~color", .2f+this->field_life*.5f, .2f+this->field_life*.5f, .2f+this->field_life*.5f, 1.f);
     tms_entity_set_uniform4f(this->field, "~color", 0.8f, 1.f, 0.8f, 0.1f+this->field_life*this->field_life);
 
     this->field_life -= _tms.dt*4.f;
     if (this->field_life < 0.f) this->field_life = 0.f;
-    else {
-        /*
-        spritebuffer::add(p.x, p.y, this->get_layer()+1.f,
-                1.f, 1.f, 1.f, this->field_life*this->field_life*.5f,
-                6, 6 ,2);
-                */
-    }
 }
 
 bool
-absorber::can_handle(entity *e)
-{
-    if (this->size == 0) { /* mini absorber */
-        switch (e->g_id) {
-            case O_BALL:
-            case O_METAL_BALL:
-            case O_CORNER:
-            case O_LAND_MINE:
-            case O_BOMB:
-            case O_INTERACTIVE_BALL:
-                return true;
-
-            case O_INTERACTIVE_BOX:
-            case O_BOX:
-            case O_CYLINDER:
-            case O_INTERACTIVE_CYLINDER:
-                return e->properties[0].v.i == 0;
-
-            case O_RESOURCE:
-                return W->level.version >= LEVEL_VERSION_1_5;
-        }
-    } else { /* big absorber */
-        switch (e->g_id) {
-            case O_BALL:
-            case O_METAL_BALL:
-            case O_CYLINDER:
-            case O_INTERACTIVE_CYLINDER:
-            case O_ROBOT:
-            case O_CORNER:
-            case O_DUMMY:
-            case O_LAND_MINE:
-            case O_BOMB:
-            case O_BOX:
-            case O_INTERACTIVE_BOX:
-            case O_INTERACTIVE_BALL:
-            case O_WEIGHT:
-                return true;
-
-            case O_LOBBER:
-            case O_BOMBER:
-            case O_SPIKEBOT:
-            case O_PLASTIC_BOX:
-                return W->level.version >= LEVEL_VERSION_1_4;
-
-            case O_ITEM:
-            case O_RESOURCE:
-                return W->level.version >= LEVEL_VERSION_1_5;
-        }
-
-        if (e->is_creature()) {
-            return W->level.version >= LEVEL_VERSION_1_5_1;
-        }
-    }
-
-    return false;
+absorber::can_handle(entity *e) {
+    return true;
 }
 
 autoabsorber::autoabsorber()
