@@ -530,8 +530,7 @@ emitter::solve_electronics()
 }
 
 bool
-emitter::can_handle(entity *e) const
-{
+emitter::can_handle(entity *e) const { // i decided to enable emit all objects cuz why not lol
     return true;
 }
 
