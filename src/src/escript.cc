@@ -923,22 +923,6 @@ extern "C" {
         return 0;
     }
 
-    /** 
-     * Added in 1.5.2
-     * world:set_gravity(x, y)
-     **/
-    static int l_world_set_gravity(lua_State *L)
-    {
-        //TODO: change this to LEVEL_VERSION_1_5_2 / "1.5.2" after release
-        ESCRIPT_VERSION_ERROR(L, "world:set_gravity", "1.5.1", LEVEL_VERSION_1_5_1);
-
-        float x = luaL_checknumber(L, 2);
-        float y = luaL_checknumber(L, 3);
-        W->set_gravity(x, y);
-
-        return 0;
-    }
-
     /* id = world:get_adventure_id()
      * Added in 1.5
      *
