@@ -597,6 +597,7 @@ static entity* (*c_creator[])(void) = {
     &new_megasplitter,
     &new_ladder_step,
     &new_mini_spikebot, /* 225 */
+    &new_rack,
 };
 
 static int num_creators = sizeof(c_creator)/sizeof(void*);
