@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.9)
 
 project(principia)
 
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
 message(STATUS "*** Building Principia! ***")
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -54,7 +58,7 @@ file(GLOB SRCS
 	src/tms/math/*.c
 	src/tms/util/*.c
 	src/tms/bindings/cpp/cpp.cc
-	src/tms/modules/3ds/3ds.c
+	src/tms/modules/3ds.c
 
 	src/lua/*.c
 
@@ -75,15 +79,28 @@ if(NOT SCREENSHOT_BUILD)
 	find_package(CURL REQUIRED)
 	find_package(GLEW REQUIRED)
 
-	# Luasocket
-	SET(LUASOCKET_FLAGS "-DBUILD_LUASOCKET -DLUASOCKET_INET_PTON")
-
 	include_directories(
-		src/luasocket/
 		${CURL_INCLUDE_DIR}
 		${GLEW_INCLUDE_DIRS}
 		${GTK3_INCLUDE_DIRS})
 
+	option(USE_LUASOCKET "Build with Luasocket support" TRUE)
+else()
+	set(USE_LUASOCKET false)
+endif()
+
+# Luasocket
+if(USE_LUASOCKET)
+	set(LUASOCKET_FLAGS "-DBUILD_LUASOCKET")
+
+	if(WIN32)
+		set(LUASOCKET_PLAT_SRC src/luasocket/wsocket.c)
+	else()
+		set(LUASOCKET_FLAGS "${LUASOCKET_FLAGS} -DLUASOCKET_INET_PTON")
+		set(LUASOCKET_PLAT_SRC
+			src/luasocket/usocket.c
+			src/luasocket/unix.c)
+	endif()
 	set(SRCS ${SRCS}
 		src/luasocket/auxiliar.c
 		src/luasocket/buffer.c
@@ -97,14 +114,29 @@ if(NOT SCREENSHOT_BUILD)
 		src/luasocket/tcp.c
 		src/luasocket/timeout.c
 		src/luasocket/udp.c
-		src/luasocket/usocket.c
-		src/luasocket/unix.c)
+		${LUASOCKET_PLAT_SRC})
 endif()
 
 include_directories(src/tms/backends/${TMS_BACKEND}/)
 
 set(SRCS ${SRCS}
 	src/tms/backends/${TMS_BACKEND}/main.cc)
+
+if(WIN32)
+	set(WINRESOURCE_FILE "packaging/principia.rc")
+	set(WINMANIFEST_FILE "packaging/principia.manifest")
+
+	if(NOT CMAKE_RC_COMPILER)
+		set(CMAKE_RC_COMPILER "windres.exe")
+	endif()
+	ADD_CUSTOM_COMMAND(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/winresource.o
+		COMMAND ${CMAKE_RC_COMPILER} -I${CMAKE_CURRENT_SOURCE_DIR} -I${CMAKE_CURRENT_BINARY_DIR}
+		-i${WINRESOURCE_FILE}
+		-o ${CMAKE_CURRENT_BINARY_DIR}/winresource.o
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		DEPENDS ${WINRESOURCE_FILE} ${WINMANIFEST_FILE})
+	SET(SRCS ${SRCS} ${CMAKE_CURRENT_BINARY_DIR}/winresource.o)
+endif()
 
 add_executable(${PROJECT_NAME} ${SRCS})
 target_link_libraries(
@@ -127,10 +159,12 @@ if(NOT SCREENSHOT_BUILD)
 			${GTK3_LIBRARIES})
 endif()
 
-set(COMMON_FLAGS "${LUASOCKET_FLAGS} -DGL_GLEXT_PROTOTYPES -DTMS_BACKEND_PC -DTMS_FAST_MATH -DLUA_COMPAT_MODULE -D__STDC_FORMAT_MACROS=1")
+set(COMMON_FLAGS "${LUASOCKET_FLAGS} -DGL_GLEXT_PROTOTYPES -DTMS_BACKEND_PC -DTMS_FAST_MATH -DLUA_COMPAT_MODULE -D__STDC_FORMAT_MACROS=1 -DUNICODE")
 
 if(WIN32)
-	set(COMMON_FLAGS "${COMMON_FLAGS} -DTMS_BACKEND_WINDOWS")
+	target_link_libraries(${PROJECT_NAME} ws2_32.lib version.lib shlwapi.lib winmm.lib)
+
+	set(COMMON_FLAGS "${COMMON_FLAGS} -DTMS_BACKEND_WINDOWS -D_WIN32_WINNT=0x0501 -mwindows -Dsrandom=srand -Drandom=rand")
 else()
 	if(SCREENSHOT_BUILD)
 		set(COMMON_FLAGS "${COMMON_FLAGS} -DNO_UI -DTMS_BACKEND_LINUX_SS")
@@ -143,10 +177,33 @@ set(COMMON_FLAGS_DEBUG "${COMMON_FLAGS} -O0 -ggdb -ffast-math -Werror=return-typ
 set(COMMON_FLAGS_RELEASE "${COMMON_FLAGS} -DNDEBUG=1 -s -fomit-frame-pointer -fvisibility=hidden -fdata-sections -ffunction-sections")
 
 set(CMAKE_C_FLAGS_RELEASE "${COMMON_FLAGS_RELEASE} -O1")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELEASE} -g")
 set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS_DEBUG}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "${COMMON_FLAGS_RELEASE} -O2 -fvisibility-inlines-hidden -fno-rtti")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -g")
+set(CMAKE_CXX_FLAGS_DEBUG "${COMMON_FLAGS_DEBUG} -O0")
 
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-Wl,-O,-s,--gc-sections")
+set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "-Wl,-O,--gc-sections")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-rdynamic")
+
+# Installation
+
+if(UNIX)
+	include(GNUInstallDirs)
+	set(SHAREDIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}")
+	set(BINDIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}")
+	set(APPS_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/applications")
+	set(ICONDIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/icons")
+
+	install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data-pc" DESTINATION "${SHAREDIR}")
+	install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data-shared" DESTINATION "${SHAREDIR}")
+
+	install(FILES "packaging/principia.desktop" DESTINATION "${APPS_DIR}")
+	install(FILES "packaging/principia-url-handler.desktop" DESTINATION "${APPS_DIR}")
+
+	install(FILES "packaging/principia.png" DESTINATION "${ICONDIR}/hicolor/128x128/apps")
+
+	install(TARGETS ${PROJECT_NAME} DESTINATION ${BINDIR})
+endif()
