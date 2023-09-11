@@ -67,7 +67,7 @@ bool operator <(const genslot& lhs, const genslot &rhs)
         } else {
             if (lhs.slot_x != rhs.slot_x) {
                 return lhs.slot_x < rhs.slot_x;
-            } else if (lhs.slot_y != lhs.slot_y) {
+            } else if (lhs.slot_y != rhs.slot_y) {
                 return lhs.slot_y < rhs.slot_y;
             }
         }
