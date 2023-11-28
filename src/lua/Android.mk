@@ -19,6 +19,7 @@ LOCAL_SRC_FILES += \
   lua/lmem.c \
   lua/lobject.c \
   lua/lopcodes.c \
+  lua/loslib.c \
   lua/lparser.c \
   lua/lstate.c \
   lua/lstring.c \
