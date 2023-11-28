@@ -3820,6 +3820,9 @@ escript::init()
     luaL_requiref(this->L, "bit32", luaopen_bit32, 1);
     lua_pop(this->L, 1);
 
+    luaL_requiref(this->L, "os", luaopen_os, 1);
+    lua_pop(this->L, 1);
+
     register_world(this->L);
 
     register_game(this->L);
