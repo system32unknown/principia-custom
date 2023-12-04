@@ -6,6 +6,29 @@
 
 #include "SDL_ttf.h"
 
+#include <cstddef>
+
+#define NUM_SLOTS 33
+
+#define NOTE_FONT "data-shared/fonts/easyspeech.ttf"
+#define NUM_SIZES 4
+
+#define PIXELSZ 1
+
+#define TEX_WIDTH 2048
+#define TEX_HEIGHT 2048
+
+#define WIDTH 256
+#define HEIGHT 256
+
+#define FONT_SCALING_FACTOR 2.
+
+//computed
+#define UV_X ((double) WIDTH / (double) TEX_WIDTH)
+#define UV_Y ((double) HEIGHT / (double) TEX_HEIGHT)
+#define SLOTS_PER_TEX_LINE (TEX_WIDTH / WIDTH)
+//
+
 #define NUM_SIZES 4
 
 static bool initialized = false;
