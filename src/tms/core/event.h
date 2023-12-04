@@ -182,7 +182,6 @@ struct tms_event {
         struct tms_pointer_button    button;
         struct tms_key               key;
         struct tms_pointer_scroll    scroll;
-        struct tms_text_input text;
     } data;
 };
 

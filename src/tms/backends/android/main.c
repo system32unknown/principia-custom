@@ -226,11 +226,6 @@ T_intercept_input(SDL_Event ev)
             spec.data.motion.x = ((float)ev.tfinger.x / 32768.f)*(float)_tms.window_width;
             spec.data.motion.y = tms.window_height - ((float)ev.tfinger.y / 32768.f) * (float)_tms.window_height;
             break;
-
-        case SDL_TEXTINPUT:
-            spec.type = TMS_EV_TEXT_INPUT;
-            memcpy(spec.data.text.text, ev.text.text, 32);
-            break;
     }
 
     tms_event_push(spec);

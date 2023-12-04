@@ -166,4 +166,3 @@ tms_event_process_all(struct tms_screen *s)
 
     return T_OK;
 }
-

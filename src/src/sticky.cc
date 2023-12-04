@@ -6,29 +6,8 @@
 
 #include "SDL_ttf.h"
 
-#include <cstddef>
-
-#define NUM_SLOTS 64
-
-#define NOTE_FONT "data-shared/fonts/easyspeech.ttf"
 #define NUM_SIZES 4
 
-#define PIXELSZ 1
-
-#define TEX_WIDTH 2048
-#define TEX_HEIGHT 2048
-
-#define WIDTH 256
-#define HEIGHT 256
-
-#define FONT_SCALING_FACTOR 2.
-
-//computed
-#define UV_X ((double) WIDTH / (double) TEX_WIDTH)
-#define UV_Y ((double) HEIGHT / (double) TEX_HEIGHT)
-#define SLOTS_PER_TEX_LINE (TEX_WIDTH / WIDTH)
-
-static bool slots[NUM_SLOTS];
 static bool initialized = false;
 static TTF_Font *ttf_font[NUM_SIZES];
 static SDL_Surface *surface;
@@ -274,6 +253,11 @@ void sticky::draw_text(const char *txt) {
                     //Source -> Destination
                     unsigned char data = ((unsigned char*) srf->pixels)[data_offset];
                     buf[offset] = data;
+                    
+                    // tms_debugf(
+                    //     "slot/offset/data_offset/data %d/%d/%d/%d/%x - '%s'",
+                    //     this->slot, offset, data_offset, data, this->lines[text_line]
+                    // );
                 }
             }
         }
@@ -324,7 +308,7 @@ void sticky::update(void) {
         this->M[5] = t.q.c;
         this->M[12] = t.p.x;
         this->M[13] = t.p.y;
-        this->M[14] = LAYER_DEPTH / -2.1f;
+        this->M[14] = this->get_layer()*LAYER_DEPTH - LAYER_DEPTH/2.1f;
 
         tmat3_copy_mat4_sub3x3(this->N, this->M);
     } else {
