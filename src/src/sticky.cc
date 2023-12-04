@@ -31,6 +31,7 @@
 
 #define NUM_SIZES 4
 
+static bool slots[NUM_SLOTS];
 static bool initialized = false;
 static TTF_Font *ttf_font[NUM_SIZES];
 static SDL_Surface *surface;
