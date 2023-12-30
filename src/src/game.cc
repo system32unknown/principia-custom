@@ -1044,12 +1044,7 @@ game::game()
 {
     G = this;
 
-#if defined(DEBUG) && defined(PAJLADA)
-    //this->layer_vis = 3;
     this->layer_vis = 7;
-#else
-    this->layer_vis = 7;
-#endif
 
     this->layer_vis_saved = 7;
 

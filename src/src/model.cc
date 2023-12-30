@@ -609,8 +609,8 @@ struct model_load_data mesh_factory::models[NUM_MODELS] = {
         "data-shared/models/plant4.3ds",
     }, {
         "data-shared/models/war_axe.3ds",
-    //}, {
-    //    "data-shared/models/banner.3ds",
+    }, {
+        "data-shared/models/banner.3ds",
     }, {
         "data-shared/models/pixel_sword.3ds",
     }, {
