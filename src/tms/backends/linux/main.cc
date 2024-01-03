@@ -532,7 +532,7 @@ T_intercept_input(SDL_Event ev)
             spec.data.scroll.y = ev.wheel.y;
             SDL_GetMouseState(&spec.data.scroll.mouse_x, &spec.data.scroll.mouse_y);
             break;
-        
+
         case SDL_TEXTINPUT:
             spec.type = TMS_EV_TEXT_INPUT;
             std::copy(ev.text.text, ev.text.text + 32, spec.data.text.text);
