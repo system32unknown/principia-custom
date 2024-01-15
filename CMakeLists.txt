@@ -13,15 +13,11 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-find_package(PkgConfig REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(ZLIB REQUIRED)
-
-pkg_check_modules(SDL2_image REQUIRED SDL2_image)
-pkg_check_modules(SDL2_ttf REQUIRED SDL2_ttf)
 
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
@@ -41,14 +37,13 @@ endif()
 include_directories(
 	src/
 	src/lua/
+	src/SDL_image/
 	src/src/
 	${FREETYPE_INCLUDE_DIRS}
 	${JPEG_INCLUDE_DIRS}
 	${OPENGL_INCLUDE_DIRS}
 	${PNG_INCLUDE_DIRS}
 	${SDL2_INCLUDE_DIRS}
-	${SDL2_image_INCLUDE_DIRS}
-	${SDL2_ttf_INCLUDE_DIRS}
 	${ZLIB_INCLUDE_DIRS})
 
 file(GLOB SRCS
@@ -59,6 +54,7 @@ file(GLOB SRCS
 	src/tms/modules/3ds.c
 
 	src/lua/*.c
+	src/SDL_image/*.c
 
 	src/src/*.cc
 	src/src/*.c
@@ -73,17 +69,19 @@ file(GLOB SRCS
 )
 
 if(NOT SCREENSHOT_BUILD)
+	find_package(PkgConfig REQUIRED)
 	pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 	find_package(CURL REQUIRED)
 	find_package(GLEW REQUIRED)
-
-	pkg_check_modules(SDL2_mixer REQUIRED SDL2_mixer)
 
 	include_directories(
 		${CURL_INCLUDE_DIR}
 		${GLEW_INCLUDE_DIRS}
 		${GTK3_INCLUDE_DIRS}
-		${SDL2_mixer_INCLUDE_DIRS})
+		src/SDL_mixer/)
+
+	file(GLOB SDL_mixer_SRCS src/SDL_mixer/*.c)
+	set(SRCS ${SRCS} ${SDL_mixer_SRCS})
 
 	option(USE_LUASOCKET "Build with Luasocket support" TRUE)
 else()
@@ -117,10 +115,7 @@ if(USE_LUASOCKET)
 		${LUASOCKET_PLAT_SRC})
 endif()
 
-include_directories(src/tms/backends/${TMS_BACKEND}/)
-
-set(SRCS ${SRCS}
-	src/tms/backends/${TMS_BACKEND}/main.cc)
+set(SRCS ${SRCS} src/tms/backends/${TMS_BACKEND}/main.cc)
 
 if(WIN32)
 	set(WINRESOURCE_FILE "packaging/principia.rc")
@@ -146,8 +141,6 @@ target_link_libraries(
 		${OPENGL_LIBRARIES}
 		${PNG_LIBRARIES}
 		${SDL2_LIBRARIES}
-		${SDL2_image_LIBRARIES}
-		${SDL2_ttf_LIBRARIES}
 		${ZLIB_LIBRARIES})
 
 if(NOT SCREENSHOT_BUILD)
@@ -155,8 +148,7 @@ if(NOT SCREENSHOT_BUILD)
 		${PROJECT_NAME}
 			${CURL_LIBRARIES}
 			${GLEW_LIBRARIES}
-			${GTK3_LIBRARIES}
-			${SDL2_mixer_LIBRARIES})
+			${GTK3_LIBRARIES})
 endif()
 
 set(COMMON_FLAGS "${LUASOCKET_FLAGS} -DGL_GLEXT_PROTOTYPES -DTMS_BACKEND_PC -DTMS_FAST_MATH -DLUA_COMPAT_MODULE -D__STDC_FORMAT_MACROS=1 -DUNICODE")
