@@ -1635,12 +1635,6 @@ factory::init_recipes()
                             .add(RESOURCE_COPPER, 2)
                             .add(RESOURCE_IRON, 8)
                 );
-        generic_objects.push_back(
-            factory_object().g_id(O_GAMEMAN)
-                            .add(RESOURCE_SAPPHIRE, 1000)
-                            .add(RESOURCE_TOPAZ, 1000)
-                            .add(RESOURCE_DIAMOND, 1000)
-                );
     }
 
     /* Robot Factory */
