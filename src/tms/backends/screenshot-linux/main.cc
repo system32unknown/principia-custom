@@ -13,9 +13,9 @@
 #include <tms/core/tms.h>
 
 #include <tms/backend/opengl.h>
+#include <tms/backends/common.h>
 
 #include "settings.hh"
-//#include "ui.hh"
 #include "game.hh"
 #include "main.hh"
 #include "menu_main.hh"
@@ -60,7 +60,6 @@ static FILE *state_fh = NULL;
 
 static uint32_t snap_step_num = 0;
 
-void tgen_init(void){};
 int screenshot(char *file_name, unsigned int x, unsigned int y, unsigned long width, unsigned long height);
 extern "C" int tbackend_init_surface();
 extern "C" const char *tbackend_get_storage_path(void);
@@ -149,13 +148,11 @@ main(int argc, char **argv)
         SDL_CreateThread(_pipe_listener, "_pipe_listener", 0);
     }
 
-    char buf[512];
-    readlink("/proc/self/exe", buf, 511);
-    dirname(buf);
-    tms_infof("chdirring to %s", buf);
-    chdir(buf);
+    CHDIR_EXE;
 
     mkdir(tbackend_get_storage_path(), S_IRWXU | S_IRWXG | S_IRWXO);
+
+    INIT_SDL;
 
     settings.init();
     settings.load();
@@ -198,7 +195,7 @@ main(int argc, char **argv)
                 }
 
                 if (_tms.screen != &G->super) {
-                    //tms_infof("Waiting for screen to be set to game... ");
+                    //tms_infof("Waiting for screen to be set to game...");
                     break;
                 }
 
@@ -265,11 +262,10 @@ main(int argc, char **argv)
                             tms_infof("Aborting, only 15 cam markers allowed.");
                             step = STEP_QUIT;
                         } else {
-                            tms_progressf("Snapping to camera %p... ", G->cam_iterator->second);
+                            tms_infof("Snapping to camera %p...", G->cam_iterator->second);
                             G->snap_to_camera(G->cam_iterator->second);
                             G->cam_iterator->second->hide();
                             G->cam_iterator++;
-                            tms_progressf(" OK\n");
 
                             snap_step_num = G->state.step_num;
                             step = STEP_SCREENSHOT;
@@ -278,7 +274,7 @@ main(int argc, char **argv)
                 } else {
                     /* snap to "saved position" */
                     if (first) {
-                        tms_progressf("Snapping to saved pos... (%.2f/%.2f %.2f)",
+                        tms_infof("Snapping to saved pos... (%.2f/%.2f %.2f)",
                                 W->level.sandbox_cam_x,
                                 W->level.sandbox_cam_y,
                                 W->level.sandbox_cam_zoom
@@ -286,7 +282,6 @@ main(int argc, char **argv)
                         G->cam->_position.x = W->level.sandbox_cam_x;
                         G->cam->_position.y = W->level.sandbox_cam_y;
                         G->cam->_position.z = W->level.sandbox_cam_zoom;
-                        tms_progressf("OK\n");
 
                         snap_step_num = G->state.step_num;
                         step = STEP_SCREENSHOT;
@@ -339,13 +334,11 @@ main(int argc, char **argv)
             char filename[256];
             snprintf(filename, 256, "ss-%d.png", ss_id++);
 
-            tms_progressf("Saving screenshot to %s... ", filename);
+            tms_infof("Saving screenshot to %s...", filename);
 
             int r = screenshot(filename, 0, 0, 1280, 720);
             if (r != 0) {
-                tms_progressf("ERROR\n");
-            } else {
-                tms_progressf("OK\n");
+                tms_infof("ERROR!");
             }
             step = STEP_SNAP;
         }
@@ -365,11 +358,6 @@ main(int argc, char **argv)
 int
 tbackend_init_surface()
 {
-    /* Set up SDL, create a window */
-    tms_progressf("Initializing SDL... ");
-    SDL_Init(SDL_INIT_VIDEO);
-    tms_progressf("OK\n");
-
     _tms.window_width = 1280;
     _tms.window_height = 720;
 
@@ -381,14 +369,13 @@ tbackend_init_surface()
     flags |= SDL_WINDOW_OPENGL;
     flags |= SDL_WINDOW_SHOWN;
 
-    tms_progressf("Creating window... ");
+    tms_infof("Creating window...");
     _window = SDL_CreateWindow("Principia Screenshotter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _tms.window_width, _tms.window_height, flags);
 
     if (_window == NULL) {
-        tms_progressf("ERROR: %s\n", SDL_GetError());
+        tms_infof("ERROR: %s", SDL_GetError());
         exit(1);
-    } else
-        tms_progressf("OK\n");
+    }
 
     _tms._window = _window;
 

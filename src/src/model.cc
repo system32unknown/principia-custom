@@ -922,7 +922,7 @@ mesh_factory::init_models(void)
 void
 mesh_factory::upload_models(void)
 {
-    tms_progressf("Uploading models... ");
+    tms_infof("Uploading models...");
 
     for (int x=0; x<NUM_MISC_MODELS; ++x) {
         tms_model_upload(model_misc[x]);
@@ -946,8 +946,6 @@ mesh_factory::upload_models(void)
             }
         }
     }
-
-    tms_progressf("OK\n");
 }
 
 int cur_mesh = 0; /* extern */
