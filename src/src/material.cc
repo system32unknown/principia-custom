@@ -2412,23 +2412,14 @@ material_factory::init_materials(bool is_shitty)
     m_spikes.type = TYPE_METAL;
 
 /*
-    tms_progressf("+");
     m_rackhouse.pipeline[0].program = shader_pv_textured_ao->get_program(0);
-    tms_progressf(".");
-    tms_progressf("+");
     m_rackhouse.pipeline[1].program = shader_gi->get_program(1);
-    tms_progressf(".");
-    tms_progressf("+");
     m_rackhouse.pipeline[2].program = shader_pv_textured_m->get_program(2);
-    tms_progressf(".");
     m_rackhouse.pipeline[0].texture[0] = static_cast<tms_texture*>(tex_rackhouse);
     m_rackhouse.pipeline[2].texture[0] = static_cast<tms_texture*>(tex_rackhouse);
-    tms_progressf("+");
     m_rackhouse.pipeline[3].program = shader_ao->get_program(3);
-    tms_progressf(".");
     */
 
-    tms_progressf("+");
     if (settings["texture_quality"]->v.u8 < 2 || is_shitty || !(m_rackhouse.pipeline[0].program = shader_shiny->get_program(0)))
         m_rackhouse.pipeline[0].program = shader_pv_textured->get_program(0);
     m_rackhouse.pipeline[1].program = shader_gi_tex->get_program(1);
