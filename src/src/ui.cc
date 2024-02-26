@@ -107,7 +107,8 @@ ui::messagef(const char *format, ...)
     }
 }
 
-#if defined(NO_UI)
+#ifdef NO_UI
+
 int prompt_is_open = 0;
 void ui::init(){};
 void ui::open_dialog(int num, void *data/*=0*/){}
@@ -138,7 +139,7 @@ void ui::alert(const char*, uint8_t/*=ALERT_INFORMATION*/) {};
 
 #include "ui_android.hh"
 
-#elif defined(TMS_BACKEND_LINUX) || defined(TMS_BACKEND_WINDOWS)
+#elif defined(TMS_BACKEND_PC)
 
 #include "ui_gtk3.hh"
 

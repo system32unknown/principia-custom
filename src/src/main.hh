@@ -25,9 +25,7 @@ class pkginfo;
 
 #if defined(TMS_BACKEND_WINDOWS)
 #define OS_STRING "Windows"
-#elif defined(TMS_BACKEND_LINUX_SS)
-#define OS_STRING "Linux_SS"
-#elif defined(TMS_BACKEND_LINUX)
+#elif defined(TMS_BACKEND_LINUX) || defined(TMS_BACKEND_LINUX_SS)
 #define OS_STRING "Linux"
 #elif defined(TMS_BACKEND_ANDROID)
 # if defined(TMS_BACKEND_ANDROID_X86) || defined(TMS_BACKEND_ANDROID_X86_64)
@@ -41,11 +39,7 @@ class pkginfo;
 #define OS_STRING "unknown"
 #endif
 
-#if defined(TMS_BACKEND_ANDROID) || defined(TMS_BACKEND_IOS)
 #define DRAG_TIME_EPS 100000
-#else
-#define DRAG_TIME_EPS 100000
-#endif
 #define DRAG_DIST_EPS 30.f
 #define DRAG_DIST_MIN_EPS 0.f
 
