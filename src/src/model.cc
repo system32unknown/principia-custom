@@ -627,9 +627,9 @@ struct model_load_data mesh_factory::models[NUM_MODELS] = {
     }, {
         "data-shared/models/pickaxe.3ds",
     }, {
-        "data-shared/models/rack.3ds",
+        "models_unused/rack.3ds",
     }, {
-        "data-shared/models/rackhouse.3ds",
+        "models_unused/rackhouse.3ds",
     }, { // MODEL_I1O1_EMPTY
         "data-shared/models/i1o1.3ds",
     }, { // MODEL_I1O1_INTEGER
