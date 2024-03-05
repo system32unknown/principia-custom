@@ -14,7 +14,7 @@ static int i2o1_shift_i = 1;
 static int cpad_shift_i = 1;
 
 struct model_load_data mesh_factory::models[NUM_MODELS] = {
-        {"data-shared/models/plank1.3ds"},
+    {"data-shared/models/plank1.3ds"},
     {"data-shared/models/plank2.3ds"},
     {"data-shared/models/plank3.3ds"},
     {"data-shared/models/plank4.3ds"},
