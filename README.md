@@ -18,8 +18,6 @@ Principia runs on anything with a recent enough version of Windows, Linux or And
 
 * Discord server: https://principia-web.se/discord
 
-* Matrix room: https://principia-web.se/matrix
-
 ## Binary builds
 Every now and then new beta builds for 1.5.2 are made whenever things are stable enough on the `master` branch. These are available for download on the [principia-web downloads page](https://principia-web.se/download).
 
@@ -28,7 +26,7 @@ There are also nightly build artifacts for Windows and Android that get automati
 ## Getting involved
 Feel free to fork this project and send in your pull requests. This is a community project and the community decides how the project evolves.
 
-Most of our discussion and development happens in the `#development` channel of the [Principia Discord server](https://principia-web.se/discord) (also bridged to [Matrix](https://principia-web.se/matrix)), make sure to join it if you want to discuss and participate in the development of the game.
+Most of our discussion and development happens in the `#development` channel of the [Principia Discord server](https://principia-web.se/discord), make sure to join it if you want to discuss and participate in the development of the game.
 
 Also be sure to follow [@principia](https://fosstodon.org/@principia) on Fosstodon for more updates about the project.
 
@@ -82,14 +80,14 @@ pacman -S mingw-w64-ucrt-x86_64-nsis
 For making Windows release builds you would run the `packaging/windows_release.sh` script, which will bundle necessary DLLs and other files to make the game run, and builds the installer.
 
 ### Linux
-If you just want to play Principia on Linux, there are packages available for Arch-based and Debian-based distros as well as NixOS. See the [principia-web downloads page](https://principia-web.se/download) for more info.
+*If you just want to play Principia on Linux, there is an AppImage build available as well as packages for various Linux distributions. See the [principia-web downloads page](https://principia-web.se/download) for more info.*
 
 Install dependencies.
 
 **Debian-based distros:**
 
 ```bash
-sudo apt install --no-install-recommends cmake ninja-build libgtk-3-dev libgl-dev libglew-dev libasound2-dev libcurl4-openssl-dev libpng-dev libjpeg-dev libfreetype6-dev libsdl2-dev
+sudo apt install --no-install-recommends cmake ninja-build libgtk-3-dev libgl-dev libglew-dev libcurl4-openssl-dev libpng-dev libjpeg-dev libfreetype6-dev libsdl2-dev
 ```
 
 **For Arch-based distros:**
@@ -109,8 +107,6 @@ sudo dnf install @development-tools cmake ninja gcc-c++ freetype-devel libcurl-d
 ```bash
 doas apk add build-base cmake ninja mesa-dev glew-dev gtk+3.0-dev libpng-dev jpeg-dev curl-dev freetype-dev zlib-dev sdl2-dev
 ```
-
-**For NixOS**, Follow the instructions [here](./nix/README.md).
 
 Generate the build files using CMake and start compilation:
 
