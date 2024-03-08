@@ -357,7 +357,6 @@ void
 emitter::step()
 {
     int g_id = this->properties[1].v.i;
-    if (g_id == O_PLANK && this->size != 2) return;
 
     this->time += G->timemul(WORLD_STEP);
 

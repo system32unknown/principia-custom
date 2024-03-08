@@ -5,6 +5,7 @@ build_*/
 
 # Misc. development files
 .vscode/
+.vs/
 *.patch
 opengl32.dll
 .cache/
