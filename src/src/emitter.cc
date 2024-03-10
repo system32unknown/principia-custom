@@ -357,6 +357,7 @@ void
 emitter::step()
 {
     int g_id = this->properties[1].v.i;
+    if (g_id == O_PLANK && this->size != 2) return;
 
     this->time += G->timemul(WORLD_STEP);
 
@@ -365,9 +366,7 @@ emitter::step()
     }
 
     switch (this->state) {
-        case 0:
-            /* waiting for signal */
-            break;
+        case 0: break;
 
         case 1:
             /* check cooldown timer */
