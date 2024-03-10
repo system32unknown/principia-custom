@@ -1,4 +1,3 @@
-#include "SDL.h"
 #include <tms/core/tms.h>
 #include "settings.hh"
 #include <cmath>
@@ -13,8 +12,6 @@
 struct shadow_res {int x; int y;};
 static struct shadow_res shadow_resolutions[10];
 static int num_shadow_resolutions;
-
-#define log2(x) (log(x) / log(2.0))
 
 _settings settings;
 
@@ -346,5 +343,3 @@ _settings::~_settings()
         delete it->second;
     }
 }
-
-#undef log2
