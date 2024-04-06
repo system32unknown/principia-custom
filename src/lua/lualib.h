@@ -35,6 +35,9 @@ LUAMOD_API int (luaopen_debug) (lua_State *L);
 #define LUA_OSLIBNAME	"os"
 LUAMOD_API int (luaopen_os) (lua_State *L);
 
+#define LUA_IOLIBNAME	"io"
+LUAMOD_API int (luaopen_io) (lua_State *L);
+
 
 #if !defined(lua_assert)
 #define lua_assert(x)	((void)0)

@@ -29,4 +29,5 @@ LOCAL_SRC_FILES += \
   lua/ltm.c \
   lua/lundump.c \
   lua/lvm.c \
-  lua/lzio.c
+  lua/lzio.c \
+  lua/loslib.c

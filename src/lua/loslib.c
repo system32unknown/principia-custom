@@ -75,6 +75,25 @@
 
 #endif
 
+static int os_execute (lua_State *L) {
+  const char *cmd = luaL_optstring(L, 1, NULL);
+  int stat = system(cmd);
+  if (cmd != NULL)
+    return luaL_execresult(L, stat);
+  else {
+    lua_pushboolean(L, stat);  /* true if there is a shell */
+    return 1;
+  }
+}
+static int os_remove (lua_State *L) {
+  const char *filename = luaL_checkstring(L, 1);
+  return luaL_fileresult(L, remove(filename) == 0, filename);
+}
+static int os_rename (lua_State *L) {
+  const char *fromname = luaL_checkstring(L, 1);
+  const char *toname = luaL_checkstring(L, 2);
+  return luaL_fileresult(L, rename(fromname, toname) == 0, NULL);
+}
 static int os_tmpname (lua_State *L) {
   char buff[LUA_TMPNAMBUFSIZE];
   int err;
@@ -225,6 +244,7 @@ static int os_time (lua_State *L) {
     lua_pushnumber(L, (lua_Number)t);
   return 1;
 }
+
 static int os_difftime (lua_State *L) {
   lua_pushnumber(L, difftime((time_t)(luaL_checknumber(L, 1)),
                              (time_t)(luaL_optnumber(L, 2, 0))));
@@ -233,11 +253,39 @@ static int os_difftime (lua_State *L) {
 
 /* }====================================================== */
 
+static int os_setlocale (lua_State *L) {
+  static const int cat[] = {LC_ALL, LC_COLLATE, LC_CTYPE, LC_MONETARY,
+                      LC_NUMERIC, LC_TIME};
+  static const char *const catnames[] = {"all", "collate", "ctype", "monetary",
+     "numeric", "time", NULL};
+  const char *l = luaL_optstring(L, 1, NULL);
+  int op = luaL_checkoption(L, 2, "all", catnames);
+  lua_pushstring(L, setlocale(cat[op], l));
+  return 1;
+}
+
+static int os_exit (lua_State *L) {
+  int status;
+  if (lua_isboolean(L, 1))
+    status = (lua_toboolean(L, 1) ? EXIT_SUCCESS : EXIT_FAILURE);
+  else
+    status = luaL_optint(L, 1, EXIT_SUCCESS);
+  if (lua_toboolean(L, 2))
+    lua_close(L);
+  if (L) exit(status);  /* 'if' to avoid warnings for unreachable 'return' */
+  return 0;
+}
+
 static const luaL_Reg syslib[] = {
   {"clock",     os_clock},
   {"date",      os_date},
   {"difftime",  os_difftime},
+  {"execute",   os_execute},
+  {"exit",      os_exit},
   {"getenv",    os_getenv},
+  {"remove",    os_remove},
+  {"rename",    os_rename},
+  {"setlocale", os_setlocale},
   {"time",      os_time},
   {"tmpname",   os_tmpname},
   {NULL, NULL}

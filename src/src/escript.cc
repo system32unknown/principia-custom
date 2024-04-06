@@ -379,13 +379,13 @@ on_entity_remove(entity *self, void *userdata)
 static const char* ignore[] = {
     "_VERSION", "assert", "collectgarbage", "coroutine", "debug", "dofile",
     "error", "gcinfo" "getfenv", "getmetatable", "io", "ipairs", "load",
-    "loadfile", "loadstring", "math", "module", "newproxy", "next", "os",
+    "loadfile", "loadstring", "math", "module", "bit32", "io", "newproxy", "next", "os",
     "package", "pairs", "pcall", "print", "rawequal", "rawget", "rawset",
     "rawlen", "require", "select", "setfenv", "setmetatable", "table",
     "tonumber", "tostring", "type", "unpack", "wl", "xpcall", "string",
     "_", "set_textdomain", "get_build_id", "ngettext", "_ENV",
-    "game", "this", "socket", "step", "world", "cam", "math", "_G",
-    "init", "include", "world.___persist_entity", "bit32", 0
+    "game", "this", "socket", "step", "world", "cam", "_G",
+    "init", "include", "world.___persist_entity", 0
 };
 
 static void
@@ -3802,6 +3802,9 @@ escript::init()
     lua_pop(this->L, 1);
 
     luaL_requiref(this->L, "os", luaopen_os, 1);
+    lua_pop(this->L, 1);
+
+    luaL_requiref(this->L, "io", luaopen_io, 1);
     lua_pop(this->L, 1);
 
     register_world(this->L);
