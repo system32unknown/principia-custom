@@ -25,7 +25,8 @@ jobs:
       image: debian:bullseye
       env: { LANG: "C.UTF-8" }
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@v4
+
       - name: Install deps
         run: |
           apt-get update
@@ -50,7 +51,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@v4
 
       - uses: msys2/setup-msys2@v2
         with:
@@ -90,7 +91,7 @@ jobs:
           ../packaging/windows_portable.sh
 
       - name: Upload output as artifact
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: principia-setup.exe
           path: build/principia-setup.exe
@@ -105,7 +106,7 @@ jobs:
   android:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@v4
 
       - name: Install deps
         run: |
@@ -118,7 +119,7 @@ jobs:
           ./gradlew assemblerelease
 
       - name: Save apk artifact
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: principia-release-unsigned.apk
           path: build-android/principia/build/outputs/apk/release/principia-release-unsigned.apk

@@ -53,6 +53,8 @@ elseif(SCREENSHOT_BUILD)
 	set(TMS_BACKEND "screenshot-linux")
 elseif(HAIKU)
 	set(TMS_BACKEND "haiku")
+elseif(APPLE)
+	set(TMS_BACKEND "macos")
 else()
 	set(TMS_BACKEND "linux")
 endif()
@@ -271,6 +273,8 @@ else()
 		set(COMMON_FLAGS "${COMMON_FLAGS} -DGL_GLEXT_PROTOTYPES -DNO_UI -DTMS_BACKEND_LINUX_SS")
 	elseif(HAIKU)
 		set(COMMON_FLAGS "${COMMON_FLAGS} -DTMS_BACKEND_HAIKU")
+	elseif(APPLE)
+		set(COMMON_FLAGS "${COMMON_FLAGS} -DTMS_BACKEND_MACOS")
 	else()
 		set(COMMON_FLAGS "${COMMON_FLAGS} -DTMS_BACKEND_LINUX")
 	endif()
@@ -279,6 +283,9 @@ endif()
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	# Downgrade some errors to warnings when building with Clang
 	set(COMMON_FLAGS "${COMMON_FLAGS} -Wno-error=incompatible-function-pointer-types -Wno-error=int-conversion")
+else()
+	# Do the same for GCC
+	set(COMMON_FLAGS "${COMMON_FLAGS} -Wno-error=incompatible-pointer-types -Wno-error=int-conversion")
 endif()
 
 set(COMMON_FLAGS_DEBUG "${COMMON_FLAGS} -O0 -ggdb -ffast-math -Werror=return-type -DDEBUG=1")
@@ -292,9 +299,12 @@ set(CMAKE_CXX_FLAGS_RELEASE "${COMMON_FLAGS_RELEASE} -O2 -fvisibility-inlines-hi
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -g")
 set(CMAKE_CXX_FLAGS_DEBUG "${COMMON_FLAGS_DEBUG}")
 
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-Wl,-O,-s,--gc-sections")
-set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "-Wl,-O,--gc-sections")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "")
+# macOS Clang's linker doesn't like these flags
+if(NOT APPLE)
+	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-Wl,-O,-s,--gc-sections")
+	set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "-Wl,-O,--gc-sections")
+	set(CMAKE_EXE_LINKER_FLAGS_DEBUG "")
+endif()
 
 if(WIN32)
 	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-mwindows")
@@ -304,7 +314,20 @@ endif()
 # Installation
 # ------------
 
-if(UNIX)
+if(APPLE)
+	set(BUNDLE_NAME ${PROJECT_NAME}.app)
+	set(BUNDLE_PATH "${BUNDLE_NAME}")
+
+	set(BINDIR ${BUNDLE_NAME}/Contents/MacOS)
+	set(SHAREDIR ${BUNDLE_NAME}/Contents/Resources)
+
+	install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data-pc" DESTINATION "${SHAREDIR}")
+	install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data-shared" DESTINATION "${SHAREDIR}")
+
+	install(FILES "packaging/principia.icns" DESTINATION "${SHAREDIR}")
+	install(FILES "packaging/Info.plist" DESTINATION "${BUNDLE_PATH}/Contents")
+
+else()
 	include(GNUInstallDirs)
 	set(SHAREDIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}")
 	set(BINDIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}")
@@ -318,6 +341,23 @@ if(UNIX)
 	install(FILES "packaging/principia.png" DESTINATION "${SHAREDIR}/icons/hicolor/128x128/apps")
 
 	install(FILES "packaging/se.principia_web.principia.metainfo.xml" DESTINATION "${SHAREDIR}/metainfo")
+endif()
 
-	install(TARGETS ${PROJECT_NAME} DESTINATION ${BINDIR})
+install(TARGETS ${PROJECT_NAME}
+	RUNTIME DESTINATION ${BINDIR}
+	LIBRARY DESTINATION ${BINDIR}
+	ARCHIVE DESTINATION ${BINDIR}
+	BUNDLE DESTINATION .
+)
+
+if(APPLE)
+	set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY 0)
+	set(CPACK_GENERATOR ZIP)
+	include(CPack)
+
+	install(CODE "
+		set(BU_CHMOD_BUNDLE_ITEMS ON)
+		include(BundleUtilities)
+		fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/${BUNDLE_PATH}\" \"\" \"\${CMAKE_INSTALL_PREFIX}/${BINDIR}\")
+	" COMPONENT Runtime)
 endif()
