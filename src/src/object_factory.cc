@@ -164,6 +164,7 @@ static entity* new_cup(void){return new cup();};
 static entity* new_cylinder(void){return new cylinder(0);};
 static entity* new_goal(void){return new goal();};
 static entity* new_command(void){return new command();};
+static entity* new_rack(void){return new rack();};
 static entity* new_smallpanel(void){return new panel(PANEL_SMALL);};
 static entity* new_xsmallpanel(void){return new panel(PANEL_XSMALL);};
 static entity* new_mpanel(void){return new panel(PANEL_MEDIUM);};
