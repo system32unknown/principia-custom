@@ -3,15 +3,11 @@
 #include "group.hh"
 #include "gear.hh"
 #include "game.hh"
-#include "connection.hh"
-#include "rack.hh"
 #include "rubberband.hh"
 #include "pivot.hh"
 #include "damper.hh"
-#include "pixel.hh"
 #include "model.hh"
 #include "world.hh"
-#include "settings.hh"
 #include "ui.hh"
 
 entity::entity()
@@ -1579,12 +1575,13 @@ entity::write_tooltip(char *out)
 void
 entity::write_quickinfo(char *out)
 {
-    if (G->state.sandbox && settings["display_object_id"]->v.b) {
-    /* XXX GID XXX */
-        sprintf(out, "%s\nid:%u, g_id:%u", this->get_name(), this->id, this->g_id);
-    } else {
-        sprintf(out, "%s", this->get_name());
-    }
+    sprintf(out, "%s", this->get_name());
+}
+
+void
+entity::write_object_id(char *out)
+{
+    sprintf(out, "\nid: %u, g_id: %u", this->id, this->g_id);
 }
 
 void

@@ -2,7 +2,6 @@
 #include "material.hh"
 #include "game.hh"
 #include "model.hh"
-#include "settings.hh"
 
 generator::generator()
     : voltage(3.f)
@@ -107,9 +106,5 @@ generator::solve_electronics()
 void
 generator::write_quickinfo(char *out)
 {
-    if (G && G->state.sandbox && settings["display_object_id"]->v.b) {
-        sprintf(out, "%s (%.0fv, id:%u, g_id:%u)", this->get_name(), this->properties[0].v.f, this->id, this->g_id);
-    } else {
-        sprintf(out, "%s (%.0fv)", this->get_name(), this->properties[0].v.f);
-    }
+    sprintf(out, "%s (%.0fv)", this->get_name(), this->properties[0].v.f);
 }
