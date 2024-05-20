@@ -268,11 +268,6 @@ static const char *menu_bgsources[] = {
 static void
 read_shader(struct shader_load_data *sld, GLenum type, uint32_t global_flags, char **out)
 {
-    if ((global_flags & GF_IS_SHITTY) && (sld->flags & SL_NO_SIMPLE)) {
-        *out = 0;
-        return;
-    }
-
     if (!(global_flags & GF_ENABLE_GI) && (sld->flags & SL_REQUIRE_GI)) {
         *out = 0;
         return;
@@ -280,11 +275,8 @@ read_shader(struct shader_load_data *sld, GLenum type, uint32_t global_flags, ch
 
     char path[1024];
 
-    snprintf(path, 1023, "data-shared/shaders/%s%s.%s",
-            sld->name,
-            (((global_flags & GF_IS_SHITTY) && (sld->flags & SL_HAS_SIMPLE)) ? ".simple" : ""),
-            type == GL_VERTEX_SHADER ? "vp" : "fp"
-            );
+    snprintf(path, 1023, "data-shared/shaders/%s.%s",
+            sld->name, type == GL_VERTEX_SHADER ? "vp" : "fp");
 
 #ifdef TMS_BACKEND_ANDROID
     FILE_IN_ASSET(1);
@@ -356,16 +348,8 @@ struct shader_load_data shaders[] = {
     { SL_SHARED, "grid",                    &shader_grid },
     { SL_SHARED, "bg_fixed",                &shader_bg_fixed },
     { SL_SHARED, "bg_colored",              &shader_bg_colored },
-    {
-        SL_SHARED | SL_HAS_SIMPLE,
-        "bg",
-        &shader_bg,
-    },
-    {
-        SL_SHARED | SL_NO_SIMPLE | SL_EXIT_ON_FAIL,
-        "shiny",
-        &shader_shiny,
-    },
+    { SL_SHARED, "bg",                      &shader_bg },
+    { SL_SHARED, "shiny",                   &shader_shiny },
     { SL_SHARED, "colored_field",           &shader_field },
 
     /* menu shaders */
@@ -1017,7 +1001,7 @@ TEX_LAZYLOAD_FN(repairstation,
 )
 
 void
-material_factory::init(bool is_shitty/*=false*/)
+material_factory::init()
 {
     setlocale(LC_ALL, "C");
     setlocale(LC_NUMERIC, "C");
@@ -1031,7 +1015,7 @@ material_factory::init(bool is_shitty/*=false*/)
 
     tms_infof("Initializing material factor...");
 
-    material_factory::init_shaders(is_shitty);
+    material_factory::init_shaders();
 
     /* TEXTURES BEGIN */
     tms_infof("Initializing textures... ");
@@ -1086,11 +1070,11 @@ material_factory::init(bool is_shitty/*=false*/)
 
     /* TEXTURES END */
 
-    material_factory::init_materials(is_shitty);
+    material_factory::init_materials();
 }
 
 void
-material_factory::init_shaders(bool is_shitty)
+material_factory::init_shaders()
 {
     setlocale(LC_ALL, "C");
     setlocale(LC_NUMERIC, "C");
@@ -1335,9 +1319,6 @@ material_factory::init_shaders(bool is_shitty)
     tms_infof("Compiling shaders");
 
     uint32_t global_flags = 0;
-    if (is_shitty) {
-        global_flags |= GF_IS_SHITTY;
-    }
 
     if (enable_gi) {
         global_flags |= GF_ENABLE_GI;
@@ -1518,9 +1499,7 @@ material_factory::init_shaders(bool is_shitty)
     menu_bg_program = sh->get_program(TMS_NO_PIPELINE);
     menu_bg_color_loc = tms_program_get_uniform(menu_bg_program, "color");
 
-    if (!is_shitty) {
-        SN(shader_shiny);
-    }
+    SN(shader_shiny);
     SN(shader_edev);
     SN(shader_edev_m);
     SN(shader_edev_dark);
@@ -1538,7 +1517,7 @@ material_factory::init_shaders(bool is_shitty)
 }
 
 void
-material_factory::init_materials(bool is_shitty)
+material_factory::init_materials()
 {
     tms_infof("Initializing materials");
 
@@ -2006,7 +1985,7 @@ material_factory::init_materials(bool is_shitty)
     m_magnet.restitution = .0f;
     m_magnet.type = TYPE_METAL;
 
-    if (is_shitty || !(m_gear.pipeline[0].program = shader_shiny->get_program(0)))
+    if (!(m_gear.pipeline[0].program = shader_shiny->get_program(0)))
         m_gear.pipeline[0].program = shader_pv_textured->get_program(0);
     m_gear.pipeline[1].program = shader_gi->get_program(1);
     m_gear.pipeline[2].program = shader_pv_textured_m->get_program(2);
@@ -2367,16 +2346,7 @@ material_factory::init_materials(bool is_shitty)
     m_spikes.restitution = .1f;
     m_spikes.type = TYPE_METAL;
 
-/*
-    m_rackhouse.pipeline[0].program = shader_pv_textured_ao->get_program(0);
-    m_rackhouse.pipeline[1].program = shader_gi->get_program(1);
-    m_rackhouse.pipeline[2].program = shader_pv_textured_m->get_program(2);
-    m_rackhouse.pipeline[0].texture[0] = static_cast<tms_texture*>(tex_rackhouse);
-    m_rackhouse.pipeline[2].texture[0] = static_cast<tms_texture*>(tex_rackhouse);
-    m_rackhouse.pipeline[3].program = shader_ao->get_program(3);
-    */
-
-    if (is_shitty || !(m_rackhouse.pipeline[0].program = shader_shiny->get_program(0)))
+    if (!(m_rackhouse.pipeline[0].program = shader_shiny->get_program(0)))
         m_rackhouse.pipeline[0].program = shader_pv_textured->get_program(0);
     m_rackhouse.pipeline[1].program = shader_gi_tex->get_program(1);
     m_rackhouse.pipeline[2].program = shader_pv_textured_m->get_program(2);
