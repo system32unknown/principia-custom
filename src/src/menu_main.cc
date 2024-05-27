@@ -23,18 +23,15 @@ menu_main::widget_clicked(principia_wdg *w, uint8_t button_id, int pid)
             P.add_action(ACTION_GOTO_CREATE, 1);
             break;
 
-        case BTN_BROWSE_COMMUNITY:
-            {
-                ui::emit_signal(SIGNAL_CLICK_DISCOVER);
-                char tmp[128];
-                snprintf(tmp, 127, "https://%s/", P.community_host);
-                ui::open_url(tmp);
-            }
-            break;
+        case BTN_BROWSE_COMMUNITY: {
+            COMMUNITY_URL("");
+            ui::open_url(url);
+        } break;
 
-        case BTN_UPDATE:
-            ui::open_url("https://principia-web.se/");
-            break;
+        case BTN_UPDATE: {
+            COMMUNITY_URL("download");
+            ui::open_url(url);
+        } break;
 
         default: return false;
     }
@@ -50,7 +47,7 @@ menu_main::menu_main()
 
     this->wdg_update_available = this->wm->create_widget(
             this->get_surface(), TMS_WDG_LABEL,
-            BTN_UPDATE, AREA_TOP_LEFT);
+            BTN_UPDATE, AREA_TOP_CENTER);
     this->wdg_update_available->set_label("Update available!");
     this->wdg_update_available->priority = 900;
 

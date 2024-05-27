@@ -506,41 +506,6 @@ init_framebuffers(void)
 void
 tproject_set_args(int argc, char **argv)
 {
-#if defined(TMS_BACKEND_WINDOWS) && !defined(DEBUG)
-    static bool has_set_log = false;
-    if (!has_set_log) {
-        has_set_log = true;
-        char logfile[1024];
-        snprintf(logfile, 1023, "%s" SLASH "run.log", tbackend_get_storage_path());
-
-        if (file_exists(logfile)) {
-            char backup_logfile[1024];
-            snprintf(backup_logfile, 1023, "%s" SLASH "bkp.run.log", tbackend_get_storage_path());
-
-            if (file_exists(backup_logfile)) {
-                unlink(backup_logfile);
-            }
-
-            tms_infof("Copying log file from %s to %s", logfile, backup_logfile);
-            int r = rename(logfile, backup_logfile);
-
-            if (r == 0) {
-                tms_infof("Success!");
-            } else {
-                tms_infof("Error copying log file.. :(");
-            }
-        }
-
-        tms_infof("changing log file to %s", logfile);
-        FILE *log = fopen(logfile, "w+"); // XXX: why "w+" instead of "w"?
-        if (log) {
-            tms_set_log_file(log, log);
-        } else {
-            tms_infof("could not open log file for writing!");
-        }
-    }
-#endif
-
     if (argc > 1) {
 
         char *s = argv[1];
@@ -1788,10 +1753,7 @@ _download_pkg(void *_p)
 
     tms_debugf("save: %s", save_path);
 
-    char url[256];
-    snprintf(url, 255, "https://%s/internal/get_package?i=%d",
-            P.community_host,
-            _play_pkg_id);
+    COMMUNITY_URL("internal/get_package?i=%d", _play_pkg_id);
     long http_code = 0;
 
     struct level_write save_data = {
@@ -2270,8 +2232,7 @@ _check_version_code(void *_unused)
     if (P.curl) {
         init_curl_defaults(P.curl);
 
-        char url[256];
-        snprintf(url, 255, "https://%s/internal/version_code", P.community_host);
+        COMMUNITY_URL("internal/version_code");
         curl_easy_setopt(P.curl, CURLOPT_URL, url);
 
         curl_easy_setopt(P.curl, CURLOPT_WRITEFUNCTION, write_memory_cb);
@@ -2684,8 +2645,7 @@ _publish_pkg(void *_unused)
                     curl_mime_data(part, tmp, CURL_ZERO_TERMINATED);
 
 
-                    char url[256];
-                    snprintf(url, 255, "https://%s/internal/upload_package", P.community_host);
+                    COMMUNITY_URL("internal/upload_package");
                     curl_easy_setopt(P.curl, CURLOPT_URL, url);
 
                     curl_easy_setopt(P.curl, CURLOPT_MIMEPOST, mime);
@@ -2808,8 +2768,7 @@ _publish_level(void *p)
 
         CURL_CUDDLES;
 
-        char url[256];
-        snprintf(url, 255, "https://%s/internal/upload", P.community_host);
+        COMMUNITY_URL("internal/upload");
         curl_easy_setopt(P.curl, CURLOPT_URL, url);
 
         curl_easy_setopt(P.curl, CURLOPT_WRITEHEADER, &hd);
@@ -2958,8 +2917,7 @@ _submit_score(void *p)
 
         CURL_CUDDLES;
 
-        char url[256];
-        snprintf(url, 255, "https://%s/internal/submit_score", P.community_host);
+        COMMUNITY_URL("internal/submit_score");
         curl_easy_setopt(P.curl, CURLOPT_URL, url);
 
         curl_easy_setopt(P.curl, CURLOPT_WRITEHEADER, &hd);
@@ -3051,8 +3009,7 @@ _login(void *p)
 
         CURL_CUDDLES;
 
-        char url[256];
-        snprintf(url, 255, "https://%s/internal/login", P.community_host);
+        COMMUNITY_URL("internal/login");
         curl_easy_setopt(P.curl, CURLOPT_URL, url);
 
         curl_easy_setopt(P.curl, CURLOPT_WRITEHEADER, &hd);
@@ -3128,8 +3085,7 @@ _register(void *p)
 
         CURL_CUDDLES;
 
-        char url[256];
-        snprintf(url, 255, "https://%s/internal/register", P.community_host);
+        COMMUNITY_URL("internal/register");
         curl_easy_setopt(P.curl, CURLOPT_URL, url);
 
         curl_easy_setopt(P.curl, CURLOPT_WRITEHEADER, &hd);
@@ -3378,6 +3334,30 @@ generate_paths()
     snprintf(featured_data_time_path, 1023, "%s/fl.time", tbackend_get_storage_path());
 }
 
+static void
+populate_community_host()
+{
+    P.community_host = "principia-web.se";
+
+    char path[1024];
+    snprintf(path, 1023, "%s/community_host.txt", tbackend_get_storage_path());
+    FILE *fh = fopen(path, "r");
+
+    if (!fh) return;
+
+    static char buf[256];
+    fgets(buf, 256, fh);
+
+    for (size_t i = 0; i < 255; i++) {
+        if (buf[i] == '\n')
+            buf[i] = 0x0;
+    }
+
+    tms_infof("Overriding community host: %s", buf);
+
+    P.community_host = buf;
+}
+
 static int
 initial_loader(int step)
 {
@@ -3390,7 +3370,7 @@ initial_loader(int step)
     switch (step) {
         case 0:
             {
-                P.community_host = "principia-web.se";
+                populate_community_host();
 
                 static const char *s_dirs[]={
                     "",
@@ -3687,8 +3667,7 @@ P_get_cookie_data(char **token)
     if (P.curl) {
         init_curl_defaults(P.curl);
 
-        char url[256];
-        snprintf(url, 255, "https://%s/internal/login", P.community_host);
+        COMMUNITY_URL("internal/login");
         curl_easy_setopt(P.curl, CURLOPT_URL, url);
 
         struct curl_slist *cookies;
