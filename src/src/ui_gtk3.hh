@@ -1,6 +1,10 @@
 
 #ifdef TMS_BACKEND_PC
 
+// fuckgtk3
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
@@ -572,7 +576,7 @@ struct gtk_level_property gtk_level_properties[] = {
       "Disable the roaming robots ability to change layer." },
     { LVL_CHUNKED_LEVEL_LOADING,
       "Chunked level loading",
-      "" },
+      "Splits up the level into chunks, leading to better performance for large levels." },
     { LVL_DISABLE_CAVEVIEW,
       "Disable adventure caveview",
       "Disable the caveview which appears when the adventure robot is in layer two, with terrain in front of him in layer three." },
@@ -581,7 +585,7 @@ struct gtk_level_property gtk_level_properties[] = {
       "Disable the rocket from triggering any explosives when contact with its flames occurs." },
     { LVL_STORE_SCORE_ON_GAME_OVER,
       "Store high score on game over",
-      "" },
+      "Allow players to submit a high score even if they did not win the level." },
     { LVL_ALLOW_HIGH_SCORE_SUBMISSIONS,
       "Allow high score submissions",
       "Allow players to submit their high scores to be displayed on your levels community page." },
@@ -611,9 +615,7 @@ static int num_gtk_level_properties = sizeof(gtk_level_properties) / sizeof(gtk_
 GtkDialog      *publish_dialog;
 GtkEntry       *publish_name;
 GtkTextView    *publish_descr;
-GtkCheckButton *publish_allow_deriv;
 GtkCheckButton *publish_locked;
-GtkWidget      *publish_help_allow_deriv;
 
 /** --New level **/
 GtkDialog      *new_level_dialog;
@@ -3721,7 +3723,6 @@ on_publish_show(GtkWidget *wdg, void *unused)
     current_name[W->level.name_len] = '\0';
     gtk_entry_set_text(publish_name, current_name);
 
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(publish_allow_deriv), W->level.allow_derivatives);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(publish_locked), W->level.visibility == LEVEL_LOCKED);
 
     free(current_descr);
@@ -5351,7 +5352,6 @@ on_properties_show(GtkWidget *wdg, void *unused)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(lvl_radio_adventure), (W->level.type == LCAT_ADVENTURE));
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(lvl_radio_custom), (W->level.type == LCAT_CUSTOM));
 
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(publish_allow_deriv), W->level.allow_derivatives);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(publish_locked), W->level.visibility == LEVEL_LOCKED);
 
     refresh_borders();
@@ -5632,7 +5632,6 @@ activate_publish(GtkMenuItem *i, gpointer unused)
         } else
             W->level.descr_len = 0;
 
-        W->level.allow_derivatives = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(publish_allow_deriv));
         W->level.visibility = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(publish_locked)) ? LEVEL_LOCKED : LEVEL_VISIBLE;
 
         tms_infof("Setting level name to:  %s", name);
@@ -7266,12 +7265,6 @@ int _gtk_loop(void *p)
         publish_descr = GTK_TEXT_VIEW(gtk_text_view_new());
         gtk_text_view_set_wrap_mode(publish_descr, GTK_WRAP_WORD);
 
-        GtkBox *box_allow_deriv = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-        publish_allow_deriv = GTK_CHECK_BUTTON(gtk_check_button_new_with_label("Allow derivatives"));
-
-        gtk_box_pack_start(box_allow_deriv, GTK_WIDGET(publish_allow_deriv), 1, 1, 0);
-        gtk_box_pack_start(box_allow_deriv, help_widget("Allow other players to download, edit your map and publish it as their own."), 0, 0, 0);
-
         GtkBox *box_locked = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
         publish_locked = GTK_CHECK_BUTTON(gtk_check_button_new_with_label("Locked"));
 
@@ -7296,9 +7289,6 @@ int _gtk_loop(void *p)
         gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Level description:</b>"), false, false, 0);
 
         gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(fr), false, false, 0);
-
-        /* Allow derivatives box */
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(box_allow_deriv), false, false, 0);
 
         /* Locked box */
         gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(box_locked), false, false, 0);
@@ -11497,14 +11487,6 @@ void ui::open_url(const char *url)
 #if SDL_VERSION_ATLEAST(2,0,14)
     tms_infof("open url (SDL): %s", url);
     SDL_OpenURL(url);
-#elif defined(TMS_BACKEND_LINUX)
-    // Fallback for old Linux distros that don't contain SDL2 2.0.14
-    tms_infof("open url (Fallback): %s", url);
-
-    if (fork() == 0) {
-        execlp("xdg-open", "xdg-open", url, NULL);
-        _exit(0);
-    }
 #else
     #error "SDL2 2.0.14+ is required for this platform"
 #endif
@@ -11782,5 +11764,7 @@ ui::alert(const char *text, uint8_t alert_type/*=ALERT_INFORMATION*/)
 
     gdk_display_flush(gdk_display_get_default());
 }
+
+#pragma GCC diagnostic pop
 
 #endif
