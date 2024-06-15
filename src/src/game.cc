@@ -1205,7 +1205,7 @@ game::init_framebuffers()
         this->bloom_fb = 0;
     }
 
-#ifdef TMS_BACKEND_PC
+#ifndef TMS_USE_GLES
     if (settings["postprocess"]->v.b) {
         tms_infof("Postprocess time");
         //this->main_fb = tms_fb_alloc(_tms.window_width/2., _tms.window_height/2., 0);
@@ -2928,7 +2928,7 @@ game::render()
             tms_fb_swap_blur3x3(tms_pipeline_get_framebuffer(3));
         }
     }
-#ifdef TMS_BACKEND_PC
+#ifndef TMS_USE_GLES
     if (settings["postprocess"]->v.b) {
         //tms_assertf(glGetError() == 0, "error before main fb bind");
         tms_fb_bind(this->main_fb);
@@ -2942,7 +2942,7 @@ game::render()
 
     tms_assertf((ierr = glGetError()) == 0, "gl error %d in game::render before bg", ierr);
 
-#ifndef TMS_BACKEND_MOBILE
+#ifndef TMS_USE_GLES
     if (settings["gamma_correct"]->v.b && !settings["postprocess"]->v.b) {
         glEnable(GL_FRAMEBUFFER_SRGB);
     }
@@ -3066,7 +3066,7 @@ game::render()
         tms_assertf((ierr = glGetError()) == 0, "gl error %d after render foreground", ierr);
     }
 
-#ifndef TMS_BACKEND_MOBILE
+#ifndef TMS_USE_GLES
     if (settings["gamma_correct"]->v.b && !settings["postprocess"]->v.b) {
         glDisable(GL_FRAMEBUFFER_SRGB);
     }
@@ -3079,7 +3079,7 @@ game::render()
     tms_ddraw_set_matrices(this->dd, this->cam->view, this->cam->projection);
     //tms_ddraw_line3d(this->dd, 0, 0, 0, this->light.x*2.f, this->light.y*2.f, this->light.z*2.f);
 
-#ifdef TMS_BACKEND_PC
+#ifndef TMS_USE_GLES
     if (settings["postprocess"]->v.b) {
         tms_fb_unbind(this->main_fb);
         glDisable(GL_DEPTH_TEST);
@@ -5917,20 +5917,25 @@ game::handle_input_playing(tms::event *ev, int action)
                 } else {
                     if (this->state.success && this->state.pkg != 0) {
                         if (this->state.is_main_puzzle) {
+                            // XXX: causes segfaults on android
+
                             char filename[1024];
                             uint32_t next = this->state.pkg->get_next_level(W->level.local_id);
                             snprintf(filename, 1023, "%s/7.%d.psol", pkgman::get_level_path(LEVEL_LOCAL), next);
 
-                            tms_infof("does %s exist?", filename);
-
                             open_play_data *opd = new open_play_data(LEVEL_LOCAL, next, this->state.pkg, false, 1);
+
+#ifndef TMS_BACKEND_ANDROID
+                            tms_infof("does %s exist?", filename);
                             if (file_exists(filename)) {
                                 tms_infof("yep! send ui confirm thing");
                                 ui::confirm("Do you want to load your last saved solution?",
                                         "Yes",    principia_action(ACTION_OPEN_MAIN_PUZZLE_SOLUTION, opd),
                                         "No",     principia_action(ACTION_CREATE_MAIN_PUZZLE_SOLUTION, opd),
                                         "Back",   ACTION_BACK);
-                            } else {
+                            } else
+#endif
+                            {
                                 tms_infof("file %s does not exist!", filename);
                                 P.add_action(ACTION_CREATE_MAIN_PUZZLE_SOLUTION, opd);
                             }

@@ -61,6 +61,16 @@ else()
 	set(TMS_BACKEND "LINUX")
 endif()
 
+if(LINUX)
+	option(USE_GLES "Use OpenGL ES on Linux (Experimental)" FALSE)
+endif()
+
+if(USE_GLES OR ANDROID OR EMSCRIPTEN)
+	set(SHOULD_USE_GLES TRUE)
+else()
+	set(SHOULD_USE_GLES FALSE)
+endif()
+
 
 # Include dirs and main source files
 # ----------------------------------
@@ -97,41 +107,10 @@ file(GLOB SRCS
 	src/src/Box2D/Particle/*.cc
 )
 
-if(ANDROID)
-	# Vendored SDL2 for Android
-
-	include_directories(
-		src/SDL-mobile/include/)
-
-	file(GLOB SDL_SRCS
-		src/SDL-mobile/src/main/android/SDL_android_main.cc
-		src/SDL-mobile/src/*.c
-		src/SDL-mobile/src/atomic/*.c
-		src/SDL-mobile/src/audio/*.c
-		src/SDL-mobile/src/audio/android/*.c
-		src/SDL-mobile/src/core/android/*.cc
-		src/SDL-mobile/src/cpuinfo/*.c
-		src/SDL-mobile/src/events/*.c
-		src/SDL-mobile/src/file/*.c
-		src/SDL-mobile/src/joystick/*.c
-		src/SDL-mobile/src/joystick/android/*.c
-		src/SDL-mobile/src/loadso/dlopen/*.c
-		src/SDL-mobile/src/render/*.c
-		src/SDL-mobile/src/stdlib/*.c
-		src/SDL-mobile/src/thread/*.c
-		src/SDL-mobile/src/thread/pthread/*.c
-		src/SDL-mobile/src/timer/*.c
-		src/SDL-mobile/src/timer/unix/*.c
-		src/SDL-mobile/src/video/*.c
-		src/SDL-mobile/src/video/android/*.c)
-	set(SRCS ${SRCS} ${SDL_SRCS})
-else()
-
-	# For non-Android, system SDL2 and OpenGL include dirs
-	include_directories(
-		${SDL2_INCLUDE_DIRS}
-		${OPENGL_INCLUDE_DIRS})
-endif()
+# For non-Android, system SDL2 and OpenGL include dirs
+include_directories(
+	${SDL2_INCLUDE_DIRS}
+	${OPENGL_INCLUDE_DIRS})
 
 # Optional dependencies not found on Android or in the screenshot build
 if(NOT SCREENSHOT_BUILD)
@@ -176,7 +155,7 @@ endif()
 
 
 if(ANDROID)
-	set(BACKEND_SRC main_android.c)
+	set(BACKEND_SRC main_android.cc)
 elseif(SCREENSHOT_BUILD)
 	set(BACKEND_SRC main_screenshotter.cc)
 else()
@@ -228,26 +207,32 @@ if(NOT SCREENSHOT_BUILD)
 	target_link_libraries(${PROJECT_NAME} ${CURL_LIBRARIES})
 
 	if(NOT ANDROID)
-		target_link_libraries(
-			${PROJECT_NAME}
-				${GLEW_LIBRARIES}
-				${GTK3_LIBRARIES})
+		target_link_libraries(${PROJECT_NAME} ${GTK3_LIBRARIES})
+	endif()
+
+	if(NOT SHOULD_USE_GLES)
+		target_link_libraries(${PROJECT_NAME} ${GLEW_LIBRARIES})
 	endif()
 endif()
 
-if(NOT ANDROID)
-	target_link_libraries(
-		${PROJECT_NAME}
-			${OPENGL_LIBRARIES}
-			${SDL2_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
+
+if(SHOULD_USE_GLES)
+	target_link_libraries(${PROJECT_NAME} -lGLESv2)
+else()
+	target_link_libraries(${PROJECT_NAME} ${OPENGL_LIBRARIES})
 endif()
 
 
 # Compiler flags
 # --------------
 
+if(SHOULD_USE_GLES)
+	add_definitions(-DTMS_USE_GLES)
+endif()
+
 if(ANDROID)
-	target_link_libraries(${PROJECT_NAME} -landroid -ldl -lGLESv2 -llog)
+	target_link_libraries(${PROJECT_NAME} -landroid -ldl -llog -lOpenSLES)
 
 	add_definitions(-DHAVE_GCC_ATOMICS)
 else()
