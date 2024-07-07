@@ -2,6 +2,7 @@
 #if defined(TMS_BACKEND_ANDROID)
 
 #include "SDL.h"
+#include "network.hh"
 #include <jni.h>
 #include <sstream>
 
@@ -28,11 +29,6 @@ void ui::emit_signal(int signal_id, void *data/*=0*/)
         case SIGNAL_REGISTER_SUCCESS:
             ui::open_dialog(CLOSE_REGISTER_DIALOG);
             tms_infof("Register success!!!!!!!!!");
-            break;
-
-        case SIGNAL_LONG_PRESS:
-            ui::open_dialog(SIGNAL_LONG_PRESS);
-            tms_debugf("SEND LONG PRESS");
             break;
 
         case SIGNAL_REGISTER_FAILED:
