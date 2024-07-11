@@ -45,9 +45,8 @@
 
 #endif
 
-#if defined(TMS_BACKEND_LINUX) && defined(DEBUG)
+#ifdef BUILD_VALGRIND
 #include <valgrind/valgrind.h>
-#include <csignal>
 #endif
 
 #include <sys/stat.h>
@@ -57,8 +56,6 @@
 #include <tms/core/entity.h>
 #include <tms/core/pipeline.h>
 #include <tms/bindings/cpp/cpp.hh>
-
-#include "zlib.h"
 
 #include "network.hh"
 
@@ -79,11 +76,7 @@ create_thread(int (SDLCALL *fn)(void*),
         const char *name, void *data)
 {
     SDL_Thread *t = SDL_CreateThread(fn, name, data);
-#ifdef TMS_BACKEND_PC
-    /* SDL_DetachThread was implemented in SDL 2.0.2, which is only available
-     * for our PC backend as of now. */
     SDL_DetachThread(t);
-#endif
 }
 
 static void
@@ -1862,7 +1855,7 @@ initial_loader(int step)
             menu_shared::init();
             adventure::init();
 
-#if defined(TMS_BACKEND_LINUX) && defined(DEBUG)
+#ifdef BUILD_VALGRIND
             if (!RUNNING_ON_VALGRIND) {
                 sm::init();
             } else {
