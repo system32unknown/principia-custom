@@ -24,6 +24,7 @@
 #include "i1o1gate.hh"
 #include "i2o1gate.hh"
 #include "item.hh"
+#include "key_listener.hh"
 #include "ladder.hh"
 #include "ledbuffer.hh"
 #include "linebuffer.hh"
@@ -44,6 +45,7 @@
 #include "proximitysensor.hh"
 #include "ragdoll.hh"
 #include "rand.h"
+#include "rc_activator.hh"
 #include "robot.hh"
 #include "robot_parts.hh"
 #include "robotman.hh"
@@ -63,6 +65,8 @@
 #include "widget_manager.hh"
 #include "worker.hh"
 #include "world.hh"
+#include "player_activator.hh"
+#include "gui.hh"
 #ifdef DEBUG
 /* for print_screen_point_info */
 #include "terrain.hh"
@@ -7301,6 +7305,13 @@ game::snap_to_camera(screenshot_marker *sm)
     this->cam_vel.z = 0.f;
 }
 
+bool
+game::player_can_build()
+{
+    return W->level.type == LCAT_ADVENTURE && adventure::player && adventure::is_player_alive()
+            && adventure::player->get_tool() && adventure::player->get_tool_type() == TOOL_BUILDER;
+}
+
 /**
  * Create an icon for the current level
  **/
@@ -10371,6 +10382,20 @@ game::timed_absorb(uint32_t id, double time)
     }
 
     return true;
+}
+
+bool
+game::timed_absorb(entity *e, double time)
+{
+    if (e) {
+        if (e->flag_active(ENTITY_IS_ABSORBED)) return false;
+
+        if (!e->conn_ll) { /* do not absorb connected objects */
+            return this->timed_absorb(e->id, time);
+        }
+    }
+
+    return false;
 }
 
 /* construct an entity at the mouse position */
