@@ -52,6 +52,7 @@
 #include "gameman.hh"
 #include "gear.hh"
 #include "gearbox.hh"
+#include "rack.hh"
 #include "generator.hh"
 #include "goal.hh"
 #include "gravityman.hh"
