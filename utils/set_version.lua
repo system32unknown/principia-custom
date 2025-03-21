@@ -74,7 +74,7 @@ end
 --------------------------------------------------------------------------------
 
 local version_info_txt = 'packaging/version_info.txt'
-local gradle_build = 'build-android/principia/build.gradle'
+local gradle_build = 'android/principia/build.gradle'
 local nsi_file = 'packaging/principia_install.nsi'
 local rc_file = 'packaging/principia.rc'
 
@@ -134,7 +134,7 @@ local function write_version_header(verinfo)
 #define PRINCIPIA_VERSION_STRING "%s" VER_EXTRA
 ]], verinfo.code, verinfo.name)
 
-	write_to_file('src/src/version_info.hh', content)
+	write_to_file('src/version_info.hh', content)
 end
 
 -- Update version info in the Windows NSIS installer file (`principia_install.nsi`).
