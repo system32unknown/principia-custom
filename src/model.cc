@@ -312,6 +312,7 @@ struct model_load_data mesh_factory::models[NUM_MODELS] = {
     {"data/models/plant3.3ds"},
     {"data/models/plant4.3ds"},
     {"data/models/war_axe.3ds"},
+    {"data/models/banner.3ds"},
     {"data/models/pixel_sword.3ds"},
     {"data/models/hard_hat.3ds"},
     {"data/models/serpent_sword.3ds"},
@@ -319,6 +320,8 @@ struct model_load_data mesh_factory::models[NUM_MODELS] = {
     {"data/models/pioneer_back.3ds"},
     {"data/models/vikinghelmet.3ds"},
     {"data/models/pickaxe.3ds"},
+    {"data/models/rack.3ds"},
+    {"data/models/rackhouse.3ds"},
     {"data/models/i1o1.3ds"}, // MODEL_I1O1_EMPTY
     {0, MODEL_I1O1_EMPTY, tvec2f(0.f, -.125f*i1o1_shift_i++)}, // MODEL_I1O1_INTEGER
     {0, MODEL_I1O1_EMPTY, tvec2f(0.f, -.125f*i1o1_shift_i++)}, // MODEL_I1O1_SQUARE
