@@ -972,6 +972,7 @@ namespace UiSettings {
         //INTERFACE
         "hide_tips",
         "display_grapher_value",
+        "disable_overloader",
         "display_object_id",
         "display_fps",
         "uiscale",
@@ -1259,6 +1260,8 @@ namespace UiSettings {
                     ImGui::Checkbox("Display grapher values", (bool*) &local_settings["display_grapher_value"]->v.b);
 
                     ImGui::Checkbox("Display object IDs", (bool*) &local_settings["display_object_id"]->v.b);
+
+                    ImGui::Checkbox("Disable Overloader", (bool*) &local_settings["disable_overloader"]->v.b);
 
                     ImGui::TextUnformatted("Display FPS");
                     ImGui::Combo("###displayFPS", (int*) &local_settings["display_fps"]->v.u8, "Off\0On\0Graph\0Graph (Raw)\0", 4);
