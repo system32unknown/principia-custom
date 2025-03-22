@@ -1,4 +1,5 @@
 #include "sqrtgate.hh"
+#include "settings.hh"
 
 edevice*
 sqrtgate::solve_electronics()
