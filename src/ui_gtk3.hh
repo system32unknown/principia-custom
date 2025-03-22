@@ -383,7 +383,7 @@ struct table_setting_row settings_misc_rows[] = {
         "fix_sqrt",
         setting_row_type::create_checkbox()
     }
-}
+};
 
 struct table_setting_row settings_control_rows[] = {
     {
