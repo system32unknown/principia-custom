@@ -254,7 +254,8 @@
     <string name="resources">Resources</string>
     <string name="recipe_explanation">This is the list of recipes that you can craft via the factory inputs.</string>
     <string name="display_grapher_value">Display grapher value</string>
-    <string name="display_wireless_frequency">Display wireless frequency</string>
+    <string name="display_wireless_frequency">Fix sqrt gate outputting NaN</string>
+    <string name="fix_sqrt">Display wireless frequency</string>
     <string name="mute_all_sound">Mute all sounds</string>
     <string name="volume">Volume</string>
     <string name="open_save">Open save</string>

@@ -376,6 +376,15 @@ struct table_setting_row settings_audio_rows[] = {
     },
 };
 
+struct table_setting_row settings_misc_rows[] = {
+    {
+        "Fix sqrt gate outputting NaN"
+        0,
+        "fix_sqrt",
+        setting_row_type::create_checkbox()
+    }
+}
+
 struct table_setting_row settings_control_rows[] = {
     {
         "Enable touch controls",
@@ -498,6 +507,7 @@ static const int settings_num_graphic_rows = sizeof(settings_graphic_rows) / siz
 static const int settings_num_audio_rows = sizeof(settings_audio_rows) / sizeof(settings_audio_rows[0]);
 static const int settings_num_control_rows = sizeof(settings_control_rows) / sizeof(settings_control_rows[0]);
 static const int settings_num_interface_rows = sizeof(settings_interface_rows) / sizeof(settings_interface_rows[0]);
+static const int settings_num_misc_rows = sizeof(settings_misc_rows) / sizeof(settings_misc_rows[0]);
 
 struct gtk_level_property {
     uint64_t flag;
@@ -8947,10 +8957,33 @@ int _gtk_loop(void *p)
             tbl_interface = tbl;
         }
 
+        GtkGrid *tbl_misc;
+        {
+            GtkGrid *tbl = create_settings_table();
+
+            int y = -1;
+
+            for (int x=0; x<settings_num_misc_rows; ++x) {
+                struct table_setting_row *r = &settings_misc_rows[x];
+
+                create_setting_row_widget(r);
+
+                add_setting_row(
+                    tbl, ++y,
+                    r->label,
+                    r->wdg,
+                    r->help
+                );
+            }
+
+            tbl_misc = tbl;
+        }
+
         gtk_notebook_append_page(nb, GTK_WIDGET(tbl_graphics),  new_lbl("<b>Graphics</b>"));
         gtk_notebook_append_page(nb, GTK_WIDGET(tbl_audio),     new_lbl("<b>Audio</b>"));
         gtk_notebook_append_page(nb, GTK_WIDGET(tbl_controls),  new_lbl("<b>Controls</b>"));
         gtk_notebook_append_page(nb, GTK_WIDGET(tbl_interface), new_lbl("<b>Interface</b>"));
+        gtk_notebook_append_page(nb, GTK_WIDGET(tbl_misc), new_lbl("<b>Miscellaneous</b>"));
 
         gtk_widget_show_all(GTK_WIDGET(nb));
 

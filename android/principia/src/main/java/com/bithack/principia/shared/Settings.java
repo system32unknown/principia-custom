@@ -21,6 +21,7 @@ public class Settings
     public boolean display_object_ids;
     public boolean display_grapher_value;
     public boolean display_wireless_frequency;
+    public boolean fix_sqrt;
     public boolean hide_tips;
     public boolean sandbox_back_dna;
     public int display_fps;

@@ -364,6 +364,12 @@
                 android:text="@string/display_wireless_frequency" />
 
             <CheckBox
+                android:id="@+id/settings_fix_sqrt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/fix_sqrt" />
+
+            <CheckBox
                 android:id="@+id/settings_hide_tips"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
