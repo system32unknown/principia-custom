@@ -378,7 +378,7 @@ struct table_setting_row settings_audio_rows[] = {
 
 struct table_setting_row settings_misc_rows[] = {
     {
-        "Fix sqrt gate outputting NaN"
+        "Fix sqrt gate outputting NaN",
         0,
         "fix_sqrt",
         setting_row_type::create_checkbox()
