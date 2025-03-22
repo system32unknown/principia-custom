@@ -8,7 +8,7 @@ sqrtgate::solve_electronics()
         return this->s_in[0].get_connected_edevice();
 
     float in = this->s_in[0].get_value();
-    float value = (settings["fix_sqrt"]->v.b) ? tclampf(in, 0.f, 1.f) : in;
+    float value = (settings["disable_overloader"]->v.b) ? tclampf(in, 0.f, 1.f) : in;
     value = sqrtf(value);
 
     this->s_out[0].write(value);

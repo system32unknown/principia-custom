@@ -1,4 +1,5 @@
 #include "squaregate.hh"
+#include "settings.hh"
 
 edevice*
 squaregate::solve_electronics()
@@ -6,10 +7,11 @@ squaregate::solve_electronics()
     if (!this->s_in[0].is_ready())
         return this->s_in[0].get_connected_edevice();
 
-    float v = tclampf(this->s_in[0].get_value(), 0.f, 1.f);
-    v *= v;
+    float value = this->s_in[0].get_value();
+    float clamp_value = (settings["disable_overloader"]->v.b) ? tclampf(value, 0.f, 1.f) : value;
+    clamp_value *= clamp_value;
 
-    this->s_out[0].write(v);
+    this->s_out[0].write(clamp_value);
 
     return 0;
 }

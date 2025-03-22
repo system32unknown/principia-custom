@@ -2,6 +2,7 @@
 #include "material.hh"
 #include "game.hh"
 #include "model.hh"
+#include "settings.hh"
 
 tester::tester()
 {
@@ -102,10 +103,11 @@ tester::solve_electronics()
     if (!this->s_in[0].is_ready())
         return this->s_in[0].get_connected_edevice();
 
-    float v = tclampf(this->s_in[0].get_value(), 0.f, 1.f);
-    this->s_out[0].write(v);
+    float value = this->s_in[0].get_value();
+    float clamp_value = (settings["disable_overloader"]->v.b) ? tclampf(value, 0.f, 1.f) : value;
+    this->s_out[0].write(clamp_value);
 
-    tms_entity_set_uniform4f(&this->lamp, "~color", v, 1.f+v, v, 1.f);
+    tms_entity_set_uniform4f(&this->lamp, "~color", clamp_value, 1.f+clamp_value, clamp_value, 1.f);
 
     return 0;
 }

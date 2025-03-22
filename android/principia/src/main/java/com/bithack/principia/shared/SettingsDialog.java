@@ -42,7 +42,7 @@ public class SettingsDialog implements OnSeekBarChangeListener, OnClickListener 
     final CheckBox settings_display_object_ids;
     final CheckBox settings_display_grapher_value;
     final CheckBox settings_display_wireless_frequency;
-    final CheckBox settings_fix_sqrt;
+    final CheckBox settings_disable_overloader;
     final CheckBox settings_hide_tips;
     final CheckBox settings_sandbox_back_dna;
 
@@ -118,7 +118,7 @@ public class SettingsDialog implements OnSeekBarChangeListener, OnClickListener 
         settings_display_object_ids = (CheckBox)view.findViewById(R.id.settings_display_object_ids);
         settings_display_grapher_value = (CheckBox)view.findViewById(R.id.settings_display_grapher_value);
         settings_display_wireless_frequency = (CheckBox)view.findViewById(R.id.settings_display_wireless_frequency);
-        settings_fix_sqrt = (CheckBox)view.findViewById(R.id.settings_fix_sqrt);
+        settings_disable_overloader = (CheckBox)view.findViewById(R.id.settings_disable_overloader);
         settings_hide_tips = (CheckBox)view.findViewById(R.id.settings_hide_tips);
         settings_sandbox_back_dna = (CheckBox)view.findViewById(R.id.settings_sandbox_back_dna);
 
@@ -172,7 +172,7 @@ public class SettingsDialog implements OnSeekBarChangeListener, OnClickListener 
         boolean display_object_ids = this.settings_display_object_ids.isChecked();
         boolean display_grapher_value = this.settings_display_grapher_value.isChecked();
         boolean display_wireless_frequency = this.settings_display_wireless_frequency.isChecked();
-        boolean fix_sqrt = this.settings_fix_sqrt.isChecked();
+        boolean disable_overloader = this.settings_disable_overloader.isChecked();
         boolean hide_tips = this.settings_hide_tips.isChecked();
         boolean sandbox_back_dna = this.settings_sandbox_back_dna.isChecked();
         float volume = this.settings_volume.getProgress() / 100.f;
@@ -214,7 +214,7 @@ public class SettingsDialog implements OnSeekBarChangeListener, OnClickListener 
                                      cam_speed, zoom_speed,
                                      smooth_cam, smooth_zoom,
                                      border_scroll_enabled, border_scroll_speed,
-                                     display_object_ids, display_grapher_value, display_wireless_frequency, fix_sqrt,
+                                     display_object_ids, display_grapher_value, display_wireless_frequency, disable_overloader,
                                      volume, muted,
                                      hide_tips, sandbox_back_dna,
                                      display_fps);
@@ -289,7 +289,7 @@ public class SettingsDialog implements OnSeekBarChangeListener, OnClickListener 
         this.settings_display_object_ids.setChecked(s.display_object_ids);
         this.settings_display_grapher_value.setChecked(s.display_grapher_value);
         this.settings_display_wireless_frequency.setChecked(s.display_wireless_frequency);
-        this.settings_fix_sqrt.setChecked(s.fix_sqrt);
+        this.settings_disable_overloader.setChecked(s.disable_overloader);
         this.settings_hide_tips.setChecked(s.hide_tips);
         this.settings_sandbox_back_dna.setChecked(s.sandbox_back_dna);
 

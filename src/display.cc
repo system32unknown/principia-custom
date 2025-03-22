@@ -2,6 +2,7 @@
 #include "model.hh"
 #include "material.hh"
 #include "ui.hh"
+#include "settings.hh"
 
 #define RSIZE .08f
 #define SIZE (RSIZE+.02f)
@@ -620,11 +621,11 @@ active_display::solve_electronics()
 
     this->active = (this->s_in[0].p == 0 || (bool)(int)roundf(this->s_in[0].get_value()));
 
-    float v = tclampf(this->s_in[1].get_value(), 0.f, 1.f);
+    float value = (settings["disable_overloader"]->v.b) ? tclampf(this->s_in[1].get_value(), 0.f, 1.f) : this->s_in[1].get_value();
 
     if (this->s_in[1].p) {
         // plug is connected
-        this->active_symbol = roundf((this->num_symbols-1) * v);
+        this->active_symbol = roundf((this->num_symbols-1) * value);
     } else {
         this->active_symbol = this->properties[1].v.i;
     }

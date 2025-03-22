@@ -378,9 +378,9 @@ struct table_setting_row settings_audio_rows[] = {
 
 struct table_setting_row settings_misc_rows[] = {
     {
-        "Fix sqrt gate outputting NaN",
+        "Disable Overloader",
         0,
-        "fix_sqrt",
+        "disable_overloader",
         setting_row_type::create_checkbox()
     }
 };

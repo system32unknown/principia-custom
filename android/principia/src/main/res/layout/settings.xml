@@ -364,10 +364,10 @@
                 android:text="@string/display_wireless_frequency" />
 
             <CheckBox
-                android:id="@+id/settings_fix_sqrt"
+                android:id="@+id/settings_disable_overloader"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/fix_sqrt" />
+                android:text="@string/disable_overloader" />
 
             <CheckBox
                 android:id="@+id/settings_hide_tips"

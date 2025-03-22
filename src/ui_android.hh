@@ -571,8 +571,8 @@ Java_org_libsdl_app_PrincipiaBackend_getSettings(JNIEnv *env, jclass _jcls)
                 f = env->GetFieldID(cls, "display_wireless_frequency", "Z");
                 env->SetBooleanField(ret, f, settings["display_wireless_frequency"]->v.b);
 
-                f = env->GetFieldID(cls, "fix_sqrt", "Z");
-                env->SetBooleanField(ret, f, settings["fix_sqrt"]->v.b);
+                f = env->GetFieldID(cls, "disable_overloader", "Z");
+                env->SetBooleanField(ret, f, settings["disable_overloader"]->v.b);
 
                 f = env->GetFieldID(cls, "hide_tips", "Z");
                 env->SetBooleanField(ret, f, settings["hide_tips"]->v.b);
@@ -693,7 +693,7 @@ Java_org_libsdl_app_PrincipiaBackend_setSettings(JNIEnv *env, jclass _jcls,
         jboolean display_object_ids,
         jboolean display_grapher_value,
         jboolean display_wireless_frequency,
-        jboolean fix_sqrt,
+        jboolean disable_overloader,
         jfloat volume,
         jboolean muted,
         jboolean hide_tips,
@@ -747,7 +747,7 @@ Java_org_libsdl_app_PrincipiaBackend_setSettings(JNIEnv *env, jclass _jcls,
     settings["display_object_id"]->v.b = (bool)display_object_ids;
     settings["display_grapher_value"]->v.b = (bool)display_grapher_value;
     settings["display_wireless_frequency"]->v.b = (bool)display_wireless_frequency;
-    settings["fix_sqrt"]->v.b = (bool)fix_sqrt;
+    settings["disable_overloader"]->v.b = (bool)disable_overloader;
     settings["hide_tips"]->v.b = (bool)hide_tips;
     settings["dna_sandbox_back"]->v.b = (bool)sandbox_back_dna;
     settings["display_fps"]->v.u8 = (uint8_t)display_fps;
