@@ -621,7 +621,10 @@ active_display::solve_electronics()
 
     this->active = (this->s_in[0].p == 0 || (bool)(int)roundf(this->s_in[0].get_value()));
 
-    float value = (settings["disable_overloader"]->v.b) ? tclampf(this->s_in[1].get_value(), 0.f, 1.f) : this->s_in[1].get_value();
+    float value = 0.0;
+    if (settings["disable_overloader"]->v.b)
+        value = tclampf(this->s_in[1].get_value(), 0.f, 1.f);
+    else value = this->s_in[1].get_value();
 
     if (this->s_in[1].p) {
         // plug is connected
