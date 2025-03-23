@@ -4917,7 +4917,7 @@ save_settings()
 
     /* Misc */
     for (int x=0; x<settings_num_misc_rows; ++x) {
-        struct table_setting_row *r = &settings_num_misc_rows[x];
+        struct table_setting_row *r = &settings_misc_rows[x];
         save_setting_row(r);
     }
 
@@ -5014,7 +5014,7 @@ on_settings_show(GtkWidget *wdg, void *unused)
 
     /* Misc */
     for (int x=0; x<settings_num_misc_rows; ++x) {
-        struct table_setting_row *r = &settings_num_misc_rows[x];
+        struct table_setting_row *r = &settings_misc_rows[x];
         load_setting_row(r);
     }
 
