@@ -4915,6 +4915,12 @@ save_settings()
         save_setting_row(r);
     }
 
+    /* Misc */
+    for (int x=0; x<settings_num_misc_rows; ++x) {
+        struct table_setting_row *r = &settings_num_misc_rows[x];
+        save_setting_row(r);
+    }
+
     sm::load_settings();
 
     strcpy(tmp, get_cb_val(settings_shadow_res));
@@ -5003,6 +5009,12 @@ on_settings_show(GtkWidget *wdg, void *unused)
     /* Interface */
     for (int x=0; x<settings_num_interface_rows; ++x) {
         struct table_setting_row *r = &settings_interface_rows[x];
+        load_setting_row(r);
+    }
+
+    /* Misc */
+    for (int x=0; x<settings_num_misc_rows; ++x) {
+        struct table_setting_row *r = &settings_num_misc_rows[x];
         load_setting_row(r);
     }
 
