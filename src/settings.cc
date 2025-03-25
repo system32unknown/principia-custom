@@ -37,9 +37,8 @@ _settings::init()
 #ifndef TMS_BACKEND_ANDROID
     this->add("window_width",       S_INT32,   _tms.window_width);
     this->add("window_height",      S_INT32,   _tms.window_height);
-    this->add("window_maximized",   S_BOOL,  0);
+    this->add("window_maximized",   S_BOOL,  false);
     this->add("window_fullscreen",  S_BOOL, false);
-    this->add("window_resizable", S_BOOL, false);
     this->add("autosave_screensize",S_BOOL,  true);
 #endif
 
@@ -123,11 +122,10 @@ _settings::init()
     this->add("score_ask_before_submitting", S_BOOL, false);
     this->add("score_automatically_submit", S_BOOL, true);
 
-    char filename[1024];
-    sprintf(filename, "%s/settings.ini", tbackend_get_storage_path());
+    sprintf(this->filename, "%s/settings.ini", tms_storage_path());
     FILE *fh;
 
-    if ((fh = fopen(filename, "r")) == NULL) {
+    if ((fh = fopen(this->filename, "r")) == NULL) {
         if (errno == ENOENT) {
             tms_infof("file doesn't exist, create it!");
             this->save();
@@ -143,9 +141,7 @@ _settings::init()
 bool
 _settings::load(void)
 {
-    char filename[1024];
-    sprintf(filename, "%s/settings.ini", tbackend_get_storage_path());
-    FILE *fh = fopen(filename, "r");
+    FILE *fh = fopen(this->filename, "r");
 
     if (!fh) {
         tms_errorf("Unable to open settings file for reading.");
@@ -261,11 +257,7 @@ _settings::save(void)
     if (RUNNING_ON_VALGRIND) return true;
 #endif
 
-    /* TODO: store filename in the class, char[1024] settings_file, to be
-     * set in init*/
-    char filename[1024];
-    sprintf(filename, "%s/settings.ini", tbackend_get_storage_path());
-    FILE *fh = fopen(filename, "w+");
+    FILE *fh = fopen(this->filename, "w+");
 
     if (!fh) {
         tms_errorf("An error occured when attempting to open settings file.");

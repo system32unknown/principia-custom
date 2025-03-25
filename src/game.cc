@@ -7607,14 +7607,6 @@ game::handle_input_paused(tms::event *ev, int action)
 
             case TMS_KEY_MINUS: this->cam->_position.z += 1.f; break;
             case TMS_KEY_EQUALS:this->cam->_position.z -= 1.f; break;
-
-            case TMS_KEY_DELETE:
-                if (this->get_mode() == GAME_MODE_DEFAULT) {
-                    if (this->selection.e && !this->selection.e->requires_delete_confirmation()) {
-                        this->delete_selected_entity();
-                    }
-                }
-                break;
         }
     } else if (ev->type == TMS_EV_KEY_PRESS) {
         if (this->menu_handle_event(ev) == EVENT_DONE) {
@@ -7878,7 +7870,7 @@ game::handle_input_paused(tms::event *ev, int action)
                                 "Yes",  ACTION_MULTI_DELETE,
                                 "No",   ACTION_IGNORE);
                     }
-                } else {
+                } else if (this->state.sandbox) {
                     if (this->selection.e && this->selection.e->requires_delete_confirmation()) {
                         ui::confirm("Are you sure you want to delete this object?",
                                 "Yes",  ACTION_DELETE_SELECTION,
@@ -10435,7 +10427,7 @@ game::editor_construct_entity(uint32_t g_id, int pid/*=0*/, bool force_on_pid/*=
 
     e->ghost_update();
 
-    if (this->selection.e && e->compatible_with(this->selection.e) && this->selection.e->g_id != O_ROPE && (this->selection.e->g_id != O_TPIXEL)) {
+    if (this->selection.e && e->compatible_with(this->selection.e) && this->selection.e->g_id != O_ROPE) {
         /* copy properties from the selected object */
         this->copy_properties(e, this->selection.e);
 
