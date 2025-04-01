@@ -39,6 +39,7 @@ _settings::init()
     this->add("window_height",      S_INT32,   _tms.window_height);
     this->add("window_maximized",   S_BOOL,  false);
     this->add("window_fullscreen",  S_BOOL, false);
+    this->add("window_resizable",   S_BOOL, false);
     this->add("autosave_screensize",S_BOOL,  true);
 #endif
 
@@ -121,6 +122,8 @@ _settings::init()
 
     this->add("score_ask_before_submitting", S_BOOL, false);
     this->add("score_automatically_submit", S_BOOL, true);
+
+    this->add("has_opened_classic_puzzles", S_BOOL, false);
 
     sprintf(this->filename, "%s/settings.ini", tms_storage_path());
     FILE *fh;

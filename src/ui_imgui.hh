@@ -211,7 +211,8 @@ static void update_imgui_ui_scale();
 /* forward */
 enum class MessageType {
     Message,
-    Error
+    Error,
+    LevelInfo
 };
 
 /* forward */
@@ -231,6 +232,7 @@ namespace UiLevelProperties { static void open(); static void layout(); }
 namespace UiSave { static void open(); static void layout(); }
 namespace UiNewLevel { static void open(); static void layout(); }
 namespace UiFrequency { static void open(bool is_range, entity *e = G->selection.e); static void layout(); }
+namespace UiConfirm { void open(const char* text, const char* button1, principia_action action1, const char* button2, principia_action action2, const char* button3, principia_action action3, struct confirm_data  _confirm_data); void layout(); }
 
 //On debug builds, open imgui demo window by pressing Shift+F9
 #ifdef DEBUG
@@ -288,35 +290,35 @@ namespace UiSandboxMenu {
                 float z = G->cam->_position.z;
 
                 auto goto_entity = [z](entity *ment) {
-                    G->lock();
                     b2Vec2 xy = ment->get_position();
                     G->cam->set_position(xy.x, xy.y, z);
-                    G->selection.select(ment);
-                    G->unlock();
                     sb_position = xy;
                 };
                 auto goto_position = [z](b2Vec2 xy) {
-                    G->lock();
                     G->cam->set_position(xy.x, xy.y, z);
-                    //XXX: should we reset the selection here?
-                    G->selection.disable();
-                    G->unlock();
                     sb_position = xy;
                 };
 
                 if (ImGui::MenuItem("0, 0")) {
                     goto_position(b2Vec2_zero);
                 }
-                //TODO the rest of goto options
-                // if (ImGui::MenuItem("Player")) {
-                //
-                // }
-                // if (ImGui::MenuItem("Last created entity")) {
-                //
-                // }
-                // if (ImGui::MenuItem("Last camera position")) {
-                //
-                // }
+
+                if (W->is_adventure()) {
+                    if (ImGui::MenuItem("Player")) {
+                        if (adventure::player) {
+                            goto_entity(adventure::player);
+                        }
+                    }
+                }
+
+                // Unimplemented: "Last camera position"
+                // (functions as an undo from the last position that was gone to)
+
+                if (ImGui::MenuItem("Last created entity")) {
+                    if (!W->all_entities.empty()) {
+                        goto_entity(W->all_entities.rbegin()->second);
+                    }
+                }
 
                 ImGui::Separator();
                 if (bookmarks.size() > 0) {
@@ -340,6 +342,13 @@ namespace UiSandboxMenu {
                         );
                         if (activated) {
                             goto_entity(ment);
+                        }
+                        // Context menu for deleting right-clicked bookmark
+                        if (ImGui::BeginPopupContextItem("BookmarkContext")) {
+                            if (ImGui::MenuItem("Delete Bookmark")) {
+                                bookmarks.erase(std::find(bookmarks.begin(), bookmarks.end(), eid));
+                            }
+                            ImGui::EndPopup();
                         }
                         //ImGui::PopItemFlag();
                         ImGui::PopID();
@@ -916,16 +925,19 @@ namespace UiMessage {
             case MessageType::Error:
                 typ = "Error###info-popup";
                 break;
+
+            case MessageType::LevelInfo:
+                typ = "Level description###info-popup";
+                break;
         }
         ImGui::SetNextWindowSize(ImVec2(400., 0.));
         if (ImGui::BeginPopupModal(typ, NULL, MODAL_FLAGS)) {
             ImGui::TextWrapped("%s", message.c_str());
+
+            ImGui::Dummy(ImVec2(0.0f, 40.0f));
+
             if (ImGui::Button("Close")) {
                 ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Copy to clipboard")) {
-                ImGui::SetClipboardText(message.c_str());
             }
             ImGui::EndPopup();
         }
@@ -2098,23 +2110,49 @@ namespace UiLevelProperties {
                         int tmp = (int)*x;
                         //HACK: use pointer as unique id
                         ImGui::PushID((size_t)x);
-                        if (ImGui::SliderInt("###slider", &tmp, 0, 255)) {
+                        if (ImGui::SliderInt("###slider", &tmp, 10, 255)) {
                             *x = tmp & 0xff;
                         }
                         ImGui::PopID();
                     };
+                    auto slider_float = [](float* x, float rng) {
+                        float tmp = *x;
+                        //HACK: use pointer as unique id
+                        ImGui::PushID((size_t)x);
+                        if (ImGui::SliderFloat("###slider", &tmp, 0.0f, rng)) {
+                            *x = tmp;
+                        }
+                        ImGui::PopID();
+                    };
 
-                    ImGui::SeparatorText("Iteration count");
-
-                    ImGui::TextUnformatted("Position interations");
+                    ImGui::SeparatorText("");
+                    ImGui::TextUnformatted("Position Iterations");
                     slider_uint8t(&W->level.position_iterations);
                     reload_if_changed();
-
-                    ImGui::TextUnformatted("Velocity interations");
+                    ImGui::TextUnformatted("Velocity Iterations");
                     slider_uint8t(&W->level.velocity_iterations);
                     reload_if_changed();
 
-                    //TODO add the rest of the physics settings
+                    ImGui::SeparatorText("");
+                    ImGui::TextUnformatted("Prismatic Tolerance");
+                    slider_float(&W->level.prismatic_tolerance, 0.075f);
+                    reload_if_changed();
+                    ImGui::TextUnformatted("Pivot Tolerance");
+                    slider_float(&W->level.pivot_tolerance, 0.075f);
+                    reload_if_changed();
+
+                    ImGui::SeparatorText("");
+                    ImGui::TextUnformatted("Linear Damping");
+                    slider_float(&W->level.linear_damping, 10.00f);
+                    reload_if_changed();
+                    ImGui::TextUnformatted("Angular Damping");
+                    slider_float(&W->level.angular_damping, 10.00f);
+                    reload_if_changed();
+
+                    ImGui::SeparatorText("");
+                    ImGui::TextUnformatted("Joint Friction");
+                    slider_float(&W->level.joint_friction, 10.00f);
+                    reload_if_changed();
 
                     ImGui::EndTabItem();
                 }
@@ -2624,6 +2662,85 @@ namespace UiFrequency {
     }
 }
 
+namespace UiConfirm {
+    static bool do_open = false;
+    const char *confirm_text;
+
+    const char *confirm_button1;
+    const char *confirm_button2;
+    const char *confirm_button3;
+
+    int confirm_action1;
+    int confirm_action2;
+    int confirm_action3;
+
+    void *confirm_action1_data = 0;
+    void *confirm_action2_data = 0;
+    void *confirm_action3_data = 0;
+
+    struct confirm_data confirm_data(CONFIRM_TYPE_DEFAULT);
+
+    void open(const char *text,
+              const char *button1, principia_action action1,
+              const char *button2, principia_action action2,
+              const char *button3, principia_action action3,
+              struct confirm_data _confirm_data) {
+
+        confirm_text = strdup(text);
+
+        confirm_button1 = strdup(button1);
+        confirm_button2 = strdup(button2);
+        if (button3) {
+            confirm_button3 = strdup(button3);
+        } else {
+            confirm_button3 = 0;
+        }
+
+        confirm_action1 = action1.action_id;
+        confirm_action2 = action2.action_id;
+        confirm_action3 = action3.action_id;
+
+        confirm_action1_data = action1.action_data;
+        confirm_action2_data = action2.action_data;
+        confirm_action3_data = action3.action_data;
+
+        confirm_data = _confirm_data;
+
+        do_open = true;
+    }
+
+    void layout() {
+        handle_do_open(&do_open, "Confirm");
+        ImGui_CenterNextWindow();
+        ImGui::SetNextWindowSize(ImVec2(400, .0));
+
+        if (ImGui::BeginPopupModal("Confirm", NULL, MODAL_FLAGS)) {
+            ImGui::TextWrapped("%s", confirm_text);
+
+            ImGui::Dummy(ImVec2(0.0f, 40.0f));
+
+            if (ImGui::Button(confirm_button1)) {
+                P.add_action(confirm_action1, confirm_action1_data);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button(confirm_button2)) {
+                P.add_action(confirm_action2, confirm_action2_data);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (confirm_button3 != 0) {
+                if (ImGui::Button(confirm_button3)) {
+                    P.add_action(confirm_action3, confirm_action3_data);
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+}
+
 static void ui_init() {
     UiLevelManager::init();
     UiLuaEditor::init();
@@ -2652,6 +2769,7 @@ static void ui_layout() {
     UiSave::layout();
     UiNewLevel::layout();
     UiFrequency::layout();
+    UiConfirm::layout();
 }
 
 //*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
@@ -2818,6 +2936,9 @@ void ui::open_dialog(int num, void *data) {
         case DIALOG_SET_FREQ_RANGE:
             UiFrequency::open(true);
             break;
+        case DIALOG_LEVEL_INFO:
+            UiMessage::open((char *)data, MessageType::LevelInfo);
+            break;
         default:
             tms_errorf("dialog %d not implemented yet", num);
     }
@@ -2825,19 +2946,6 @@ void ui::open_dialog(int num, void *data) {
 
 void ui::open_sandbox_tips() {
     UiTips::open();
-}
-
-void ui::open_url(const char *url) {
-    tms_infof("open url: %s", url);
-    #if SDL_VERSION_ATLEAST(2,0,14)
-        SDL_OpenURL(url);
-    #else
-        #error "SDL2 2.0.14+ is required"
-    #endif
-}
-
-void ui::open_help_dialog(const char* title, const char* description) {
-    tms_errorf("ui::open_help_dialog not implemented yet");
 }
 
 void ui::emit_signal(int num, void *data){
@@ -2878,10 +2986,7 @@ void ui::confirm(
     const char *button3, principia_action action3,
     struct confirm_data _confirm_data
 ) {
-    //TODO
-    UiMessage::open(text, MessageType::Message);
-    P.add_action(action1.action_id, 0);
-    tms_errorf("ui::confirm not implemented yet");
+    UiConfirm::open(text, button1, action1, button2, action2, button3, action3, _confirm_data);
 }
 
 void ui::alert(const char* text, uint8_t type) {
@@ -2889,5 +2994,3 @@ void ui::alert(const char* text, uint8_t type) {
 }
 
 //NOLINTEND(misc-definitions-in-headers)
-
-//ї

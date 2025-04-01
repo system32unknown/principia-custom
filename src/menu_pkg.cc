@@ -7,6 +7,7 @@
 #include "ui.hh"
 #include "misc.hh"
 #include "widget_manager.hh"
+#include "settings.hh"
 
 #include <unistd.h>
 
@@ -145,6 +146,10 @@ menu_pkg::menu_pkg()
 bool
 menu_pkg::set_pkg(int type, uint32_t id)
 {
+    if (type == LEVEL_MAIN && id == 7) {
+        settings["has_opened_classic_puzzles"]->v.b = true;
+    }
+
     tms_infof("set pkg");
     if (!(this->pkg.open(type,id))) {
         tms_errorf("could not open package!");
@@ -469,6 +474,7 @@ menu_pkg::handle_input(tms::event *ev, int action)
 
                 if (UNLOCK_ALL_LVLS || this->pkg.unlock_count == 0 || btn < unlock_count || cache[btn].progress->completed) {
                     uint32_t level_id = this->pkg.levels[btn];
+                    G->play_sound(SND_CLICK, 0.0f, 0.0f, 0, .5f);
 
                     bool test_playing = false;
                     G->screen_back = this;
