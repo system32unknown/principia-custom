@@ -25,7 +25,7 @@ megasplitter::solve_electronics()
 
     const float v = this->s_in[0].get_value();
 
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 8; i++) {
         this->s_out[i].write(v);
     }
 
