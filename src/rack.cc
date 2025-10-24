@@ -11,21 +11,21 @@ rack::rack()
     this->rackbody = 0;
     this->joint = 0;
     this->type = ENTITY_RACK;
+    this->set_flag(ENTITY_IS_DEV, true);
     this->menu_scale = 1.f/6.f;
 
     this->limits[0] = -4.f;
     this->limits[1] = 4.f;
 
-    this->set_mesh(mesh_factory::get_mesh(MODEL_BOX0)); /* XXX */
+    this->set_mesh(mesh_factory::get_mesh(MODEL_RACKHOUSE));
     this->set_material(&m_rackhouse);
-    //this->set_uniform("~color", 1.f, 1.f, 1.f, 1.f);
 
     tmat4_load_identity(this->M);
     tmat3_load_identity(this->N);
 
     this->rackent = tms_entity_alloc();
     tms_entity_init(this->rackent);
-    tms_entity_set_mesh(this->rackent, mesh_factory::get_mesh(MODEL_BOX0)); /* XXX */
+    tms_entity_set_mesh(this->rackent, mesh_factory::get_mesh(MODEL_RACK));
     tms_entity_set_material(this->rackent, &m_rack);
     tms_entity_set_uniform4f(this->rackent, "~color", 0.5f, .5f, .5f, 1.f);
     tmat4_load_identity(this->rackent->M);
@@ -122,7 +122,6 @@ rack::create_shape()
         fd.friction = .1f;
         fd.restitution = .1f;
 
-        //(this->rackbody->CreateFixture(&fd))->SetUserData(this);
         (this->rackbody->CreateFixture(&fd))->SetUserData(this);
         this->set_layer(this->prio);
     }

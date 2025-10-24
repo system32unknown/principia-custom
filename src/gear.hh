@@ -35,6 +35,7 @@ class gear : public entity, public b2QueryCallback
     float get_slider_value(int s);
     float get_slider_snap(int s);
     void on_slider_change(int s, float value);
+    const char *get_slider_label(int s){return "Size";};
     float get_ratio();
     void connection_create_joint(connection *c);
     bool connection_destroy_joint(connection *c);

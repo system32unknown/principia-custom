@@ -331,7 +331,6 @@ void sticky::update(void) {
         this->M[12] = t.p.x;
         this->M[13] = t.p.y;
         this->M[14] = LAYER_DEPTH / -2.1f;
-        //this->M[14] = this->get_layer()*LAYER_DEPTH - LAYER_DEPTH/2.1f;
 
         tmat3_copy_mat4_sub3x3(this->N, this->M);
     } else {
