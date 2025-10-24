@@ -2,6 +2,7 @@
 #include "model.hh"
 #include "material.hh"
 #include "ui.hh"
+#include "settings.hh"
 
 #define RSIZE .08f
 #define SIZE (RSIZE+.02f)
