@@ -324,7 +324,7 @@ emitter::update_effects()
 
     tms_entity_set_uniform4f(this->field, "~color", 0.8f, 1.f, 0.8f, 0.1f+this->field_life*this->field_life);
 
-    this->field_life -= _tms.dt * 4.f;
+    this->field_life -= _tms.dt*4.f;
     if (this->field_life < 0.f) this->field_life = 0.f;
 }
 
@@ -364,7 +364,9 @@ emitter::step()
     }
 
     switch (this->state) {
-        case 0: break;
+        case 0:
+            /* waiting for signal */
+            break;
 
         case 1:
             /* check cooldown timer */
@@ -526,7 +528,7 @@ emitter::solve_electronics()
 }
 
 bool
-emitter::can_handle(entity *e) const { // i decided to enable emit all objects cuz why not lol
+emitter::can_handle(entity *e) const {
     return true;
 }
 

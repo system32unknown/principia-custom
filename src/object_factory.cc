@@ -52,7 +52,6 @@
 #include "gameman.hh"
 #include "gear.hh"
 #include "gearbox.hh"
-#include "rack.hh"
 #include "generator.hh"
 #include "goal.hh"
 #include "gravityman.hh"
@@ -191,7 +190,6 @@ static entity* new_cup(void){return new cup();};
 static entity* new_cylinder(void){return new cylinder(0);};
 static entity* new_goal(void){return new goal();};
 static entity* new_command(void){return new command();};
-static entity* new_rack(void){return new rack();};
 static entity* new_smallpanel(void){return new panel(PANEL_SMALL);};
 static entity* new_xsmallpanel(void){return new panel(PANEL_XSMALL);};
 static entity* new_mpanel(void){return new panel(PANEL_MEDIUM);};
@@ -622,7 +620,6 @@ static entity* (*c_creator[])(void) = {
     &new_megasplitter,
     &new_ladder_step,
     &new_mini_spikebot, /* 225 */
-    &new_rack,
 };
 
 static int num_creators = sizeof(c_creator)/sizeof(void*);
@@ -669,6 +666,7 @@ static int c0_ids[] = {
     O_PLASTIC_BOX,
     O_PLASTIC_POLYGON,
     //O_SEPARATOR,
+    //O_ROOM,
     O_PIXEL,
     O_TPIXEL,
     O_DUMMY,
@@ -708,9 +706,7 @@ static int c1_ids[] = {
     O_MAGNET,
     O_ELECTROMAGNET,
     // put here because of lack of space in Basic categ
-    O_SEPARATOR,
-    O_RACK,
-    O_ROOM
+    O_SEPARATOR
 };
 
 /* Electronics */

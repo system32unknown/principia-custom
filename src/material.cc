@@ -394,6 +394,65 @@ GLSL(
     }
 )
 };
+/*
+static const char *src_wheel[] = {
+GLSL(
+    attribute vec3 position;
+    attribute vec3 normal;
+    attribute vec2 texcoord;
+
+    varying lowp vec2 FS_diffuse;
+    varying lowp vec2 FS_texcoord;
+    VARYINGS
+
+    uniform mat4 MVP;
+    uniform mat4 MV;
+    uniform mat3 N;
+    UNIFORMS
+
+    varying lowp vec3 FS_normal;
+    varying lowp vec3 FS_eye;
+
+    void main(void)
+    {
+        vec3 nor = N*normal;
+        vec4 pos = MVP*vec4(position, 1.);
+
+        SET_SHADOW
+        SET_AMBIENT_OCCL
+
+        FS_texcoord = texcoord;
+        FS_diffuse = vec2(clamp(dot(LIGHT, nor)*_DIFFUSE, 0., 1.), .05*nor.z);
+
+        FS_normal = nor;
+        FS_eye = (MV*vec4(position, 1.)).xyz;
+
+        gl_Position = pos;
+    }
+),
+GLSL(
+    uniform sampler2D tex_0;
+    UNIFORMS
+
+    varying lowp vec2 FS_diffuse;
+    varying lowp vec2 FS_texcoord;
+    varying lowp vec3 FS_normal;
+    varying lowp vec3 FS_eye;
+    VARYINGS
+
+    void main(void)
+    {
+        vec4 color = texture2D(tex_0, FS_texcoord);
+        vec3 n = normalize(FS_normal);
+        vec3 e = normalize(FS_eye);
+        vec3 R = normalize(reflect(LIGHT, n));
+        float specular = pow(clamp(dot(R, e), .0, 1.), 6.);
+        gl_FragColor = SHADOW * (color + color*specular) * FS_diffuse.x + color.a * color * (_AMBIENT + FS_diffuse.y)*AMBIENT_OCCL
+                        ;
+    }
+)
+};
+*/
 
 void
 material_factory::upload_all()

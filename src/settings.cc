@@ -100,7 +100,6 @@ _settings::init()
     this->add("display_object_id",          S_BOOL, false);
     this->add("display_grapher_value",      S_BOOL, false);
     this->add("display_wireless_frequency", S_BOOL, true);
-    this->add("disable_overloader", S_BOOL, true);
 
     this->add("emulate_touch",      S_BOOL, false);
 

@@ -29,8 +29,6 @@
 #define SLOTS_PER_TEX_LINE (TEX_WIDTH / WIDTH)
 //
 
-#define NUM_SIZES 4
-
 static bool slots[NUM_SLOTS];
 static bool initialized = false;
 static TTF_Font *ttf_font[NUM_SIZES];
@@ -332,7 +330,8 @@ void sticky::update(void) {
         this->M[5] = t.q.c;
         this->M[12] = t.p.x;
         this->M[13] = t.p.y;
-        this->M[14] = this->get_layer()*LAYER_DEPTH - LAYER_DEPTH/2.1f;
+        this->M[14] = LAYER_DEPTH / -2.1f;
+        //this->M[14] = this->get_layer()*LAYER_DEPTH - LAYER_DEPTH/2.1f;
 
         tmat3_copy_mat4_sub3x3(this->N, this->M);
     } else {

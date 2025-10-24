@@ -21,4 +21,5 @@ class halfunpack : public i1o2gate
   public:
     edevice* solve_electronics();
     const char *get_name(void){return "Half-unpack";};
+
 };
