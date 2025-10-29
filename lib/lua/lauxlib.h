@@ -112,6 +112,10 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 
 #define luaL_argcheck(L, cond,numarg,extramsg)	\
 		((void)((cond) || luaL_argerror(L, (numarg), (extramsg))))
+
+#define luaL_argexpected(L,cond,arg,tname)	\
+	((void)(luai_likely(cond) || luaL_typeerror(L, (arg), (tname))))
+
 #define luaL_checkstring(L,n)	(luaL_checklstring(L, (n), NULL))
 #define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
 #define luaL_checkint(L,n)	((int)luaL_checkinteger(L, (n)))
