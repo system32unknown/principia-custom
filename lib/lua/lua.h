@@ -56,6 +56,7 @@ typedef struct lua_State lua_State;
 typedef int (*lua_CFunction) (lua_State *L);
 
 
+
 /*
 ** functions that read/write blocks when loading/dumping Lua chunks
 */
@@ -133,7 +134,7 @@ LUA_API void       (lua_close) (lua_State *L);
 LUA_API lua_State *(lua_newthread) (lua_State *L);
 
 LUA_API lua_CFunction (lua_atpanic) (lua_State *L, lua_CFunction panicf);
-
+LUA_API int        (lua_closethread) (lua_State *L, lua_State *from);
 
 LUA_API const lua_Number *(lua_version) (lua_State *L);
 
@@ -273,6 +274,7 @@ LUA_API int  (lua_yieldk) (lua_State *L, int nresults, int ctx,
 #define lua_yield(L,n)		lua_yieldk(L, (n), 0, NULL)
 LUA_API int  (lua_resume) (lua_State *L, lua_State *from, int narg);
 LUA_API int  (lua_status) (lua_State *L);
+LUA_API int (lua_isyieldable) (lua_State *L);
 
 /*
 ** garbage-collection function and options

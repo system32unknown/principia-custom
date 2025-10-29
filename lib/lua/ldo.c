@@ -482,11 +482,13 @@ static int recover (lua_State *L, int status) {
 ** coroutine itself. (Such errors should not be handled by any coroutine
 ** error handler and should not kill the coroutine.)
 */
-static l_noret resume_error (lua_State *L, const char *msg, StkId firstArg) {
-  L->top = firstArg;  /* remove args from the stack */
-  setsvalue2s(L, L->top, luaS_new(L, msg));  /* push error message */
+static int resume_error (lua_State *L, const char *msg, int narg) {
+  api_checkpop(L, narg);
+  L->top.p -= narg;  /* remove args from the stack */
+  setsvalue2s(L, L->top.p, luaS_new(L, msg));  /* push error message */
   api_incr_top(L);
-  luaD_throw(L, -1);  /* jump back to 'lua_resume' */
+  lua_unlock(L);
+  return LUA_ERRRUN;
 }
 
 
@@ -532,37 +534,42 @@ static void resume (lua_State *L, void *ud) {
 }
 
 
-LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
-  int status;
-  int oldnny = L->nny;  /* save 'nny' */
+LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs, int *nresults) {
+  TStatus status;
   lua_lock(L);
-  luai_userstateresume(L, nargs);
-  L->nCcalls = (from) ? from->nCcalls + 1 : 1;
-  L->nny = 0;  /* allow yields */
-  api_checknelems(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
-  status = luaD_rawrunprotected(L, resume, L->top - nargs);
-  if (status == -1)  /* error calling 'lua_resume'? */
-    status = LUA_ERRRUN;
-  else {  /* yield or regular error */
-    while (status != LUA_OK && status != LUA_YIELD) {  /* error? */
-      if (recover(L, status))  /* recover point? */
-        status = luaD_rawrunprotected(L, unroll, NULL);  /* run continuation */
-      else {  /* unrecoverable error */
-        L->status = cast_byte(status);  /* mark thread as `dead' */
-        seterrorobj(L, status, L->top);
-        L->ci->top = L->top;
-        break;
-      }
-    }
-    lua_assert(status == L->status);
+  if (L->status == LUA_OK) {  /* may be starting a coroutine */
+    if (L->ci != &L->base_ci)  /* not in base level? */
+      return resume_error(L, "cannot resume non-suspended coroutine", nargs);
+    else if (L->top.p - (L->ci->func.p + 1) == nargs)  /* no function? */
+      return resume_error(L, "cannot resume dead coroutine", nargs);
   }
-  L->nny = oldnny;  /* restore 'nny' */
-  L->nCcalls--;
-  lua_assert(L->nCcalls == ((from) ? from->nCcalls : 0));
+  else if (L->status != LUA_YIELD)  /* ended with errors? */
+    return resume_error(L, "cannot resume dead coroutine", nargs);
+  L->nCcalls = (from) ? getCcalls(from) : 0;
+  if (getCcalls(L) >= LUAI_MAXCCALLS)
+    return resume_error(L, "C stack overflow", nargs);
+  L->nCcalls++;
+  luai_userstateresume(L, nargs);
+  api_checkpop(L, (L->status == LUA_OK) ? nargs + 1 : nargs);
+  status = luaD_rawrunprotected(L, resume, &nargs);
+   /* continue running after recoverable errors */
+  status = precover(L, status);
+  if (l_likely(!errorstatus(status)))
+    lua_assert(status == L->status);  /* normal end or yield */
+  else {  /* unrecoverable error */
+    L->status = status;  /* mark thread as 'dead' */
+    luaD_seterrorobj(L, status, L->top.p);  /* push error message */
+    L->ci->top.p = L->top.p;
+  }
+  *nresults = (status == LUA_YIELD) ? L->ci->u2.nyield
+                                    : cast_int(L->top.p - (L->ci->func.p + 1));
   lua_unlock(L);
-  return status;
+  return APIstatus(status);
 }
 
+LUA_API int lua_isyieldable (lua_State *L) {
+  return yieldable(L);
+}
 
 LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k) {
   CallInfo *ci = L->ci;

@@ -7,8 +7,6 @@
 #define ldblib_c
 #define LUA_LIB
 
-#include "lprefix.h"
-
 
 #include <stdio.h>
 #include <stdlib.h>

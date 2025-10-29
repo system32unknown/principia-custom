@@ -380,6 +380,23 @@
 */
 #define l_mathop(x)		(x)
 
+/*
+** macros to improve jump prediction, used mostly for error handling
+** and debug facilities. (Some macros in the Lua API use these macros.
+** Define LUA_NOBUILTIN if you do not want '__builtin_expect' in your
+** code.)
+*/
+#if !defined(luai_likely)
+
+#if defined(__GNUC__) && !defined(LUA_NOBUILTIN)
+#define luai_likely(x)		(__builtin_expect(((x) != 0), 1))
+#define luai_unlikely(x)	(__builtin_expect(((x) != 0), 0))
+#else
+#define luai_likely(x)		(x)
+#define luai_unlikely(x)	(x)
+#endif
+
+#endif
 
 /*
 @@ lua_str2number converts a decimal numeric string to a number.
