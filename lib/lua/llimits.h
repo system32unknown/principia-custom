@@ -1,6 +1,6 @@
 /*
-** $Id: llimits.h $
-** Limits, basic types, and some other 'installation-dependent' definitions
+** $Id: llimits.h,v 1.103.1.1 2013/04/12 18:48:47 roberto Exp $
+** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
 
@@ -15,343 +15,295 @@
 #include "lua.h"
 
 
-#define l_numbits(t)	cast_int(sizeof(t) * CHAR_BIT)
+typedef unsigned LUA_INT32 lu_int32;
 
-/*
-** 'l_mem' is a signed integer big enough to count the total memory
-** used by Lua.  (It is signed due to the use of debt in several
-** computations.) 'lu_mem' is a corresponding unsigned type.  Usually,
-** 'ptrdiff_t' should work, but we use 'long' for 16-bit machines.
-*/
-#if defined(LUAI_MEM)		/* { external definitions? */
-typedef LUAI_MEM l_mem;
 typedef LUAI_UMEM lu_mem;
-#elif LUAI_IS32INT	/* }{ */
-typedef ptrdiff_t l_mem;
-typedef size_t lu_mem;
-#else  /* 16-bit ints */	/* }{ */
-typedef long l_mem;
-typedef unsigned long lu_mem;
-#endif				/* } */
 
-#define MAX_LMEM  \
-	cast(l_mem, (cast(lu_mem, 1) << (l_numbits(l_mem) - 1)) - 1)
+typedef LUAI_MEM l_mem;
 
 
-/* chars used as small naturals (so that 'char' is reserved for characters) */
+
+/* chars used as small naturals (so that `char' is reserved for characters) */
 typedef unsigned char lu_byte;
-typedef signed char ls_byte;
 
 
-/* Type for thread status/error codes */
-typedef lu_byte TStatus;
+#define MAX_SIZET	((size_t)(~(size_t)0)-2)
 
-/* The C API still uses 'int' for status/error codes */
-#define APIstatus(st)	cast_int(st)
+#define MAX_LUMEM	((lu_mem)(~(lu_mem)0)-2)
 
-/* maximum value for size_t */
-#define MAX_SIZET	((size_t)(~(size_t)0))
+#define MAX_LMEM	((l_mem) ((MAX_LUMEM >> 1) - 2))
 
-/*
-** Maximum size for strings and userdata visible for Lua; should be
-** representable as a lua_Integer and as a size_t.
-*/
-#define MAX_SIZE	(sizeof(size_t) < sizeof(lua_Integer) ? MAX_SIZET \
-			  : cast_sizet(LUA_MAXINTEGER))
+
+#define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
 
 /*
-** test whether an unsigned value is a power of 2 (or zero)
+** conversion of pointer to integer
+** this is for hashing only; there is no problem if the integer
+** cannot hold the whole pointer value
 */
-#define ispow2(x)	(((x) & ((x) - 1)) == 0)
+#define IntPoint(p)  ((unsigned int)(lu_mem)(p))
 
 
-/* number of chars of a literal string without the ending \0 */
-#define LL(x)   (sizeof(x)/sizeof(char) - 1)
 
-
-/*
-** conversion of pointer to unsigned integer: this is for hashing only;
-** there is no problem if the integer cannot hold the whole pointer
-** value. (In strict ISO C this may cause undefined behavior, but no
-** actual machine seems to bother.)
-*/
-#if !defined(LUA_USE_C89) && defined(__STDC_VERSION__) && \
-    __STDC_VERSION__ >= 199901L
-#include <stdint.h>
-#if defined(UINTPTR_MAX)  /* even in C99 this type is optional */
-#define L_P2I	uintptr_t
-#else  /* no 'intptr'? */
-#define L_P2I	uintmax_t  /* use the largest available integer */
-#endif
-#else  /* C89 option */
-#define L_P2I	size_t
+/* type to ensure maximum alignment */
+#if !defined(LUAI_USER_ALIGNMENT_T)
+#define LUAI_USER_ALIGNMENT_T	union { double u; void *s; long l; }
 #endif
 
-#define point2uint(p)	cast_uint((L_P2I)(p) & UINT_MAX)
+typedef LUAI_USER_ALIGNMENT_T L_Umaxalign;
 
 
-
-/* types of 'usual argument conversions' for lua_Number and lua_Integer */
+/* result of a `usual argument conversion' over lua_Number */
 typedef LUAI_UACNUMBER l_uacNumber;
-typedef LUAI_UACINT l_uacInt;
 
 
-/*
-** Internal assertions for in-house debugging
-*/
-#if defined LUAI_ASSERT
-#undef NDEBUG
-#include <assert.h>
-#define lua_assert(c)           assert(c)
-#define assert_code(c)		c
-#endif
-
+/* internal assertions for in-house debugging */
 #if defined(lua_assert)
-#else
-#define lua_assert(c)		((void)0)
-#define assert_code(c)		((void)0)
-#endif
-
 #define check_exp(c,e)		(lua_assert(c), (e))
 /* to avoid problems with conditions too long */
-#define lua_longassert(c)	assert_code((c) ? (void)0 : lua_assert(0))
+#define lua_longassert(c)	{ if (!(c)) lua_assert(0); }
+#else
+#define lua_assert(c)		((void)0)
+#define check_exp(c,e)		(e)
+#define lua_longassert(c)	((void)0)
+#endif
+
+/*
+** assertion for checking API calls
+*/
+#if !defined(luai_apicheck)
+
+#if defined(LUA_USE_APICHECK)
+#include <assert.h>
+#define luai_apicheck(L,e)	assert(e)
+#else
+#define luai_apicheck(L,e)	lua_assert(e)
+#endif
+
+#endif
+
+#define api_check(l,e,msg)	luai_apicheck(l,(e) && msg)
 
 
-/* macro to avoid warnings about unused variables */
 #if !defined(UNUSED)
-#define UNUSED(x)	((void)(x))
+#define UNUSED(x)	((void)(x))	/* to avoid warnings */
 #endif
 
 
-/* type casts (a macro highlights casts in the code) */
 #define cast(t, exp)	((t)(exp))
 
-#define cast_void(i)	cast(void, (i))
-#define cast_voidp(i)	cast(void *, (i))
+#define cast_byte(i)	cast(lu_byte, (i))
 #define cast_num(i)	cast(lua_Number, (i))
 #define cast_int(i)	cast(int, (i))
-#define cast_short(i)	cast(short, (i))
-#define cast_uint(i)	cast(unsigned int, (i))
-#define cast_byte(i)	cast(lu_byte, (i))
 #define cast_uchar(i)	cast(unsigned char, (i))
-#define cast_char(i)	cast(char, (i))
-#define cast_charp(i)	cast(char *, (i))
-#define cast_sizet(i)	cast(size_t, (i))
-#define cast_Integer(i)	cast(lua_Integer, (i))
-#define cast_Inst(i)	cast(Instruction, (i))
-
-
-/* cast a signed lua_Integer to lua_Unsigned */
-#if !defined(l_castS2U)
-#define l_castS2U(i)	((lua_Unsigned)(i))
-#endif
-
-/*
-** cast a lua_Unsigned to a signed lua_Integer; this cast is
-** not strict ISO C, but two-complement architectures should
-** work fine.
-*/
-#if !defined(l_castU2S)
-#define l_castU2S(i)	((lua_Integer)(i))
-#endif
-
-/*
-** cast a size_t to lua_Integer: These casts are always valid for
-** sizes of Lua objects (see MAX_SIZE)
-*/
-#define cast_st2S(sz)	((lua_Integer)(sz))
-
-/* Cast a ptrdiff_t to size_t, when it is known that the minuend
-** comes from the subtrahend (the base)
-*/
-#define ct_diff2sz(df)	((size_t)(df))
-
-/* ptrdiff_t to lua_Integer */
-#define ct_diff2S(df)	cast_st2S(ct_diff2sz(df))
-
-/*
-** Special type equivalent to '(void*)' for functions (to suppress some
-** warnings when converting function pointers)
-*/
-typedef void (*voidf)(void);
-
-/*
-** Macro to convert pointer-to-void* to pointer-to-function. This cast
-** is undefined according to ISO C, but POSIX assumes that it works.
-** (The '__extension__' in gnu compilers is only to avoid warnings.)
-*/
-#if defined(__GNUC__)
-#define cast_func(p) (__extension__ (voidf)(p))
-#else
-#define cast_func(p) ((voidf)(p))
-#endif
-
 
 
 /*
 ** non-return type
 */
-#if !defined(l_noret)
-
 #if defined(__GNUC__)
 #define l_noret		void __attribute__((noreturn))
-#elif defined(_MSC_VER) && _MSC_VER >= 1200
+#elif defined(_MSC_VER)
 #define l_noret		void __declspec(noreturn)
 #else
 #define l_noret		void
 #endif
 
+
+
+/*
+** maximum depth for nested C calls and syntactical nested non-terminals
+** in a program. (Value must fit in an unsigned short int.)
+*/
+#if !defined(LUAI_MAXCCALLS)
+#define LUAI_MAXCCALLS		200
+#endif
+
+/*
+** maximum number of upvalues in a closure (both C and Lua). (Value
+** must fit in an unsigned char.)
+*/
+#define MAXUPVAL	UCHAR_MAX
+
+
+/*
+** type for virtual-machine instructions
+** must be an unsigned with (at least) 4 bytes (see details in lopcodes.h)
+*/
+typedef lu_int32 Instruction;
+
+
+
+/* maximum stack for a Lua function */
+#define MAXSTACK	250
+
+
+
+/* minimum size for the string table (must be power of 2) */
+#if !defined(MINSTRTABSIZE)
+#define MINSTRTABSIZE	32
+#endif
+
+
+/* minimum size for string buffer */
+#if !defined(LUA_MINBUFFER)
+#define LUA_MINBUFFER	32
+#endif
+
+
+#if !defined(lua_lock)
+#define lua_lock(L)     ((void) 0)
+#define lua_unlock(L)   ((void) 0)
+#endif
+
+#if !defined(luai_threadyield)
+#define luai_threadyield(L)     {lua_unlock(L); lua_lock(L);}
 #endif
 
 
 /*
-** Inline functions
+** these macros allow user-specific actions on threads when you defined
+** LUAI_EXTRASPACE and need to do something extra when a thread is
+** created/deleted/resumed/yielded.
 */
-#if !defined(LUA_USE_C89)
-#define l_inline	inline
-#elif defined(__GNUC__)
-#define l_inline	__inline__
+#if !defined(luai_userstateopen)
+#define luai_userstateopen(L)		((void)L)
+#endif
+
+#if !defined(luai_userstateclose)
+#define luai_userstateclose(L)		((void)L)
+#endif
+
+#if !defined(luai_userstatethread)
+#define luai_userstatethread(L,L1)	((void)L)
+#endif
+
+#if !defined(luai_userstatefree)
+#define luai_userstatefree(L,L1)	((void)L)
+#endif
+
+#if !defined(luai_userstateresume)
+#define luai_userstateresume(L,n)       ((void)L)
+#endif
+
+#if !defined(luai_userstateyield)
+#define luai_userstateyield(L,n)        ((void)L)
+#endif
+
+/*
+** lua_number2int is a macro to convert lua_Number to int.
+** lua_number2integer is a macro to convert lua_Number to lua_Integer.
+** lua_number2unsigned is a macro to convert a lua_Number to a lua_Unsigned.
+** lua_unsigned2number is a macro to convert a lua_Unsigned to a lua_Number.
+** luai_hashnum is a macro to hash a lua_Number value into an integer.
+** The hash must be deterministic and give reasonable values for
+** both small and large values (outside the range of integers).
+*/
+
+#if defined(MS_ASMTRICK) || defined(LUA_MSASMTRICK)	/* { */
+/* trick with Microsoft assembler for X86 */
+
+#define lua_number2int(i,n)  __asm {__asm fld n   __asm fistp i}
+#define lua_number2integer(i,n)		lua_number2int(i, n)
+#define lua_number2unsigned(i,n)  \
+  {__int64 l; __asm {__asm fld n   __asm fistp l} i = (unsigned int)l;}
+
+
+#elif defined(LUA_IEEE754TRICK)		/* }{ */
+/* the next trick should work on any machine using IEEE754 with
+   a 32-bit int type */
+
+union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
+
+#if !defined(LUA_IEEEENDIAN)	/* { */
+#define LUAI_EXTRAIEEE	\
+  static const union luai_Cast ieeeendian = {-(33.0 + 6755399441055744.0)};
+#define LUA_IEEEENDIANLOC	(ieeeendian.l_p[1] == 33)
 #else
-#define l_inline	/* empty */
+#define LUA_IEEEENDIANLOC	LUA_IEEEENDIAN
+#define LUAI_EXTRAIEEE		/* empty */
+#endif				/* } */
+
+#define lua_number2int32(i,n,t) \
+  { LUAI_EXTRAIEEE \
+    volatile union luai_Cast u; u.l_d = (n) + 6755399441055744.0; \
+    (i) = (t)u.l_p[LUA_IEEEENDIANLOC]; }
+
+#define luai_hashnum(i,n)  \
+  { volatile union luai_Cast u; u.l_d = (n) + 1.0;  /* avoid -0 */ \
+    (i) = u.l_p[0]; (i) += u.l_p[1]; }  /* add double bits for his hash */
+
+#define lua_number2int(i,n)		lua_number2int32(i, n, int)
+#define lua_number2unsigned(i,n)	lua_number2int32(i, n, lua_Unsigned)
+
+/* the trick can be expanded to lua_Integer when it is a 32-bit value */
+#if defined(LUA_IEEELL)
+#define lua_number2integer(i,n)		lua_number2int32(i, n, lua_Integer)
 #endif
 
-#define l_sinline	static l_inline
+#endif				/* } */
 
 
-/*
-** An unsigned with (at least) 4 bytes
-*/
-#if LUAI_IS32INT
-typedef unsigned int l_uint32;
+/* the following definitions always work, but may be slow */
+
+#if !defined(lua_number2int)
+#define lua_number2int(i,n)	((i)=(int)(n))
+#endif
+
+#if !defined(lua_number2integer)
+#define lua_number2integer(i,n)	((i)=(lua_Integer)(n))
+#endif
+
+#if !defined(lua_number2unsigned)	/* { */
+/* the following definition assures proper modulo behavior */
+#if defined(LUA_NUMBER_DOUBLE) || defined(LUA_NUMBER_FLOAT)
+#include <math.h>
+#define SUPUNSIGNED	((lua_Number)(~(lua_Unsigned)0) + 1)
+#define lua_number2unsigned(i,n)  \
+	((i)=(lua_Unsigned)((n) - floor((n)/SUPUNSIGNED)*SUPUNSIGNED))
 #else
-typedef unsigned long l_uint32;
+#define lua_number2unsigned(i,n)	((i)=(lua_Unsigned)(n))
+#endif
+#endif				/* } */
+
+
+#if !defined(lua_unsigned2number)
+/* on several machines, coercion from unsigned to double is slow,
+   so it may be worth to avoid */
+#define lua_unsigned2number(u)  \
+    (((u) <= (lua_Unsigned)INT_MAX) ? (lua_Number)(int)(u) : (lua_Number)(u))
 #endif
 
 
-/*
-** The luai_num* macros define the primitive operations over numbers.
-*/
 
-/* floor division (defined as 'floor(a/b)') */
-#if !defined(luai_numidiv)
-#define luai_numidiv(L,a,b)     ((void)L, l_floor(luai_numdiv(L,a,b)))
-#endif
+#if defined(ltable_c) && !defined(luai_hashnum)
 
-/* float division */
-#if !defined(luai_numdiv)
-#define luai_numdiv(L,a,b)      ((a)/(b))
-#endif
+#include <float.h>
+#include <math.h>
 
-/*
-** modulo: defined as 'a - floor(a/b)*b'; the direct computation
-** using this definition has several problems with rounding errors,
-** so it is better to use 'fmod'. 'fmod' gives the result of
-** 'a - trunc(a/b)*b', and therefore must be corrected when
-** 'trunc(a/b) ~= floor(a/b)'. That happens when the division has a
-** non-integer negative result: non-integer result is equivalent to
-** a non-zero remainder 'm'; negative result is equivalent to 'a' and
-** 'b' with different signs, or 'm' and 'b' with different signs
-** (as the result 'm' of 'fmod' has the same sign of 'a').
-*/
-#if !defined(luai_nummod)
-#define luai_nummod(L,a,b,m)  \
-  { (void)L; (m) = l_mathop(fmod)(a,b); \
-    if (((m) > 0) ? (b) < 0 : ((m) < 0 && (b) > 0)) (m) += (b); }
-#endif
+#define luai_hashnum(i,n) { int e;  \
+  n = l_mathop(frexp)(n, &e) * (lua_Number)(INT_MAX - DBL_MAX_EXP);  \
+  lua_number2int(i, n); i += e; }
 
-/* exponentiation */
-#if !defined(luai_numpow)
-#define luai_numpow(L,a,b)  \
-  ((void)L, (b == 2) ? (a)*(a) : l_mathop(pow)(a,b))
-#endif
-
-/* the others are quite standard operations */
-#if !defined(luai_numadd)
-#define luai_numadd(L,a,b)      ((a)+(b))
-#define luai_numsub(L,a,b)      ((a)-(b))
-#define luai_nummul(L,a,b)      ((a)*(b))
-#define luai_numunm(L,a)        (-(a))
-#define luai_numeq(a,b)         ((a)==(b))
-#define luai_numlt(a,b)         ((a)<(b))
-#define luai_numle(a,b)         ((a)<=(b))
-#define luai_numgt(a,b)         ((a)>(b))
-#define luai_numge(a,b)         ((a)>=(b))
-#define luai_numisnan(a)        (!luai_numeq((a), (a)))
 #endif
 
 
 
 /*
-** lua_numbertointeger converts a float number with an integral value
-** to an integer, or returns 0 if the float is not within the range of
-** a lua_Integer.  (The range comparisons are tricky because of
-** rounding. The tests here assume a two-complement representation,
-** where MININTEGER always has an exact representation as a float;
-** MAXINTEGER may not have one, and therefore its conversion to float
-** may have an ill-defined value.)
+** macro to control inclusion of some hard tests on stack reallocation
 */
-#define lua_numbertointeger(n,p) \
-  ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
-   (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
-      (*(p) = (LUA_INTEGER)(n), 1))
-
-
-
-/*
-** LUAI_FUNC is a mark for all extern functions that are not to be
-** exported to outside modules.
-** LUAI_DDEF and LUAI_DDEC are marks for all extern (const) variables,
-** none of which to be exported to outside modules (LUAI_DDEF for
-** definitions and LUAI_DDEC for declarations).
-** Elf and MACH/gcc (versions 3.2 and later) mark them as "hidden" to
-** optimize access when Lua is compiled as a shared library. Not all elf
-** targets support this attribute. Unfortunately, gcc does not offer
-** a way to check whether the target offers that support, and those
-** without support give a warning about it. To avoid these warnings,
-** change to the default definition.
-*/
-#if !defined(LUAI_FUNC)
-
-#if defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302) && \
-    (defined(__ELF__) || defined(__MACH__))
-#define LUAI_FUNC	__attribute__((visibility("internal"))) extern
+#if !defined(HARDSTACKTESTS)
+#define condmovestack(L)	((void)0)
 #else
-#define LUAI_FUNC	extern
+/* realloc stack keeping its size */
+#define condmovestack(L)	luaD_reallocstack((L), (L)->stacksize)
 #endif
 
-#define LUAI_DDEC(dec)	LUAI_FUNC dec
-#define LUAI_DDEF	/* empty */
-
+#if !defined(HARDMEMTESTS)
+#define condchangemem(L)	condmovestack(L)
+#else
+#define condchangemem(L)  \
+	((void)(!(G(L)->gcrunning) || (luaC_fullgc(L, 0), 1)))
 #endif
 
-
-/* Give these macros simpler names for internal use */
-#define l_likely(x)	luai_likely(x)
-#define l_unlikely(x)	luai_unlikely(x)
-
-/*
-** {==================================================================
-** "Abstraction Layer" for basic report of messages and errors
-** ===================================================================
-*/
-
-/* print a string */
-#if !defined(lua_writestring)
-#define lua_writestring(s,l)   fwrite((s), sizeof(char), (l), stdout)
 #endif
-
-/* print a newline and flush the output */
-#if !defined(lua_writeline)
-#define lua_writeline()        (lua_writestring("\n", 1), fflush(stdout))
-#endif
-
-/* print an error message */
-#if !defined(lua_writestringerror)
-#define lua_writestringerror(s,p) \
-        (fprintf(stderr, (s), (p)), fflush(stderr))
-#endif
-
-/* }================================================================== */
-
-#endif
-
