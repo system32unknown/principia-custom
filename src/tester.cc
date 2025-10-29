@@ -2,6 +2,7 @@
 #include "material.hh"
 #include "game.hh"
 #include "model.hh"
+#include "settings.hh"
 
 tester::tester()
 {
