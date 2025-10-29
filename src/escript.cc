@@ -3259,6 +3259,9 @@ escript::init()
     luaL_requiref(this->L, "io", luaopen_io, 1);
     lua_pop(this->L, 1);
 
+    luaL_requiref(this->L, "utf8", luaopen_utf8, 1);
+    lua_pop(this->L, 1);
+
     register_world(this->L);
 
     register_game(this->L);

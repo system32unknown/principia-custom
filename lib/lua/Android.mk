@@ -9,6 +9,7 @@ LOCAL_SRC_FILES += \
   lua/lctype.c \
   lua/ldblib.c \
   lua/ldebug.c \
+  lua/lutf8lib.c \
   lua/ldo.c \
   lua/ldump.c \
   lua/lfunc.c \
