@@ -1399,6 +1399,17 @@ extern "C" {
 
     /* ENTITY */
 
+#if 0
+    static int create_entity(lua_State *L)
+    {
+        double val = lua_tonumber(L, lua_upvalueindex(1));
+        lua_pushnumber(L, ++val);  /* new value */
+        lua_pushvalue(L, -1);  /* duplicate it */
+        lua_replace(L, lua_upvalueindex(1));  /* update upvalue */
+        return 1;
+    }
+#endif
+
     static int l_entity_persist(lua_State *L)
     {
         entity *e = *(static_cast<entity**>(luaL_checkudata(L, 1, "EntityMT"))); // We turn that address into an entity pointer
@@ -3248,9 +3259,6 @@ escript::init()
     lua_pop(this->L, 1);
 
     luaL_requiref(this->L, "bit32", luaopen_bit32, 1);
-    lua_pop(this->L, 1);
-
-    luaL_requiref(this->L, "debug", luaopen_debug, 1);
     lua_pop(this->L, 1);
 
     luaL_requiref(this->L, "os", luaopen_os, 1);
