@@ -41,11 +41,6 @@
 
 #define MEMERRMSG	"not enough memory"
 
-/* true if this thread does not have non-yieldable calls in the stack */
-#define yieldable(L)		(((L)->nCcalls & 0xffff0000) == 0)
-
-/* real number of C calls */
-#define getCcalls(L)	((L)->nCcalls & 0xffff)
 
 /*
 ** a macro to help the creation of a unique random seed when a state is
@@ -267,16 +262,6 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
   luaM_free(L, l);
 }
 
-LUA_API int lua_closethread (lua_State *L, lua_State *from) {
-  TStatus status;
-  lua_lock(L);
-  L->nCcalls = (from) ? getCcalls(from) : 0;
-  status = luaE_resetthread(L, L->status);
-  if (L == from)  /* closing itself? */
-    luaD_throwbaselevel(L, status);
-  lua_unlock(L);
-  return APIstatus(status);
-}
 
 LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   int i;
@@ -334,5 +319,3 @@ LUA_API void lua_close (lua_State *L) {
   lua_lock(L);
   close_state(L);
 }
-
-

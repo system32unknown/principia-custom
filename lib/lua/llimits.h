@@ -21,16 +21,10 @@ typedef LUAI_UMEM lu_mem;
 
 typedef LUAI_MEM l_mem;
 
-/* chars used as small naturals (so that 'char' is reserved for characters) */
+
+
+/* chars used as small naturals (so that `char' is reserved for characters) */
 typedef unsigned char lu_byte;
-typedef signed char ls_byte;
-
-
-/* Type for thread status/error codes */
-typedef lu_byte TStatus;
-
-/* The C API still uses 'int' for status/error codes */
-#define APIstatus(st)	cast_int(st)
 
 
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
@@ -249,9 +243,6 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 
 #endif				/* } */
 
-/* Give these macros simpler names for internal use */
-#define l_likely(x)	luai_likely(x)
-#define l_unlikely(x)	luai_unlikely(x)
 
 /* the following definitions always work, but may be slow */
 
