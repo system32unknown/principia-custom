@@ -59,7 +59,6 @@ const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
   else return tm;
 }
 
-
 const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
   Table *mt;
   switch (ttypenv(o)) {
@@ -75,3 +74,17 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
   return (mt ? luaH_getstr(mt, G(L)->tmname[event]) : luaO_nilobject);
 }
 
+/*
+** Return the name of the type of an object. For tables and userdata
+** with metatable, use their '__name' metafield, if present.
+*/
+const char *luaT_objtypename (lua_State *L, const TValue *o) {
+  Table *mt;
+  if ((ttistable(o) && (mt = hvalue(o)->metatable) != NULL) ||
+      (ttisfulluserdata(o) && (mt = uvalue(o)->metatable) != NULL)) {
+    const TValue *name = luaH_getstr(mt, luaS_new(L, "__name"));
+    if (ttisstring(name))  /* is '__name' a string? */
+      return getstr(tsvalue(name));  /* use it as type name */
+  }
+  return ttypename(ttype(o));  /* else use standard type name */
+}
