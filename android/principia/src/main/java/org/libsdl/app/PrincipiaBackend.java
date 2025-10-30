@@ -43,6 +43,7 @@ public class PrincipiaBackend
             boolean display_object_ids,
             boolean display_grapher_value,
             boolean display_wireless_frequency,
+            boolean disable_overloader,
             float volume,
             boolean muted,
             boolean hide_tips,
