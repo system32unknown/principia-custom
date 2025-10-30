@@ -543,10 +543,8 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
   const char *ret;
   va_list argp;
   lua_lock(L);
+  pushvfstring(L, argp, fmt, ret);
   luaC_checkGC(L);
-  va_start(argp, fmt);
-  ret = luaO_pushvfstring(L, fmt, argp);
-  va_end(argp);
   lua_unlock(L);
   return ret;
 }

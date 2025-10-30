@@ -203,15 +203,9 @@ typedef struct lua_TValue TValue;
     val_(io).gc=i_g; settt_(io, ctb(gch(i_g)->tt)); }
 
 #define setsvalue(L,obj,x) \
-  { TValue *io=(obj); \
-    TString *x_ = (x); \
-    val_(io).gc=cast(GCObject *, x_); settt_(io, ctb(x_->tsv.tt)); \
-    checkliveness(G(L),io); }
-
-#define setuvalue(L,obj,x) \
-  { TValue *io=(obj); \
-    val_(io).gc=cast(GCObject *, (x)); settt_(io, ctb(LUA_TUSERDATA)); \
-    checkliveness(G(L),io); }
+  { TValue *io = (obj); TString *x_ = (x); \
+    val_(io).gc = obj2gco(x_); settt_(io, ctb(x_->tt)); \
+    checkliveness(L,io); }
 
 #define setthvalue(L,obj,x) \
   { TValue *io=(obj); \
@@ -268,6 +262,12 @@ typedef struct lua_TValue TValue;
 /* check whether a number is valid (useful only for NaN trick) */
 #define luai_checknum(L,o,c)	{ /* empty */ }
 
+/* macro to call 'luaO_pushvfstring' correctly */
+#define pushvfstring(L, argp, fmt, msg)	\
+  { va_start(argp, fmt); \
+  msg = luaO_pushvfstring(L, fmt, argp); \
+  va_end(argp); \
+  if (msg == NULL) luaD_throw(L, LUA_ERRMEM);  /* only after 'va_end' */ }
 
 /*
 ** {======================================================
