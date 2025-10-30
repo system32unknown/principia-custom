@@ -137,6 +137,18 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 
 #define luaL_loadbuffer(L,s,sz,n)	luaL_loadbufferx(L,s,sz,n,NULL)
 
+/*
+** Perform arithmetic operations on lua_Integer values with wrap-around
+** semantics, as the Lua core does.
+*/
+#define luaL_intop(op,v1,v2)  \
+	((lua_Integer)((lua_Unsigned)(v1) op(lua_Unsigned)(v2)))
+
+#if defined(LUA_FAILISFALSE)
+#define luaL_pushfail(L)	lua_pushboolean(L, 0)
+#else
+#define luaL_pushfail(L)	lua_pushnil(L)
+#endif
 
 /*
 ** {======================================================
