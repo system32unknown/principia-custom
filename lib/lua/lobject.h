@@ -251,7 +251,7 @@ typedef struct lua_TValue TValue;
 /* to stack (not from same stack) */
 #define setobj2s	setobj
 /* set a string to the stack */
-#define setsvalue2s(L,o,s)	setsvalue(L,s2v(o),s)
+#define setsvalue2s	setsvalue
 
 #define sethvalue2s	sethvalue
 #define setptvalue2s	setptvalue
