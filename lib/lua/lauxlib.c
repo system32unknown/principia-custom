@@ -311,7 +311,7 @@ LUALIB_API void *luaL_testudata (lua_State *L, int ud, const char *tname) {
 
 LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
   void *p = luaL_testudata(L, ud, tname);
-  if (p == NULL) typeerror(L, ud, tname);
+  luaL_argexpected(L, p != NULL, ud, tname);
   return p;
 }
 
