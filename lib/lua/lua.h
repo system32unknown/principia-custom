@@ -230,7 +230,7 @@ LUA_API void  (lua_rawgetp) (lua_State *L, int idx, const void *p);
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
-LUA_API void  (lua_getuservalue) (lua_State *L, int idx);
+LUA_API void  (lua_getiuservalue) (lua_State *L, int idx);
 
 
 /*
@@ -347,6 +347,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
 
+#define lua_getuservalue(L,idx)	lua_getiuservalue(L,idx,1)
 
 
 /*

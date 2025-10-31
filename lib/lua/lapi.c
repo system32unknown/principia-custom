@@ -712,20 +712,24 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   return res;
 }
 
-
-LUA_API void lua_getuservalue (lua_State *L, int idx) {
-  StkId o;
+LUA_API int lua_getiuservalue (lua_State *L, int idx, int n) {
+  TValue *o;
+  int t;
   lua_lock(L);
-  o = index2addr(L, idx);
-  api_check(L, ttisuserdata(o), "userdata expected");
-  if (uvalue(o)->env) {
-    sethvalue(L, L->top, uvalue(o)->env);
-  } else
-    setnilvalue(L->top);
+  o = index2value(L, idx);
+  api_check(L, ttisfulluserdata(o), "full userdata expected");
+  if (n <= 0 || n > uvalue(o)->nuvalue) {
+    setnilvalue(s2v(L->top.p));
+    t = LUA_TNONE;
+  }
+  else {
+    setobj2s(L, L->top.p, &uvalue(o)->uv[n - 1].uv);
+    t = ttype(s2v(L->top.p));
+  }
   api_incr_top(L);
   lua_unlock(L);
+  return t;
 }
-
 
 /*
 ** set functions (stack -> Lua)
