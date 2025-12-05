@@ -22,6 +22,7 @@ ninja
 # Strip binary and create debug symbol file
 objcopy --only-keep-debug principia principia.debug
 objcopy --strip-debug --add-gnu-debuglink=principia.debug principia
+strip -s principia
 
 # Install into AppDir
 ninja install
@@ -69,7 +70,6 @@ chmod +x AppRun
 # installed by the user and other libraries like libcurl and libfreetype are
 # expected to already exist on the system.
 INCLUDE_LIBS=(
-	libGLEW.so.2.1
 	libjpeg.so.62
 	libpng16.so.16
 )
