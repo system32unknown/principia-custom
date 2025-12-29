@@ -81,7 +81,7 @@ typedef struct {
     long   time;
 } oc_column;
 
-int prompt_is_open = 0;
+bool prompt_is_open = false;
 GtkDialog *cur_prompt = 0;
 
 enum mark_type {
@@ -5818,7 +5818,8 @@ void
 on_login_hide(GtkWidget *wdg, void *unused)
 {
     tms_infof("login hiding");
-    prompt_is_open = 0;
+    P.focused = true;
+    prompt_is_open = false;
 }
 
 gboolean
@@ -5879,8 +5880,8 @@ activate_gettingstarted(GtkMenuItem *i, gpointer unused)
 void
 activate_login(GtkMenuItem *i, gpointer unused)
 {
-    prompt_is_open = 1;
-    P.focused = 0;
+    prompt_is_open = true;
+    P.focused = false;
     gtk_widget_show_all(GTK_WIDGET(login_window));
 }
 
@@ -10182,7 +10183,7 @@ _open_prompt_dialog(gpointer unused)
         }
 
         cur_prompt = d;
-        prompt_is_open = 1;
+        prompt_is_open = true;
 
         P.focused = false;
 
@@ -10218,7 +10219,7 @@ _open_prompt_dialog(gpointer unused)
     }
 
     cur_prompt = 0;
-    prompt_is_open = 0;
+    prompt_is_open = false;
 
     return false;
 }

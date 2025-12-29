@@ -363,105 +363,105 @@ init_framebuffers(void)
 void
 tproject_set_args(int argc, char **argv)
 {
-    if (argc > 1) {
+    if (argc <= 1)
+        return;
 
-        char *s = argv[1];
-        int n;
+    char *s = argv[1];
+    int n;
 
-        do {
-            if (strncmp(s, "principia://", 12) != 0)
+    do {
+        if (strncmp(s, "principia://", 12) != 0)
+            break;
+
+        s+=12;
+
+        /* extract the host */
+        _community_host[0] = '\0';
+        for (n=0; n<511; n++) {
+            if (*(s+n) == '/' || *(s+n) == '\0') {
                 break;
+            }
+        }
 
-            s+=12;
+        strncpy(_community_host, s, n);
+        _community_host[n] = '\0';
+        s += n;
 
-            /* extract the host */
+        if (*s == '\0') {
+            break;
+        }
+
+        s ++;
+
+        /* backwards compatibility, if the "host" equals any of the reserved words below we default to the
+            * currently signed-in community host instead and backset the pointer */
+        if (strcmp(_community_host, "play") == 0 ||
+            strcmp(_community_host, "sandbox") == 0 ||
+            strcmp(_community_host, "edit") == 0) {
+            s -= strlen(_community_host) + 1;
             _community_host[0] = '\0';
-            for (n=0; n<511; n++) {
-                if (*(s+n) == '/' || *(s+n) == '\0') {
-                    break;
-                }
-            }
+        }
 
-            strncpy(_community_host, s, n);
-            _community_host[n] = '\0';
-            s += n;
+        if (strncmp(s, "play/", 5) == 0) {
+            s+=5;
 
-            if (*s == '\0') {
+            int action = ACTION_IGNORE;
+
+            if (strncmp(s, "lvl/", 4) == 0)
+                action = ACTION_OPEN_PLAY;
+            else if (strncmp(s, "pkg/", 4) == 0)
+                action = ACTION_PLAY_PKG;
+
+            s+=4;
+
+            if (strncmp(s, "local/", 6) == 0) {
+                s+=6;
+                _play_type = LEVEL_LOCAL;
+            } else if (strncmp(s, "db/", 3) == 0) {
+                s+=3;
+                _play_type = LEVEL_DB;
+            } else if (strncmp(s, "main/", 5) == 0) {
+                s+=5;
+                _play_type = LEVEL_MAIN;
+            } else {
                 break;
             }
 
-            s ++;
+            _play_id = atoi(s);
+            P.add_action(action, 0);
+        } else if (strncmp(s, "sandbox/", 8) == 0) {
+            s+=8;
 
-            /* backwards compatibility, if the "host" equals any of the reserved words below we default to the
-             * currently signed-in community host instead and backset the pointer */
-            if (strcmp(_community_host, "play") == 0 ||
-                strcmp(_community_host, "sandbox") == 0 ||
-                strcmp(_community_host, "edit") == 0) {
-                s -= strlen(_community_host) + 1;
-                _community_host[0] = '\0';
+            int action = ACTION_IGNORE;
+
+            if (strncmp(s, "local/", 6) == 0) {
+                s+=6;
+                _play_type = LEVEL_LOCAL;
+                action = ACTION_OPEN;
+            } else if (strncmp(s, "db/", 3) == 0) {
+                s+=3;
+                _play_type = LEVEL_DB;
+                action = ACTION_DERIVE;
             }
 
-            if (strncmp(s, "play/", 5) == 0) {
-                s+=5;
+            _play_id = atoi(s);
+            P.add_action(action, _play_id);
+        } else if (strncmp(s, "edit/", 5) == 0) {
+            s+=5;
 
-                int action = ACTION_IGNORE;
+            int action = ACTION_IGNORE;
 
-                if (strncmp(s, "lvl/", 4) == 0)
-                    action = ACTION_OPEN_PLAY;
-                else if (strncmp(s, "pkg/", 4) == 0)
-                    action = ACTION_PLAY_PKG;
-
-                s+=4;
-
-                if (strncmp(s, "local/", 6) == 0) {
-                    s+=6;
-                    _play_type = LEVEL_LOCAL;
-                } else if (strncmp(s, "db/", 3) == 0) {
-                    s+=3;
-                    _play_type = LEVEL_DB;
-                } else if (strncmp(s, "main/", 5) == 0) {
-                    s+=5;
-                    _play_type = LEVEL_MAIN;
-                } else {
-                    break;
-                }
-
-                _play_id = atoi(s);
-                P.add_action(action, 0);
-            } else if (strncmp(s, "sandbox/", 8) == 0) {
-                s+=8;
-
-                int action = ACTION_IGNORE;
-
-                if (strncmp(s, "local/", 6) == 0) {
-                    s+=6;
-                    _play_type = LEVEL_LOCAL;
-                    action = ACTION_OPEN;
-                } else if (strncmp(s, "db/", 3) == 0) {
-                    s+=3;
-                    _play_type = LEVEL_DB;
-                    action = ACTION_DERIVE;
-                }
-
-                _play_id = atoi(s);
-                P.add_action(action, _play_id);
-            } else if (strncmp(s, "edit/", 5) == 0) {
-                s+=5;
-
-                int action = ACTION_IGNORE;
-
-                if (strncmp(s, "db/", 3) == 0) {
-                    s+=3;
-                    _play_type = LEVEL_DB;
-                    action = ACTION_EDIT;
-                }
-
-                _play_id = atoi(s);
-                P.add_action(action, _play_id);
+            if (strncmp(s, "db/", 3) == 0) {
+                s+=3;
+                _play_type = LEVEL_DB;
+                action = ACTION_EDIT;
             }
 
-        } while (0);
-    }
+            _play_id = atoi(s);
+            P.add_action(action, _play_id);
+        }
+
+    } while (0);
 }
 
 void
@@ -1299,6 +1299,7 @@ tproject_init(void)
     P.message = 0;
     P.new_version_available = false;
     P.curl = 0;
+    P.focused = true;
 
     tms_infof("tproject_init called");
     srand((unsigned)time(0));
@@ -2019,19 +2020,4 @@ principia::get_light_normal()
     tvec3 light = (tvec3){0.5, 1.3, 0.6}; // X,Y,Z normals
     tvec3_normalize(&light);
     return light;
-}
-
-extern "C" void
-P_focus(int focus)
-{
-    P.focused = focus?true:false;
-
-    if (focus) sm::resume_all();
-    else sm::pause_all();
-}
-
-extern "C" void
-P_add_action(int id, void *data)
-{
-    P.add_action(id, data);
 }
