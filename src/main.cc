@@ -164,7 +164,7 @@ disconnect_all(entity *e, void *userdata)
     e->disconnect_all();
 }
 
-void (* _glDiscardFramebufferEXT)(GLenum target, GLsizei num, const GLenum *d) = 0;
+
 
 static int shader_loader(int step);
 static int level_loader(int step);
@@ -185,13 +185,8 @@ gi_end(void)
     if (!settings["shadow_map_depth_texture"]->is_true()) {
         GLenum discards[] = {GL_DEPTH_ATTACHMENT};
 
-        if (settings["discard_framebuffer"]->v.b && _glDiscardFramebufferEXT == 0) {
-            _glDiscardFramebufferEXT = (void (*)(GLenum , GLsizei , const GLenum *))SDL_GL_GetProcAddress("glDiscardFramebufferEXT");
-        }
-
-        if (_glDiscardFramebufferEXT) {
-            _glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, discards);
-        }
+        if (glad_glDiscardFramebufferEXT)
+            glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, discards);
     }
 
     glEnable(GL_CULL_FACE);
@@ -249,11 +244,6 @@ begin(void)
     glDepthMask(0xff);
     glCullFace(GL_BACK);
 
-    //glActiveTexture(GL_TEXTURE3);
-    //glBindTexture(GL_TEXTURE_2D, gi_fb->fb_texture[gi_fb->toggle][0]);
-    //glBindTexture(GL_TEXTURE_2D, gi_fb->fb_texture[gi_fb->toggle][0]);
-    //tms_fb_bind_current_textures(gi_fb, GL_TEXTURE3);
-
     if (gi_fb) {
         if (settings["shadow_map_depth_texture"]->is_true()) {
             glActiveTexture(GL_TEXTURE3);
@@ -263,7 +253,6 @@ begin(void)
         }
     }
     if (ao_fb) tms_fb_bind_current_textures(ao_fb, GL_TEXTURE4);
-    //glBindTexture(GL_TEXTURE_2D, gi_fb->fb_texture[gi_fb->toggle][0]);
     glActiveTexture(GL_TEXTURE0);
 
     //glFinish();
@@ -280,16 +269,6 @@ end(void)
     glActiveTexture(GL_TEXTURE4);
     glBindTexture(GL_TEXTURE_2D, 0);
     glActiveTexture(GL_TEXTURE0);
-
-#if 0
-    if (settings["postprocess"]->v.b) {
-        GLenum discards[] = {GL_DEPTH_ATTACHMENT};
-        if (settings["discard_framebuffer"]->v.b && _glDiscardFramebufferEXT) {
-            _glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, discards);
-        }
-    }
-#endif
-
 }
 
 void
@@ -308,7 +287,6 @@ init_framebuffers(void)
     }
 
     if (settings["enable_shadows"]->v.b) {
-        tms_infof("SM(%u,%u)", settings["shadow_map_resx"]->v.i,settings["shadow_map_resy"]->v.i);
         gi_fb = tms_fb_alloc(settings["shadow_map_resx"]->v.i,settings["shadow_map_resy"]->v.i,  (settings["swap_shadow_map"]->v.b?1:0));
         /* XXX use RGB is only shadows, RGBA if shadows+gi */
         //tms_fb_add_texture(gi_fb, GL_RGB, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST);
@@ -345,7 +323,6 @@ init_framebuffers(void)
     }
 
     if (settings["enable_ao"]->v.i) {
-        tms_infof("AO!!!!!!");
         int res = settings["ao_map_res"]->v.i == 512 ? 512 : (
                   settings["ao_map_res"]->v.i == 256 ? 256 :
                   128);
@@ -1228,10 +1205,6 @@ tproject_quit(void)
 void
 setup_opengl_settings()
 {
-    if (settings["discard_framebuffer"]->is_uninitialized()) {
-        settings["discard_framebuffer"]->v.b = ((bool)strstr(_tms.gl_extensions, "discard_framebuffer") ? 1 : 0);
-    }
-
 #ifdef TMS_BACKEND_MOBILE
     if (settings["shadow_map_precision"]->is_uninitialized()) {
         settings["shadow_map_precision"]->v.i = 0;
@@ -1307,8 +1280,7 @@ tproject_init(void)
     setup_opengl_settings();
     settings.save();
 
-    _tms.xppcm *= settings["uiscale"]->v.f;
-    _tms.yppcm *= settings["uiscale"]->v.f;
+    P.update_uiscale(settings["uiscale"]->v.f);
 
 #ifdef NO_UI
     settings["render_gui"]->set(false);
@@ -1956,6 +1928,7 @@ initial_loader(int step)
 
         case 17:
             {
+#if 0
                 uint32_t total = 0;
                 for (int x=0; x<step; x++) {
                     tms_infof("%27s: %u", load_step_name[x], loader_times[x]);
@@ -1963,6 +1936,7 @@ initial_loader(int step)
                 }
 
                 tms_infof("%27s: %u", "Total", total);
+#endif
 
                 ui::emit_signal(SIGNAL_QUICKADD_REFRESH);
             }
@@ -2012,6 +1986,26 @@ principia::add_action(int id, void *data)
         P.num_actions ++;
     }
     SDL_UnlockMutex(P.action_mutex);
+}
+
+static bool has_updated_uiscale = false;
+static float base_xppcm = 0.f;
+static float base_yppcm = 0.f;
+
+void principia::update_uiscale(float scale) {
+    if (!has_updated_uiscale) {
+        base_xppcm = _tms.xppcm;
+        base_yppcm = _tms.yppcm;
+    }
+
+    _tms.xppcm = base_xppcm * scale;
+    _tms.yppcm = base_yppcm * scale;
+
+    if (!has_updated_uiscale) {
+        has_updated_uiscale = true;
+    } else {
+        tproject_window_size_changed();
+    }
 }
 
 tvec3

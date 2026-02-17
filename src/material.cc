@@ -458,7 +458,7 @@ static int last_loaded = -1;
 void
 material_factory::load_bg_texture(bool soft)
 {
-    tms_debugf("Load BG Texture...");
+    tms_debugf("Load BG Textures...");
     char bgname[256];
 
     if (material_factory::background_id >= num_bgs || material_factory::background_id < 0)
@@ -507,8 +507,6 @@ material_factory::load_bg_texture(bool soft)
 
     tex_bg->upload();
     tms_texture_free_buffer(tex_bg);
-
-    tms_debugf("Done");
 }
 
 #define TEX_LAZYLOAD_FN(name, body) \
@@ -1133,10 +1131,10 @@ material_factory::init_shaders()
         char *buf;
         int r;
 
-        tms_debugf("Reading %s vertex shader...", sld->name);
+        //tms_debugf("Reading %s vertex shader...", sld->name);
         read_shader(sld, GL_VERTEX_SHADER, global_flags, &buf);
         if (!buf) {
-            tms_infof("Falling back, failed to read!");
+            tms_infof("Failed to read %s vertex shader!", sld->name);
             *sld->shader = (sld->fallback ? *sld->fallback : 0);
             continue;
         }
@@ -1148,10 +1146,10 @@ material_factory::init_shaders()
         free(buf);
         buf = 0;
 
-        tms_debugf("Reading %s fragment shader...", sld->name);
+        //tms_debugf("Reading %s fragment shader...", sld->name);
         read_shader(sld, GL_FRAGMENT_SHADER, global_flags, &buf);
         if (!buf) {
-            tms_infof("Falling back, failed to read!");
+            tms_infof("Failed to read %s fragment shader!", sld->name);
             *sld->shader = (sld->fallback ? *sld->fallback : 0);
             continue;
         }
