@@ -389,26 +389,6 @@ plua_foreach(lua_State *L, const int index, void (*cb)(lua_State*, int, void*), 
     }
 }
 
-static struct lua_vert base[4] = {
-    {
-        (tvec3){.5f,.5f,0.f},
-        (tvec2){.5f, 1.f},
-        (tvec4){0.f, 0.f, 0.f, 0.f},
-    }, {
-        (tvec3){-.5f,.5f,0.f},
-        (tvec2){0.f, 1.f},
-        (tvec4){0.f, 0.f, 0.f, 0.f},
-    }, {
-        (tvec3){-.5f,-.5f,0.f},
-        (tvec2){0.f, .5f},
-        (tvec4){0.f, 0.f, 0.f, 0.f},
-    }, {
-        (tvec3){.5f,-.5f,0.f},
-        (tvec2){.5f, .5f},
-        (tvec4){0.f, 0.f, 0.f, 0.f},
-    }
-};
-
 static int
 my_writer(lua_State *L, const void *contents, size_t size, void *ud)
 {
@@ -1111,7 +1091,7 @@ escript::solve_electronics()
     return 0;
 }
 
-static unsigned char keys[5] = {0x41, 0xf3, 0x1a, 0x44, 0x14};
+static unsigned char encryption_keys[5] = {0x41, 0xf3, 0x1a, 0x44, 0x14};
 
 #define IS_ENCRYPTED(ver) \
         ver >= LEVEL_VERSION_1_5 \
@@ -1161,7 +1141,7 @@ escript::on_load(bool created, bool has_state)
         // For old level versions above 1.5+, LuaScript code is encrypted
         if (IS_ENCRYPTED(W->level.version)) {
             for (uint32_t x=0; x<this->properties[0].v.s.len; ++x) {
-                this->properties[0].v.s.buf[x] ^= keys[x%5];
+                this->properties[0].v.s.buf[x] ^= encryption_keys[x%5];
             }
         }
     }
@@ -1175,7 +1155,7 @@ escript::pre_write()
     // For old level versions above 1.5+, LuaScript code is encrypted
     if (IS_ENCRYPTED(W->level.version)) {
         for (uint32_t x=0; x<this->properties[0].v.s.len; ++x) {
-            this->properties[0].v.s.buf[x] ^= keys[x%5];
+            this->properties[0].v.s.buf[x] ^= encryption_keys[x%5];
         }
     }
 }
@@ -1188,7 +1168,7 @@ escript::post_write()
     // For old level versions above 1.5+, LuaScript code is encrypted
     if (IS_ENCRYPTED(W->level.version)) {
         for (uint32_t x=0; x<this->properties[0].v.s.len; ++x) {
-            this->properties[0].v.s.buf[x] ^= keys[x%5];
+            this->properties[0].v.s.buf[x] ^= encryption_keys[x%5];
         }
     }
 }
@@ -1576,7 +1556,7 @@ escript::add_static_sprite(float x, float y, float r, float w, float h, int bx, 
             tmath_sincos(r, &sn, &cs);
 
             for (int ix=0; ix<4; ix++) {
-                _b[n*4+ix] = base[ix];
+                _b[n*4+ix] = sprite_base[ix];
 
                 _b[n*4+ix].pos.x *= w;
                 _b[n*4+ix].pos.y *= h;
@@ -1600,7 +1580,7 @@ escript::add_static_sprite(float x, float y, float r, float w, float h, int bx, 
             }
         } else {
             for (int ix=0; ix<4; ix++) {
-                _b[n*4+ix] = base[ix];
+                _b[n*4+ix] = sprite_base[ix];
 
                 _b[n*4+ix].pos.x *= w;
                 _b[n*4+ix].pos.y *= h;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tms/bindings/cpp/cpp.hh"
+#include <tms/cpp.hh>
 
 #define LINEBUFFER_MAX 512
 
@@ -26,4 +26,18 @@ class linebuffer
             );
     static tms::entity *get_entity();
     static tms::entity *get_entity2();
+
+  private:
+    static tms::gbuffer *verts;
+    static tms::gbuffer *verts2;
+    static tms::gbuffer *indices;
+    static tms::varray *va;
+    static tms::varray *va2;
+    static tms::mesh *mesh;
+    static tms::mesh *mesh2;
+    static tms::entity *e;
+    static tms::entity *e2;
+
+    static int n;
+    static int n2;
 };

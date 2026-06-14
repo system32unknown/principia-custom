@@ -8,40 +8,33 @@
 #include "noise.h"
 #include "misc.hh"
 
-static struct tms_mesh    *mesh_pool[MAX_CHUNKS];
-static tms::gbuffer *vbuf[MAX_CHUNKS];
-static struct tms_varray  *va[MAX_CHUNKS];
-static struct tms_gbuffer *ibuf;
-static bool   initialized;
+bool chunk_window::initialized = false;
+
+tms_mesh     *chunk_window::mesh_pool[MAX_CHUNKS];
+tms::gbuffer *chunk_window::vbuf[MAX_CHUNKS];
+tms_varray   *chunk_window::va[MAX_CHUNKS];
+tms::gbuffer  *chunk_window::ibuf;
 
 static struct tms_mesh    *grass_pool[MAX_CHUNKS];
 static struct tms_gbuffer *grass_vbuf[MAX_CHUNKS];
 static struct tms_varray  *grass_va[MAX_CHUNKS];
 static struct tms_gbuffer *grass_ibuf;
 
-struct vertex {
+struct terrain_vert {
     tvec3 pos;
     tvec3 nor;
     tvec2 uv;
 } __attribute__ ((packed));
 
-struct grass_vertex {
+struct grass_vert {
     tvec4 pos;
     tvec2 uv;
 }  __attribute__ ((packed));
 
-struct cvert {
-    tvec3 p;
-    tvec3 n;
-    tvec2 u;
-} __attribute__((packed));
-
 static int vertices_per_tpixel;
 static int indices_per_tpixel;
 
-static void
-_init()
-{
+void chunk_window::_init() {
     initialized = true;
 
     struct tms_mesh *mm = mesh_factory::get_mesh(MODEL_BOX_TEX);
@@ -53,7 +46,7 @@ _init()
         ibuf->usage = GL_STATIC_DRAW;
         ibuf->target = GL_ELEMENT_ARRAY_BUFFER;
 
-        uint16_t *i = (uint16_t*)tms_gbuffer_get_buffer(ibuf);
+        uint16_t *i = (uint16_t*)ibuf->get_buffer();
         uint16_t *ri = (uint16_t*)((char*)tms_gbuffer_get_buffer(mm->indices)+mm->i_start*2);
         uint16_t ibase = mm->v_start / sizeof(struct cvert);
 
@@ -63,7 +56,7 @@ _init()
             }
         }
 
-        tms_gbuffer_upload(ibuf);
+        ibuf->upload();
     }
 
     {
@@ -82,7 +75,7 @@ _init()
     }
 
     for (int x=0; x<MAX_CHUNKS; x++) {
-        vbuf[x] = new tms::gbuffer((3 * 16 * 16 * vertices_per_tpixel * sizeof(struct vertex))/* / 4 * 3*/);
+        vbuf[x] = new tms::gbuffer((3 * 16 * 16 * vertices_per_tpixel * sizeof(struct terrain_vert))/* / 4 * 3*/);
         vbuf[x]->usage = GL_STREAM_DRAW;
 
         va[x] = tms_varray_alloc(3);
@@ -91,7 +84,7 @@ _init()
         tms_varray_map_attribute(va[x], "texcoord", 2, GL_FLOAT, vbuf[x]);
         mesh_pool[x] = tms_mesh_alloc(va[x], ibuf);
 
-        grass_vbuf[x] = new tms::gbuffer(MAX_GRASS_VERTS_PER_CHUNK*sizeof(struct grass_vertex));
+        grass_vbuf[x] = new tms::gbuffer(MAX_GRASS_VERTS_PER_CHUNK*sizeof(struct grass_vert));
         grass_vbuf[x]->usage = GL_STREAM_DRAW;
 
         grass_va[x] = tms_varray_alloc(2);
@@ -119,9 +112,8 @@ chunk_window::chunk_window()
 void
 chunk_window::reset()
 {
-    if (!initialized) {
+    if (!initialized)
         _init();
-    }
 
     memset(this->slots, 0, sizeof(this->slots));
 
@@ -281,9 +273,9 @@ chunk_window::load_slot(int s, level_chunk *c)
         rv_tri[x] = (struct cvert*)((char*)tms_gbuffer_get_buffer(vbuf)+mm2->v_start);
     }
 
-    struct vertex *v_first = (struct vertex*)tms_gbuffer_get_buffer(vbuf[s]);
+    terrain_vert *v_first = (terrain_vert *)tms_gbuffer_get_buffer(vbuf[s]);
 
-    struct grass_vertex *v_grass = (struct grass_vertex*)tms_gbuffer_get_buffer(grass_vbuf[s]);
+    grass_vert *v_grass = (grass_vert *)tms_gbuffer_get_buffer(grass_vbuf[s]);
     int num_grass = 0;
     int num_grass_01 = 0;
 
@@ -349,19 +341,19 @@ chunk_window::load_slot(int s, level_chunk *c)
                             }
                         }
 
-                        v_grass[num_grass++] = (struct grass_vertex){
+                        v_grass[num_grass++] = (grass_vert){
                             (tvec4){x*.5f + .25f+w2, y*.5f + height+h2, gx*.25f+z*LAYER_DEPTH - .25f+.01f, 1.f},
                             (tvec2){.25f+u, .9f},
                         };
-                        v_grass[num_grass++] = (struct grass_vertex){
+                        v_grass[num_grass++] = (grass_vert){
                             (tvec4){x*.5f - .25f-w1, y*.5f + height+h1, gx*.25f+z*LAYER_DEPTH - .25f+.01f, 1.f},
                             (tvec2){u, 0.9f},
                         };
-                        v_grass[num_grass++] = (struct grass_vertex){
+                        v_grass[num_grass++] = (grass_vert){
                             (tvec4){x*.5f - .25f, y*.5f + .22f+b1, gx*.25f+z*LAYER_DEPTH - .25f+.01f, diffuse},
                             (tvec2){u, 0.f},
                         };
-                        v_grass[num_grass++] = (struct grass_vertex){
+                        v_grass[num_grass++] = (grass_vert){
                             (tvec4){x*.5f + .25f, y*.5f + .22f+b2, gx*.25f+z*LAYER_DEPTH - .25f+.01f, std::max(diffuse, diffuse_lim)},
                             (tvec2){.25f+u, 0.f},
                         };
@@ -396,7 +388,7 @@ chunk_window::load_slot(int s, level_chunk *c)
             }
 
             int base = (num*vertices_per_tpixel);
-            struct vertex *v = v_first + base;
+            terrain_vert *v = v_first + base;
 
             //float as = .5f;//tp->get_size()*2.f;
             float rs = (3.f - size)*(.125f);
@@ -450,7 +442,7 @@ chunk_window::load_slot(int s, level_chunk *c)
     }
 
     if (num)
-        tms_gbuffer_upload_partial(vbuf[s], num*vertices_per_tpixel*sizeof(struct vertex));
+        tms_gbuffer_upload_partial(vbuf[s], num*vertices_per_tpixel*sizeof(struct terrain_vert));
 
     c->grass_entity[0].mesh->i_start = 0;
     c->grass_entity[0].mesh->i_count = num_grass_01/4*6;
@@ -459,7 +451,7 @@ chunk_window::load_slot(int s, level_chunk *c)
     c->grass_entity[1].mesh->i_count = (num_grass-num_grass_01)/4*6;
 
     if (num_grass)
-        tms_gbuffer_upload_partial(grass_vbuf[s], num_grass*sizeof(struct grass_vertex));
+        tms_gbuffer_upload_partial(grass_vbuf[s], num_grass*sizeof(struct grass_vert));
 }
 
 static level_chunk *_c = 0;

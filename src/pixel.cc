@@ -4,32 +4,26 @@
 #include "game.hh"
 #include "ui.hh"
 
-static bool initialized = false;
+bool pixel::initialized = false;
 static bool _modified = false;
 
-struct vertex {
+struct pixel_vert {
     tvec3 pos;
     tvec3 nor;
     tvec3 col;
 } __attribute__ ((packed));
 
-struct cvert {
-    tvec3 p;
-    tvec3 n;
-    tvec2 u;
-} __attribute__((packed));
-
-static struct tms_mesh   *_mesh[3];
-static struct tms_entity *_e[3];
-static tms::varray *_va[3];
-static tms::gbuffer *_buf[3];
-static tms::gbuffer *_ibuf;
+tms_mesh   *pixel::_mesh[3];
+tms_entity *pixel::_e[3];
+tms::varray *pixel::_va[3];
+tms::gbuffer *pixel::_buf[3];
+tms::gbuffer *pixel::_ibuf;
 static volatile int _counter[3] = {0,0,0};
 
 static int vertices_per_pixel = 0;
 static int indices_per_pixel = 0;
 
-static float _cam_x = 0.f, _cam_y = 0.f;
+float pixel::_cam_x = 0.f, pixel::_cam_y = 0.f;
 
 #define MAX_PIXELS 8192*2
 
@@ -52,7 +46,7 @@ pixel::initialize()
 
         for (int x=0; x<3; x++) {
 
-            _buf[x] = new tms::gbuffer(MAX_PIXELS * vertices_per_pixel * sizeof(struct vertex));
+            _buf[x] = new tms::gbuffer(MAX_PIXELS * vertices_per_pixel * sizeof(struct pixel_vert));
             _buf[x]->usage = GL_STREAM_DRAW;
 
             _va[x] = new tms::varray(3);
@@ -128,16 +122,15 @@ pixel::upload_buffers(void)
         _mesh[x]->i_count = (count*indices_per_pixel);
 
         if (count) {
-            _buf[x]->upload_partial((count*vertices_per_pixel) * sizeof(struct vertex));
+            _buf[x]->upload_partial((count*vertices_per_pixel) * sizeof(struct pixel_vert));
         }
     }
 }
 
 pixel::pixel()
 {
-    if (!initialized) {
+    if (!initialized)
         initialize();
-    }
 
     this->last_size = -1.f;
 
@@ -193,7 +186,7 @@ void pixel::update()
             int num = __sync_fetch_and_add(&_counter[l], 1);
 
             int base = (num*vertices_per_pixel);
-            struct vertex *v = ((struct vertex*)_buf[l]->get_buffer());
+            pixel_vert *v = ((pixel_vert *)_buf[l]->get_buffer());
             v += base;
 
             struct tms_mesh *mm = mesh_factory::get_mesh(MODEL_BOX_NOTEX);

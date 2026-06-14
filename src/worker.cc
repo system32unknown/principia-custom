@@ -1,11 +1,10 @@
 #include "worker.hh"
 #include "entity.hh"
 #include "settings.hh"
-
-#include <tms/core/graph.h>
-#include <Box2D/Dynamics/b2Island.h>
-#include <Box2D/Dynamics/b2ContactManager.h>
 #include <Box2D/Dynamics/Contacts/b2Contact.h>
+#include <Box2D/Dynamics/b2ContactManager.h>
+#include <Box2D/Dynamics/b2Island.h>
+#include <tms/cpp.hh>
 
 static int  _worker_main(void *in);
 static void _w_do_solve(struct worker *w);
@@ -34,7 +33,7 @@ struct tms_graph        *w_updatec_graph;
 
 std::set<entity*>       *w_mstep_set;
 
-static bool initialized = false;
+static bool workers_init = false;
 static int num_running_workers = 0;
 
 bool
@@ -52,8 +51,8 @@ w_get_num_workers()
 void
 w_init()
 {
-    if (!initialized) {
-        initialized = true;
+    if (!workers_init) {
+        workers_init = true;
         num_running_workers = 0;
 
         w_collide_destroy_lock = SDL_CreateMutex();

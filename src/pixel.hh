@@ -22,6 +22,7 @@ class pixel : public basepixel,
   public:
     pixel();
 
+    static bool initialized;
     static void initialize();
     static struct tms_entity *get_entity(int x);
     static void reset_counter();
@@ -67,4 +68,13 @@ class pixel : public basepixel,
         this->last_size = lb->r_float();
         this->pending_value = lb->r_float();
     }
+
+  private:
+    static tms_mesh   *_mesh[3];
+    static tms_entity *_e[3];
+    static tms::varray *_va[3];
+    static tms::gbuffer *_buf[3];
+    static tms::gbuffer *_ibuf;
+
+    static float _cam_x, _cam_y;
 };

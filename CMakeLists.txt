@@ -22,6 +22,8 @@ add_custom_target(GenerateGitVersion
 	-P "${CMAKE_SOURCE_DIR}/cmake/Modules/GenerateGitVersion.cmake"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
+option(UNITY_BUILD "Experimental unity build" FALSE)
+mark_as_advanced(UNITY_BUILD)
 
 # Find core dependencies
 # ----------------------
@@ -103,28 +105,45 @@ include_directories(
 	${CMAKE_CURRENT_BINARY_DIR})
 
 file(GLOB SRCS
-	src/tms/core/*.c
-	src/tms/math/*.c
-	src/tms/util/*.c
-	src/tms/bindings/cpp/cpp.cc
-	src/tms/modules/3ds.c
-
-	src/*.cc
-	src/luascript/*.cc
 	src/*.c
 
 	lib/GLAD/src/gl.c
 	lib/lua/*.c
 	lib/SDL_image/*.c
-
-	lib/Box2D/Collision/*.cc
-	lib/Box2D/Collision/Shapes/*.cc
-	lib/Box2D/Common/*.cc
-	lib/Box2D/Dynamics/*.cc
-	lib/Box2D/Dynamics/Contacts/*.cc
-	lib/Box2D/Dynamics/Joints/*.cc
-	lib/Box2D/Particle/*.cc
 )
+
+if(UNITY_BUILD)
+	list(APPEND SRCS
+		src/tms/_unity_chunk.c
+		src/_unity_chunk.cc
+		src/game.cc
+		src/game-gearbox-edit.cc
+		src/game-gui.cc
+		src/game-panel-edit.cc
+		src/menu_pkg.cc
+		src/repair_station.cc
+		src/solver_ingame.cc
+
+		lib/Box2D/_unity_chunk.cc)
+else()
+	file(GLOB MAIN_SRCS
+		src/tms/core/*.c
+		src/tms/math/*.c
+		src/tms/cpp.cc
+		src/tms/modules/3ds.c
+
+		src/*.cc
+		src/luascript/*.cc
+
+		lib/Box2D/Collision/*.cc
+		lib/Box2D/Collision/Shapes/*.cc
+		lib/Box2D/Common/*.cc
+		lib/Box2D/Dynamics/*.cc
+		lib/Box2D/Dynamics/Contacts/*.cc
+		lib/Box2D/Dynamics/Joints/*.cc
+		lib/Box2D/Particle/*.cc)
+	list(APPEND SRCS ${MAIN_SRCS})
+endif()
 
 if(BACKEND_IMGUI)
 	file(GLOB IMGUI_SRCS
@@ -175,16 +194,16 @@ if(USE_LUASOCKET)
 	list(APPEND SRCS ${LUASOCKET_SRCS})
 endif()
 
+if(NOT UNITY_BUILD)
+	if(SCREENSHOT_BUILD)
+		set(BACKEND_SRC main_screenshotter.cc)
+	else()
+		set(BACKEND_SRC main.cc)
+		list(APPEND SRCS src/tms/backend/pipe.cc)
+	endif()
 
-if(SCREENSHOT_BUILD)
-	set(BACKEND_SRC main_screenshotter.cc)
-else()
-	set(BACKEND_SRC main.cc)
-	list(APPEND SRCS src/tms/backend/pipe.cc)
+	list(APPEND SRCS src/tms/backend/${BACKEND_SRC})
 endif()
-
-list(APPEND SRCS src/tms/backend/${BACKEND_SRC})
-
 
 if(WIN32)
 	list(APPEND SRCS packaging/principia.rc)
@@ -219,7 +238,7 @@ if(NOT EMSCRIPTEN)
 	if(NOT SCREENSHOT_BUILD AND NOT EMSCRIPTEN)
 		list(APPEND LIBS ${CURL_LIBRARIES})
 
-		if(NOT ANDROID)
+		if(NOT ANDROID AND NOT BACKEND_IMGUI)
 			list(APPEND LIBS ${GTK3_LIBRARIES})
 		endif()
 	endif()
@@ -246,6 +265,10 @@ add_dependencies(${PROJECT_NAME} GenerateGitVersion)
 
 if(SHOULD_USE_GLES)
 	add_definitions(-DTMS_USE_GLES)
+endif()
+
+if(UNITY_BUILD)
+	add_definitions(-DUNITY_BUILD)
 endif()
 
 if(WIN32)

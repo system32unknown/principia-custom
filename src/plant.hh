@@ -156,6 +156,9 @@ class plant : public entity_simpleconnect
     float      pending_timer;
     b2Vec2     pending_normal;
 
+
+    static void _init();
+
     inline float rand_range(tvec2 v)
     {
         float r = (float)rand()/(float)RAND_MAX;
@@ -236,7 +239,7 @@ class plant : public entity_simpleconnect
     }
 
     void set_position(float x, float y, uint8_t frame);
-    
+
     connection *load_connection(connection &c);
     void connection_create_joint(connection *c);
     bool connection_destroy_joint(connection *c);
@@ -265,10 +268,10 @@ class plant : public entity_simpleconnect
     plant_leaf *create_leaf(plant_branch *br);
 
     void update_meshes(plant_branch *br);
-    int update_mesh(plant_section *s, struct vertex *v, int y, bool search_only);
-    int mesh_add_pre_branch_sections(plant_branch *br, struct vertex *v, int y);
-    int mesh_add_post_branch_sections(plant_branch *br, struct vertex *v, int y);
-    int mesh_add_section(struct vertex *v, int y, b2Vec2 position, b2Vec2 axis, float width);
+    int update_mesh(plant_section *s, struct plant_vert *v, int y, bool search_only);
+    int mesh_add_pre_branch_sections(plant_branch *br, struct plant_vert *v, int y);
+    int mesh_add_post_branch_sections(plant_branch *br, struct plant_vert *v, int y);
+    int mesh_add_section(struct plant_vert *v, int y, b2Vec2 position, b2Vec2 axis, float width);
 
     void settle();
 
@@ -335,4 +338,11 @@ class plant : public entity_simpleconnect
 
     plant_section root_section;
     plant_branch root_branch;
+
+  private:
+    static bool initialized;
+    static tms_gbuffer *ibuf;
+    static tms_gbuffer *vbuf;
+    static tms_varray  *va;
+    static int counter;
 };

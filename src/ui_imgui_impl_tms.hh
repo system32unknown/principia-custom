@@ -5,15 +5,14 @@
 #include <SDL.h>
 #include "SDL_clipboard.h"
 #include "SDL_stdinc.h"
+#include "SDL_syswm.h"
 
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "imgui_stdlib.h"
 #include "imgui_impl_opengl3.h"
 
-#include "tms/core/tms.h"
-#include "tms/core/event.h"
-#include "tms/core/err.h"
+#include <tms/cpp.hh>
 
 static int tms_mouse_button_to_imgui(int btn) {
     switch (btn) {
@@ -163,23 +162,30 @@ static int event_handler(tms_event *event) {
 }
 
 //SDL2 impls:
-static const char* GetClipboardTextFn(void* _cbt) {
-    char* cbt = (char*)_cbt;
-    if (cbt) SDL_free(cbt);
-    cbt = SDL_GetClipboardText();
-    if (*cbt == 0) return nullptr;
-    return cbt;
+static const char* clipboard_data = nullptr;
+static const char* GetClipboardTextFn(ImGuiContext *) {
+    if (clipboard_data)
+        SDL_free((void *)clipboard_data);
+
+    if (SDL_HasClipboardText())
+        clipboard_data = SDL_GetClipboardText();
+    else
+        clipboard_data = nullptr;
+
+    return clipboard_data;
 }
-inline static void SetClipboardTextFn(void*, const char* text) {
+inline static void SetClipboardTextFn(ImGuiContext *, const char* text) {
     SDL_SetClipboardText(text);
 }
 
 inline const void init_io() {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendPlatformName = "tms";
-    io.ClipboardUserData = nullptr;
-    io.GetClipboardTextFn = GetClipboardTextFn;
-    io.SetClipboardTextFn = SetClipboardTextFn;
+
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_ClipboardUserData = nullptr;
+    platform_io.Platform_GetClipboardTextFn = GetClipboardTextFn;
+    platform_io.Platform_SetClipboardTextFn = SetClipboardTextFn;
 
     //set PlatformHandleRaw
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();

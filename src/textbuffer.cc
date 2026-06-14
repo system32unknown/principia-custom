@@ -1,35 +1,38 @@
 #include "textbuffer.hh"
 #include "material.hh"
 
-static tms::gbuffer *verts;
-static tms::gbuffer *verts2;
-static tms::gbuffer *indices;
-static tms::varray *va;
-static tms::varray *va2;
-static tms::mesh *mesh;
-static tms::mesh *mesh2;
-static tms::entity *e;
-static tms::entity *e2;
+tms::gbuffer *textbuffer::verts;
+tms::gbuffer *textbuffer::verts2;
+tms::gbuffer *textbuffer::indices;
+tms::varray *textbuffer::va;
+tms::varray *textbuffer::va2;
+tms::mesh *textbuffer::mesh;
+tms::mesh *textbuffer::mesh2;
+tms::entity *textbuffer::e;
+tms::entity *textbuffer::e2;
 
-static int n = 0;
-static int n2 = 0;
+int textbuffer::n = 0;
+int textbuffer::n2 = 0;
 
-struct vert {
+struct textbuf_vert {
     tvec3 pos;
     tvec2 uv;
     tvec4 color;
 };
 
-static struct vert base[4];
+textbuf_vert textbuffer::base[4];
+
+#define TEX_WIDTH  1024.f
+#define TEX_HEIGHT 1024.f
 
 void textbuffer::_init()
 {
     tms_infof("Initializing textbuffer...");
 
-    verts = new tms::gbuffer(4*TEXTBUFFER_MAX*sizeof(struct vert));
+    verts = new tms::gbuffer(4*TEXTBUFFER_MAX*sizeof(struct textbuf_vert));
     verts->usage = TMS_GBUFFER_STREAM_DRAW;
 
-    verts2 = new tms::gbuffer(4*TEXTBUFFER_MAX*sizeof(struct vert));
+    verts2 = new tms::gbuffer(4*TEXTBUFFER_MAX*sizeof(struct textbuf_vert));
     verts2->usage = TMS_GBUFFER_STREAM_DRAW;
 
     indices = new tms::gbuffer(6*TEXTBUFFER_MAX*sizeof(uint16_t));
@@ -61,22 +64,22 @@ void textbuffer::_init()
 
     indices->upload();
 
-    base[0] = (struct vert){
+    base[0] = (textbuf_vert){
         (tvec3){.5f,.5f,0.f},
         (tvec2){.5f, 1.f},
         (tvec4){0.f, 0.f, 0.f, 0.f},
     };
-    base[1] = (struct vert){
+    base[1] = (textbuf_vert){
         (tvec3){-.5f,.5f,0.f},
         (tvec2){0.f, 1.f},
         (tvec4){0.f, 0.f, 0.f, 0.f},
     };
-    base[2] = (struct vert){
+    base[2] = (textbuf_vert){
         (tvec3){-.5f,-.5f,0.f},
         (tvec2){0.f, .5f},
         (tvec4){0.f, 0.f, 0.f, 0.f},
     };
-    base[3] = (struct vert){
+    base[3] = (textbuf_vert){
         (tvec3){.5f,-.5f,0.f},
         (tvec2){.5f, .5f},
         (tvec4){0.f, 0.f, 0.f, 0.f},
@@ -104,8 +107,8 @@ textbuffer::upload()
         mesh2->i_count = n2*6;
     }
 
-    if (n) verts->upload_partial(n*4*sizeof(struct vert));
-    if (n2) verts2->upload_partial(n2*4*sizeof(struct vert));
+    if (n) verts->upload_partial(n*4*sizeof(struct textbuf_vert));
+    if (n2) verts2->upload_partial(n2*4*sizeof(struct textbuf_vert));
 }
 
 tms::entity *
@@ -161,14 +164,11 @@ textbuffer::add_char(glyph *gl,
     int tx = 530;
     int ty = 1024;
 
-#define TEX_WIDTH  1024.f
-#define TEX_HEIGHT 1024.f
-
     tvec2 uvb = {(float)bx / TEX_WIDTH, (float)by / TEX_HEIGHT};
     tvec2 uvt = {(float)tx / TEX_WIDTH, (float)ty / TEX_HEIGHT};
 
     if (n < TEXTBUFFER_MAX) {
-        struct vert *_b = (struct vert*)verts->get_buffer();
+        textbuf_vert *_b = (textbuf_vert *)verts->get_buffer();
         for (int ix=0; ix<4; ix++) {
             _b[n*4+ix] = base[ix];
 
@@ -202,7 +202,7 @@ textbuffer::add_bg(
         float w, float h)
 {
     if (n < TEXTBUFFER_MAX) {
-        struct vert *_b = (struct vert*)verts->get_buffer();
+        textbuf_vert *_b = (textbuf_vert *)verts->get_buffer();
         for (int ix=0; ix<4; ix++) {
             _b[n*4+ix] = base[ix];
 
@@ -238,14 +238,11 @@ textbuffer::add_char2(glyph *gl,
     int tx = 530;
     int ty = 1024;
 
-#define TEX_WIDTH  1024.f
-#define TEX_HEIGHT 1024.f
-
     tvec2 uvb = {(float)bx / TEX_WIDTH, (float)by / TEX_HEIGHT};
     tvec2 uvt = {(float)tx / TEX_WIDTH, (float)ty / TEX_HEIGHT};
 
     if (n2 < TEXTBUFFER_MAX) {
-        struct vert *_b = (struct vert*)verts2->get_buffer();
+        textbuf_vert *_b = (textbuf_vert *)verts2->get_buffer();
         for (int ix=0; ix<4; ix++) {
             _b[n2*4+ix] = base[ix];
 
@@ -422,3 +419,6 @@ textbuffer::add_text2(const char *text, p_font *font,
         }
     }
 }
+
+#undef TEX_WIDTH
+#undef TEX_HEIGHT

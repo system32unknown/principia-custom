@@ -55,6 +55,7 @@ class rope : public entity,
     static void reset_counter(void);
     static void upload_buffers(void);
     static void _init();
+    static bool initialized;
 
     uint32_t get_num_bodies();
     b2Body* get_body(uint8_t frame);
@@ -74,4 +75,14 @@ class rope : public entity,
 
     /* (num_bodies + ROPE_LENGTH) * 3 */
     float state[(2 + ROPE_LENGTH) * 3];
+
+  private:
+    static tms::varray *va;
+    static tms::gbuffer *buf;
+    static tms::gbuffer *ibuf;
+    static tms_mesh   *_mesh;
+    static tms_entity *_e;
+    static float _cam_x, _cam_y;
+
+    static volatile int counter;
 };

@@ -7,10 +7,9 @@
 #include "object_factory.hh"
 #include "progress.hh"
 #include "text.hh"
-#include "tms/backend/print.h"
-#include "tms/core/err.h"
 #include "ui.hh"
 #include "version.hh"
+#include <tms/cpp.hh>
 
 /* Publish level variables */
 uint32_t      _publish_lvl_community_id;
@@ -916,11 +915,6 @@ _submit_score(void *p)
 
     CURLcode r;
 
-    char data_path[1024];
-
-    const char *storage = tms_storage_path();
-    snprintf(data_path, 1023, "%s/data.bin", storage);
-
     int highscore_level_offset = highscore_offset(W->level.community_id);
 
     lvledit lvl;
@@ -975,7 +969,7 @@ _submit_score(void *p)
 
         part = curl_mime_addpart(mime);
         curl_mime_name(part, "data.bin");
-        curl_mime_filedata(part, data_path);
+        curl_mime_filedata(part, progress::path);
 
         char tmp[32];
         sprintf(tmp, "%u", W->level.community_id);

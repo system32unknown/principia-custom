@@ -7,11 +7,11 @@
 #define RSIZE .08f
 #define SIZE (RSIZE+.02f)
 
-static tms::gbuffer *verts;
-static tms::gbuffer *indices;
-static tms::varray *_va;
-static tms::mesh *_mesh;
-static tms::entity *_e;
+tms::mesh *display::_mesh;
+tms::entity *display::_e;
+tms::gbuffer *display::verts;
+tms::gbuffer *display::indices;
+tms::varray *display::_va;
 
 static int n = 0;
 
@@ -638,3 +638,6 @@ active_display::solve_electronics()
 
     return 0;
 }
+
+#undef RSIZE
+#undef SIZE

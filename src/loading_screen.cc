@@ -2,6 +2,7 @@
 #include "menu_main.hh"
 #include "settings.hh"
 #include "text.hh"
+#include <tms/cpp.hh>
 
 loading_screen::loading_screen()
 {
@@ -30,6 +31,9 @@ loading_screen::pause(void)
 int
 loading_screen::resume(void)
 {
+    // Disable vsync for loading screen to not bottleneck loading speed
+    SDL_GL_SetSwapInterval(0);
+
     tms_infof("resume loading -----------------------------------");
     this->step = 0;
     return T_OK;

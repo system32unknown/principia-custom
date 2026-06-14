@@ -55,4 +55,15 @@ class gearbox : public edev, public b2QueryCallback
         edevice* solve_electronics();
 
         void create_gearjoint();
+
+        static void _init();
+
+    private:
+        static void addmesh(struct tms_mesh *from, float dx, float dy, int *num_v, int *num_i);
+        static void recreate_meshes();
+
+        static bool initialized;
+        static tms_varray *va;
+        static tms_gbuffer *vbuf;
+        static tms_gbuffer *ibuf;
 };

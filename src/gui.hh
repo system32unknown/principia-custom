@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tms/bindings/cpp/cpp.hh>
+#include <tms/cpp.hh>
 #include "text.hh"
 #include "const.hh"
 
@@ -172,6 +172,7 @@ class gui_spritesheet
 
     static float text_factor;
 
+    static bool initialized;
     static void init_atlas(void);
     static void init_loading_font(void);
     static void init_fonts(void);

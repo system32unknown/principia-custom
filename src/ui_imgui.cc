@@ -1,30 +1,20 @@
 #ifdef PRINCIPIA_BACKEND_IMGUI
 
 #include "ui_imgui.hh"
-
 #include "game.hh"
 #include "main.hh"
 #include "misc.hh"
 #include "settings.hh"
 #include "ui.hh"
-
-#include "tms/backend/print.h"
-
+#include "ui_imgui_impl_tms.hh"
+#include <SDL.h>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <stdexcept>
-#include <string>
-#include <vector>
-
-#include <SDL.h>
-#include <SDL_opengl.h>
-#include <SDL_syswm.h>
-
-#include "ui_imgui_impl_tms.hh"
-
-#include <cstdio>
 #include <cstdlib>
+#include <string>
+#include <tms/cpp.hh>
+#include <vector>
 
 // Misc helper functions
 
@@ -46,12 +36,7 @@ bool lax_search(const std::string& where, const std::string& what) {
 }
 
 void ImGui_CenterNextWindow() {
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui::SetNextWindowPos(
-        ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f),
-        ImGuiCond_Always, //ImGuiCond_Appearing,
-        ImVec2(0.5f, 0.5f)
-    );
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 }
 
 void ImGui_BeginScaleFont(float scale) {
@@ -154,6 +139,8 @@ static void principia_style() {
     style->WindowRounding = style->PopupRounding = style->ChildRounding = 3.0f;
 
     //style->FrameBorderSize = .5;
+
+    colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.05f, 0.05f, 0.05f, 0.35f);
 }
 
 static bool init_ready = false;

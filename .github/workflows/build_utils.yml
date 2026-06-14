@@ -1,0 +1,34 @@
+name: build_utils
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'utils/**'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'utils/**'
+
+jobs:
+  build_utils:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libjansson-dev
+
+      - name: Build
+        run: |
+          cd utils
+          make
+
+      - name: Upload output as artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: principia-utils
+          path: utils/bin/
+          if-no-files-found: error

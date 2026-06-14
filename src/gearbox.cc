@@ -6,10 +6,10 @@
 
 #define MAX_MSLOTS 32
 
-static struct tms_varray *va;
-static struct tms_gbuffer *vbuf;
-static struct tms_gbuffer *ibuf;
-static bool initialized = false;
+bool gearbox::initialized = false;
+tms_varray *gearbox::va;
+tms_gbuffer *gearbox::vbuf;
+tms_gbuffer *gearbox::ibuf;
 
 static gearbox *mslots[MAX_MSLOTS];
 static int num_mslots;
@@ -17,23 +17,23 @@ static int vp;
 static int ip;
 
 /* from */
-struct vertex {
+struct gb_vert {
     tvec3 pos;
     tvec3 nor;
     tvec2 uv;
 };
 
 /* to */
-struct vertex2 {
+struct gb_vert2 {
     tvec3 pos;
     tvec3 nor;
 } __attribute__ ((packed));
 
-static void init_gearbox()
+void gearbox::_init()
 {
     num_mslots = 0;
 
-    vbuf = tms_gbuffer_alloc(4096*sizeof(struct vertex2));
+    vbuf = tms_gbuffer_alloc(4096*sizeof(struct gb_vert2));
     ibuf = tms_gbuffer_alloc(32*4096*sizeof(uint16_t));
     ibuf->target = GL_ELEMENT_ARRAY_BUFFER;
 
@@ -43,16 +43,16 @@ static void init_gearbox()
     initialized = true;
 }
 
-static void
-addmesh(struct tms_mesh *from, float dx, float dy, int *num_v, int *num_i)
+void
+gearbox::addmesh(struct tms_mesh *from, float dx, float dy, int *num_v, int *num_i)
 {
-    struct vertex *v = (struct vertex*)(from->vertex_array->gbufs[0].gbuf->buf+from->v_start);
+    gb_vert *v = (gb_vert *)(from->vertex_array->gbufs[0].gbuf->buf+from->v_start);
     uint16_t *i = (uint16_t*)(from->indices->buf+from->i_start*sizeof(uint16_t));
 
-    struct vertex2 *nv = (struct vertex2*)(vbuf->buf+vp*sizeof(struct vertex2));
+    gb_vert2 *nv = (gb_vert2 *)(vbuf->buf+vp*sizeof(struct gb_vert2));
     uint16_t *ni = (uint16_t *)(ibuf->buf+ip*sizeof(uint16_t));
 
-    int last_base = from->v_start / sizeof(struct vertex);
+    int last_base = from->v_start / sizeof(struct gb_vert);
 
     for (int x=0; x<from->i_count; x++)
         ni[x] = i[x] - last_base + vp;
@@ -72,8 +72,8 @@ addmesh(struct tms_mesh *from, float dx, float dy, int *num_v, int *num_i)
     (*num_i) += from->i_count;
 }
 
-static void
-recreate_meshes()
+void
+gearbox::recreate_meshes()
 {
     //tms_infof("recreate meshes- ------------------------------------------------------");
     vp = 0;
@@ -92,7 +92,7 @@ recreate_meshes()
             num_v = 0;
             num_i = 0;
 
-            m->v_start = vp*sizeof(struct vertex2);
+            m->v_start = vp*sizeof(struct gb_vert2);
             m->i_start = ip;
 
             if (a == 0) {
@@ -120,7 +120,7 @@ recreate_meshes()
         }
     }
 
-    tms_gbuffer_upload_partial(vbuf, vp*sizeof(struct vertex2));
+    tms_gbuffer_upload_partial(vbuf, vp*sizeof(struct gb_vert2));
     tms_gbuffer_upload_partial(ibuf, ip*sizeof(uint16_t));
 }
 
@@ -139,9 +139,8 @@ gearbox::get_body(uint8_t n)
 
 gearbox::gearbox()
 {
-    if (!initialized) {
-        init_gearbox();
-    }
+    if (!initialized)
+        _init();
 
     this->set_flag(ENTITY_DO_STEP,      true);
     this->set_flag(ENTITY_HAS_CONFIG,   true);

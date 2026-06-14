@@ -119,7 +119,11 @@ const char *tms_storage_cache_path(void)
         snprintf(path, 1024, "%s/cache", SDL_GetBasePath());
     } else { // System
 #ifdef TMS_BACKEND_WINDOWS
-        snprintf(path, 1024, "%s\\Principia", getenv("LOCALAPPDATA"));
+        const char *localappdata = getenv("LOCALAPPDATA");
+        if (localappdata)
+            snprintf(path, 1024, "%s\\Principia", localappdata);
+        else // XP doesn't define LOCALAPPDATA, fallback to another dir in APPDATA
+            snprintf(path, 1024, "%s\\Principia_cache", getenv("APPDATA"));
 #else
         const char *xdg = getenv("XDG_CACHE_HOME");
         if (!xdg)
@@ -178,8 +182,9 @@ static int dir_exists(const char *path) {
 
 static void move_matching_files(const char *srcdir, const char *dstdir, const char *ext) {
 #ifdef TMS_BACKEND_WINDOWS
-    char pattern[MAX_PATH];
-    snprintf(pattern, sizeof(pattern), "%s\\*.%s", srcdir, ext);
+    // As Windows is UTF-16 and we have UNICODE defined, we need to convert everything to UTF-16...
+    wchar_t pattern[MAX_PATH];
+    swprintf(pattern, MAX_PATH, L"%hs\\*.%hs", srcdir, ext);
 
     WIN32_FIND_DATA ffd;
     HANDLE hFind = FindFirstFile(pattern, &ffd);
@@ -188,11 +193,11 @@ static void move_matching_files(const char *srcdir, const char *dstdir, const ch
     do {
         if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
 
-        char src[MAX_PATH], dst[MAX_PATH];
-        snprintf(src, sizeof(src), "%s\\%s", srcdir, ffd.cFileName);
-        snprintf(dst, sizeof(dst), "%s\\%s", dstdir, ffd.cFileName);
+        wchar_t src[MAX_PATH], dst[MAX_PATH];
+        swprintf(src, MAX_PATH, L"%hs\\%s", srcdir, ffd.cFileName);
+        swprintf(dst, MAX_PATH, L"%hs\\%s", dstdir, ffd.cFileName);
 
-        rename(src, dst);
+        MoveFile(src, dst);
     } while (FindNextFile(hFind, &ffd) != 0);
 
     FindClose(hFind);

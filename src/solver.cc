@@ -1,7 +1,7 @@
 #include "solver.hh"
 #include "entity.hh"
 #include "gear.hh"
-#include <tms/bindings/cpp/cpp.hh>
+#include <tms/cpp.hh>
 
 #define NUM_HANDLERS 13
 
@@ -242,8 +242,6 @@ presolve_cog_cog(b2Contact *contact, entity *a, entity *b, int rev, const b2Mani
 
         double diff = a2-a1;
 
-#define EPS .1f
-
         //if ()
         //
         //if (fabsf(a1) < .2f) tms_infof("A1 ALLOWED");
@@ -261,7 +259,7 @@ presolve_cog_cog(b2Contact *contact, entity *a, entity *b, int rev, const b2Mani
         */
 
         //if (fabsf(diff) > EPS && fabsf(diff) < (1.f-EPS)) {
-        if (std::abs(diff) < EPS) {
+        if (std::abs(diff) < .1f) {
             contact->SetEnabled(false);
 
             /* attach the gears to each other */

@@ -64,6 +64,7 @@ import android.app.Dialog;
 import android.app.UiModeManager;
 import android.content.ClipboardManager;
 import android.content.ClipData;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -2088,8 +2089,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                     Log.v("Principia", "set arg "+url);
                     PrincipiaBackend.setarg(url);
                     SDLActivity.wv_dialog.dismiss();
-                } else if (true) {
-                    // FIXME: Also IF HOST CONTAINS QUERY ?printable=yes
+                } else if (host.contains(PrincipiaBackend.getCommunityHost())) {
                     Log.v("Principia", "Load url "+url);
                     view.stopLoading();
                     view.loadUrl(url);
@@ -2097,7 +2097,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                     Log.v(TAG, "unhandled url " + url);
                     Log.v(TAG, "host: '" + uri.getHost()+"'");
                     Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                    SDLActivity.mSingleton.startActivity(intent);
+                    try {
+                        SDLActivity.mSingleton.startActivity(intent);
+                    } catch (ActivityNotFoundException e) {
+                        Log.v(TAG, "No app found to open url: " + url);
+                    }
                     SDLActivity.wv_dialog.dismiss();
                 }
 
