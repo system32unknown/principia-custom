@@ -321,7 +321,7 @@ struct model_load_data mesh_factory::models[NUM_MODELS] = {
     {PATH("vikinghelmet")},
     {PATH("pickaxe")},
     {PATH("rack")},
-    {PATH("rackhouse")}},
+    {PATH("rackhouse")},
     {PATH("i1o1")}, // MODEL_I1O1_EMPTY
     {0, MODEL_I1O1_EMPTY, tvec2f(0.f, -.125f*i1o1_shift_i++)}, // MODEL_I1O1_INTEGER
     {0, MODEL_I1O1_EMPTY, tvec2f(0.f, -.125f*i1o1_shift_i++)}, // MODEL_I1O1_SQUARE
