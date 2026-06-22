@@ -37,7 +37,7 @@
 #include "treasure_chest.hh"
 #include "ui.hh"
 #include "wheel.hh"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <sstream>
 #include <tms/cpp.hh>
 
@@ -63,16 +63,11 @@
 #include <gtksourceview/gtksource.h>
 #endif
 
-#ifdef TMS_BACKEND_WINDOWS
-#include <windows.h>
-#include <shellapi.h>
-#endif
-
 static gboolean _close_all_dialogs(gpointer unused);
 
-SDL_bool   ui_ready = SDL_FALSE;
-SDL_cond  *ui_cond;
-SDL_mutex *ui_lock;
+bool   ui_ready = false;
+SDL_Condition  *ui_cond;
+SDL_Mutex *ui_lock;
 static gboolean _sig_ui_ready(gpointer unused);
 
 typedef std::map<int, std::pair<int, int> > freq_container;
@@ -485,11 +480,6 @@ struct table_setting_row settings_control_rows[] = {
         "Enable RC cursor lock",
         "Lock the cursor if you active an RC widgets mouse control.",
         "rc_lock_cursor",
-        setting_row_type::create_checkbox()
-    }, {
-        "Emulate touch device",
-        "Enable this if you use an external device other than a mouse to control Principia, such as a Wacom pad.",
-        "emulate_touch",
         setting_row_type::create_checkbox()
     },
 };
@@ -5030,10 +5020,6 @@ save_settings()
     }
 
     tms_infof("done!");
-
-#ifdef TMS_BACKEND_WINDOWS
-    SDL_EventState(SDL_SYSWMEVENT, settings["emulate_touch"]->is_true() ? SDL_ENABLE : SDL_DISABLE);
-#endif
 
     P.can_reload_graphics = true;
 }
@@ -9972,8 +9958,8 @@ static gboolean
 _sig_ui_ready(gpointer unused)
 {
     SDL_LockMutex(ui_lock);
-    ui_ready = SDL_TRUE;
-    SDL_CondSignal(ui_cond);
+    ui_ready = true;
+    SDL_SignalCondition(ui_cond);
     SDL_UnlockMutex(ui_lock);
 
     return false;
@@ -9982,8 +9968,8 @@ _sig_ui_ready(gpointer unused)
 void ui::init()
 {
     ui_lock = SDL_CreateMutex();
-    ui_cond = SDL_CreateCond();
-    ui_ready = SDL_FALSE;
+    ui_cond = SDL_CreateCondition();
+    ui_ready = false;
 
     SDL_Thread *gtk_thread;
 
@@ -11481,7 +11467,7 @@ static void wait_ui_ready()
 
     SDL_LockMutex(ui_lock);
     if (!ui_ready) {
-        SDL_CondWaitTimeout(ui_cond, ui_lock, 4000);
+        SDL_WaitConditionTimeout(ui_cond, ui_lock, 4000);
         if (!ui_ready) tms_fatalf("Could not initialise game (GTK not ready)");
     }
     SDL_UnlockMutex(ui_lock);

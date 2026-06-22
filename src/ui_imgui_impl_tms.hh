@@ -2,10 +2,7 @@
 
 #pragma once
 
-#include <SDL.h>
-#include "SDL_clipboard.h"
-#include "SDL_stdinc.h"
-#include "SDL_syswm.h"
+#include <SDL3/SDL.h>
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -187,15 +184,7 @@ inline const void init_io() {
     platform_io.Platform_GetClipboardTextFn = GetClipboardTextFn;
     platform_io.Platform_SetClipboardTextFn = SetClipboardTextFn;
 
-    //set PlatformHandleRaw
-    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    main_viewport->PlatformHandleRaw = nullptr;
-#if defined(TMS_BACKEND_WINDOWS)
-    SDL_SysWMinfo info;
-    if (SDL_GetWindowWMInfo((SDL_Window*) _tms._window, &info)) {
-        main_viewport->PlatformHandleRaw = (void*)info.info.win.window;
-    }
-#endif
+    // PlatformHandleRaw is never used by imgui, so don't do anything with it
 }
 
 inline int ImGui_ImplTMS_Init_Platform() {

@@ -1,3 +1,4 @@
+#include "game.hh"
 #include "absorber.hh"
 #include "adventure.hh"
 #include "basepixel.hh"
@@ -16,10 +17,10 @@
 #include "font.hh"
 #include "fxemitter.hh"
 #include "game-message.hh"
-#include "game.hh"
 #include "gravityman.hh"
 #include "grid.hh"
 #include "group.hh"
+#include "gui.hh"
 #include "i0o1gate.hh"
 #include "i1o1gate.hh"
 #include "i2o1gate.hh"
@@ -40,16 +41,18 @@
 #include "panel.hh"
 #include "pixel.hh"
 #include "plant.hh"
+#include "player_activator.hh"
 #include "polygon.hh"
 #include "progress.hh"
 #include "proximitysensor.hh"
 #include "ragdoll.hh"
-#include "rand.h"
+#include "rand.hh"
 #include "rc_activator.hh"
 #include "robot.hh"
 #include "robot_parts.hh"
 #include "robotman.hh"
 #include "rope.hh"
+#include "rotozoom.hh"
 #include "screenshot_marker.hh"
 #include "scup.hh"
 #include "settings.hh"
@@ -58,6 +61,7 @@
 #include "soundman.hh"
 #include "soundmanager.hh"
 #include "spritebuffer.hh"
+#include "terrain.hh" /* for print_screen_point_info */
 #include "text.hh"
 #include "textbuffer.hh"
 #include "tpixel.hh"
@@ -66,20 +70,11 @@
 #include "widget_manager.hh"
 #include "worker.hh"
 #include "world.hh"
-#include "player_activator.hh"
-#include "gui.hh"
-#ifdef DEBUG
-/* for print_screen_point_info */
-#include "terrain.hh"
-#endif
-
+#include <SDL3/SDL.h>
 #include <glad/gl.h>
-#include <unistd.h>
-
 #include <iterator>
 #include <map>
-
-#include "SDL2_rotozoom.h"
+#include <unistd.h>
 
 #define MAX_COPY_ENTITIES 10
 
@@ -684,8 +679,10 @@ try_activate_slider(int slot)
                 G->wdg_base_y = _tms.window_height/2;
                 SDL_WarpMouseInWindow((SDL_Window*)_tms._window, G->wdg_base_x, G->wdg_base_y);
             } else {
-                SDL_GetMouseState(&G->wdg_base_x, &G->wdg_base_y);
-                G->wdg_base_y = _tms.window_height - G->wdg_base_y;
+                float mx, my;
+                SDL_GetMouseState(&mx, &my);
+                G->wdg_base_x = (int)mx;
+                G->wdg_base_y = _tms.window_height - (int)my;
             }
 
             tms_wdg_set_active(wdg_misc[slot], 1);
@@ -1389,7 +1386,7 @@ game::pause()
     ui::open_dialog(CLOSE_ABSOLUTELY_ALL_DIALOGS);
 
 #ifdef TMS_BACKEND_PC
-    SDL_SetWindowGrab((SDL_Window*)_tms._window, SDL_FALSE);
+    SDL_SetWindowMouseGrab(_tms._window, false);
 #endif
 
     return T_OK;
@@ -1553,11 +1550,9 @@ game::step(double dt)
     if (settings["rc_lock_cursor"]->v.b) {
         if ((this->active_hori_wdg && !this->active_hori_wdg->is_radial())
                 || (this->active_vert_wdg && !this->active_vert_wdg->is_radial())) {
-            SDL_ShowCursor(0);
-            //SDL_SetRelativeMouseMode(SDL_TRUE);
+            SDL_ShowCursor();
         } else {
-            SDL_ShowCursor(1);
-            //SDL_SetRelativeMouseMode(SDL_FALSE);
+            SDL_HideCursor();
         }
     }
 #endif
@@ -2832,18 +2827,6 @@ game::render()
 #ifdef PROFILING
     tms_infof("upload: %d", SDL_GetTicks() - ss);
     ss = SDL_GetTicks();
-#endif
-
-#ifdef DEBUG
-# ifdef TMS_BACKEND_MOBILE
-    G->show_numfeed(_tms.fps_mean);
-# else
-    if (W->step_count % 120 == 0) {
-        char fps[64];
-        sprintf(fps, "Principia - FPS: %f (%f)", _tms.fps, _tms.fps_mean);
-        SDL_SetWindowTitle((SDL_Window*)_tms._window, fps);
-    }
-# endif
 #endif
 
     glViewport(0,0,_tms.opengl_width, _tms.opengl_height);
@@ -5317,7 +5300,7 @@ game::apply_level_properties()
         this->set_architect_mode(false);
     }
 
-#ifdef TMS_BACKEND_MOBILE
+#ifdef SDL_PLATFORM_ANDROID
     if (W->level.flag_active(LVL_PORTRAIT_MODE)) {
 #else
     if (false) {
@@ -5409,7 +5392,7 @@ game::do_pause()
     W->save_cache(W->level_id_type, W->level.local_id);
 
 #ifdef TMS_BACKEND_PC
-    SDL_SetWindowGrab((SDL_Window*)_tms._window, SDL_FALSE);
+    SDL_SetWindowMouseGrab((SDL_Window*)_tms._window, false);
 #endif
     if (this->state.test_playing && !W->is_puzzle()) {
         tms_infof("returning to sandbox");
@@ -5894,9 +5877,7 @@ game::handle_input_playing(tms::event *ev, int action)
                 || ev->type == TMS_EV_KEY_PRESS) {
                 if (ev->type == TMS_EV_KEY_PRESS) {
                     switch (ev->data.key.keycode) {
-#ifdef TMS_BACKEND_MOBILE
                         case SDL_SCANCODE_AC_BACK:
-#endif
                         case TMS_KEY_B:
                             this->back();
                             return EVENT_DONE;
@@ -5922,9 +5903,9 @@ game::handle_input_playing(tms::event *ev, int action)
                 this->state.waiting = false;
 #ifdef TMS_BACKEND_PC
                 if (settings["jail_cursor"]->v.b == true) {
-                    SDL_SetWindowGrab((SDL_Window*)_tms._window, SDL_TRUE);
+                    SDL_SetWindowMouseGrab(_tms._window, true);
                 } else {
-                    SDL_SetWindowGrab((SDL_Window*)_tms._window, SDL_FALSE);
+                    SDL_SetWindowMouseGrab(_tms._window, false);
                 }
 #endif
 
@@ -6031,9 +6012,7 @@ game::handle_input_playing(tms::event *ev, int action)
                 }
                 break;
 
-#ifdef TMS_BACKEND_MOBILE
             case SDL_SCANCODE_AC_BACK:
-#endif
             case TMS_KEY_B:
             case TMS_KEY_P:
                 if (W->is_adventure()) {
@@ -6074,11 +6053,9 @@ game::handle_input_playing(tms::event *ev, int action)
                 }
                 break;
 
-#ifdef TMS_BACKEND_MOBILE
             case SDL_SCANCODE_MENU:
                 ui::open_dialog(DIALOG_PLAY_MENU);
                 break;
-#endif
         }
     } else if (ev->type == TMS_EV_KEY_DOWN || ev->type == TMS_EV_KEY_REPEAT) {
         if (this->menu_handle_event(ev) == EVENT_DONE) {
@@ -6454,10 +6431,9 @@ game::handle_input_playing(tms::event *ev, int action)
                         bool shift_down = (this->shift_down() && !this->state.abo_architect_mode) || (!this->shift_down() && this->state.abo_architect_mode);
                         bool ctrl_down = this->ctrl_down();
 
-#ifdef TMS_BACKEND_MOBILE
-                        /* On Android and iOS we include alternate snap-methods (holding a second finger down on the screen) */
-                        shift_down = shift_down || snap[0] || snap[1];
-#endif
+                        // On touch platforms we include alternate snap-methods (holding a second finger down on the screen)
+                        if (settings["touch_controls"]->v.b)
+                            shift_down = shift_down || snap[0] || snap[1];
 
                         /**
                          * Holding down shift and ctrl produces 64-angle snapping
@@ -7292,7 +7268,8 @@ game::create_icon()
 
     glViewport(0,0,_tms.opengl_width, _tms.opengl_height);
 
-    SDL_Surface *srf = SDL_CreateRGBSurface(SDL_SWSURFACE, 512, 512, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+    SDL_Surface *srf = SDL_CreateSurface(512, 512,
+            SDL_GetPixelFormatForMasks(32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000));
     glReadPixels(0, 0, 512, 512, GL_RGBA, GL_UNSIGNED_BYTE, srf->pixels);
 
     if ((err = glGetError()) != 0) tms_infof("glReadPixels: %u", err);
@@ -7317,9 +7294,9 @@ game::create_icon()
             W->level.icon[y*128+x] = (uint8_t)new_c&0xff;
         }
     }
-    SDL_FreeSurface(n);
+    SDL_DestroySurface(n);
 
-    SDL_FreeSurface(srf);
+    SDL_DestroySurface(srf);
 
     tms_fb_unbind(this->icon_fb);
 
@@ -7680,7 +7657,7 @@ game::handle_input_paused(tms::event *ev, int action)
                     if (this->selection.e != 0) {
                         this->set_mode(GAME_MODE_ROTATE);
 
-                        int mx, my;
+                        float mx, my;
                         SDL_GetMouseState(&mx, &my);
                         this->rot_mouse_pos = tvec2f(mx, my);
                         this->rot_mouse_base = this->selection.e->gr ? this->selection.e->gr->get_angle() : this->selection.e->get_angle();
@@ -7811,9 +7788,7 @@ game::handle_input_paused(tms::event *ev, int action)
                 }
                 break;
 
-#ifdef TMS_BACKEND_MOBILE
             case SDL_SCANCODE_AC_BACK:
-#endif
             case TMS_KEY_B: this->back(); break;
 
             case TMS_KEY_DELETE:
@@ -8034,13 +8009,11 @@ game::handle_input_paused(tms::event *ev, int action)
                 }
                 break;
 
-#ifdef TMS_BACKEND_MOBILE
             case SDL_SCANCODE_MENU:
                 if (this->state.sandbox) {
                     ui::open_dialog(DIALOG_SANDBOX_MENU);
                 }
                 break;
-#endif
         }
     } else if (ev->type == TMS_EV_KEY_UP) {
         switch (ev->data.key.keycode) {
@@ -8108,7 +8081,7 @@ game::handle_input_paused(tms::event *ev, int action)
             if (!this->selection.e) {
                 this->set_mode(GAME_MODE_DEFAULT);
             } else {
-                int mx, my;
+                float mx, my;
                 SDL_GetMouseState(&mx, &my);
                 float dist = my - this->rot_mouse_pos.y;
                 dist *= 1.f/100.f;
@@ -8132,7 +8105,7 @@ game::handle_input_paused(tms::event *ev, int action)
             if (!this->selection.e) {
                 this->set_mode(GAME_MODE_DEFAULT);
             } else {
-                int mx, my;
+                float mx, my;
                 SDL_GetMouseState(&mx, &my);
                 float dist_x = mx - this->rot_mouse_pos.x;
                 float dist_y = my - this->rot_mouse_pos.y;
@@ -8489,12 +8462,9 @@ game::handle_input_paused(tms::event *ev, int action)
                             simple_snap = !simple_snap;
                         }
 
-#ifdef TMS_BACKEND_MOBILE
-                        /* On Android and iOS we include alternate snap-methods (holding a second finger down on the screen) */
-                        if (snap[0] || snap[1]) {
+                        // On touch platforms we include alternate snap-methods (holding a second finger down on the screen)
+                        if (settings["touch_controls"]->v.b && (snap[0] || snap[1]))
                             simple_snap = !simple_snap;
-                        }
-#endif
 
                         bool advanced_snap = false;
 
@@ -8905,12 +8875,10 @@ game::handle_input_paused(tms::event *ev, int action)
             }
         }
 
-#ifdef TMS_BACKEND_PC
-        if (pid == 1) {
+        if (!settings["touch_controls"]->v.b && pid == 1) {
             ui::open_dialog(DIALOG_SANDBOX_MENU);
             return T_OK;
         }
-#endif
 
         moving[pid] = false;
         dragging[pid] = false;
@@ -10355,9 +10323,9 @@ game::editor_construct_entity(uint32_t g_id, int pid/*=0*/, bool force_on_pid/*=
 
     tvec3 pos;
 #ifdef TMS_BACKEND_PC
-    int mx, my;
+    float mx, my;
     SDL_GetMouseState(&mx, &my);
-    W->get_layer_point(this->cam, mx, _tms.window_height-my, 0.f, &pos);
+    W->get_layer_point(this->cam, (int)mx, _tms.window_height-(int)my, 0.f, &pos);
 #else
     if (force_on_pid) {
         W->get_layer_point(this->cam, touch_proj[pid].x, touch_proj[pid].y, 0.f, &pos);
@@ -10485,9 +10453,9 @@ game::editor_construct_item(uint32_t item_id)
 
     tvec3 pos;
 #ifdef TMS_BACKEND_PC
-    int mx, my;
+    float mx, my;
     SDL_GetMouseState(&mx, &my);
-    W->get_layer_point(this->cam, mx, _tms.window_height-my, 0.f, &pos);
+    W->get_layer_point(this->cam, (int)mx, _tms.window_height-(int)my, 0.f, &pos);
 #else
     pos = this->cam->_position;
 #endif
@@ -10539,9 +10507,9 @@ game::editor_construct_decoration(uint32_t decoration_id)
 
     tvec3 pos;
 #ifdef TMS_BACKEND_PC
-    int mx, my;
+    float mx, my;
     SDL_GetMouseState(&mx, &my);
-    W->get_layer_point(this->cam, mx, _tms.window_height-my, 0.f, &pos);
+    W->get_layer_point(this->cam, (int)mx, _tms.window_height-(int)my, 0.f, &pos);
 #else
     pos = this->cam->_position;
 #endif
@@ -10592,8 +10560,10 @@ void
 game::refresh_last_cursor_pos()
 {
 #ifdef TMS_BACKEND_PC
-    SDL_GetMouseState(&this->last_cursor_pos_x, &this->last_cursor_pos_y);
-    this->last_cursor_pos_y = _tms.window_height - this->last_cursor_pos_y;
+    float mx, my;
+    SDL_GetMouseState(&mx, &my);
+    this->last_cursor_pos_x = (int)mx;
+    this->last_cursor_pos_y = _tms.window_height - (int)my;
 #endif
 }
 
@@ -11477,7 +11447,7 @@ game::clamp_entities()
 
     W->groups = new_groups;
 
-    tms_debugf("Done in %u ticks", SDL_GetTicks()-ss);
+    tms_debugf("Done in %" PRIu64 " ticks", SDL_GetTicks()-ss);
     tms_debugf("Old biggest id: %u. New: %u", prev_biggest, id-1);
     tms_debugf("Entities: %u, Cables: %u, Groups: %u",
                num_entities, num_cables, num_groups);

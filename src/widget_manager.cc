@@ -41,22 +41,13 @@ base_touch_up(struct tms_wdg *w, int pid, int bid, int ox, int oy, float rx, flo
     }
 
     bool hovered;
-
-#ifdef TMS_BACKEND_PC
-    if (false && settings["emulate_touch"]->is_true()) {
+    if (settings["touch_controls"]->v.b) {
         float dist = sqrtf((float)(ox*ox + oy*oy));
-
-        tms_infof("DIST: %.2f", dist);
 
         hovered = (dist < w->size.w);
     } else {
         hovered = w->hovered;
     }
-#else
-    float dist = sqrtf((float)(ox*ox + oy*oy));
-
-    hovered = (dist < w->size.w);
-#endif
 
     if (hovered) {
 #ifndef TMS_BACKEND_PC
@@ -345,7 +336,6 @@ principia_wdg::step()
         }
     }
 
-#ifdef TMS_BACKEND_MOBILE
     if (this->type == TMS_WDG_BUTTON) {
         if (this->moved_out) {
             this->down_time = 0.0;
@@ -368,7 +358,6 @@ principia_wdg::step()
             this->down_time = 0.0;
         }
     }
-#endif
 }
 
 /* Emulate a click event. This will only reliably work on a button */
@@ -835,22 +824,6 @@ widget_manager::init_areas()
     this->areas[AREA_MENU_BOTTOM_CENTER].tmody  =  0.0f;
     this->areas[AREA_MENU_BOTTOM_CENTER].horizontal_align = ALIGN_CENTER;
     this->areas[AREA_MENU_BOTTOM_CENTER].last_width = 0.f;
-
-    this->areas[AREA_CREATE_CONTEST_TOP].base_x = MARGIN_X;
-    this->areas[AREA_CREATE_CONTEST_TOP].base_y = _tms.window_height - MARGIN_Y;
-    this->areas[AREA_CREATE_CONTEST_TOP].imodx  =  1.25f;
-    this->areas[AREA_CREATE_CONTEST_TOP].imody  =  0.0f;
-    this->areas[AREA_CREATE_CONTEST_TOP].modx   =  1.0f;
-    this->areas[AREA_CREATE_CONTEST_TOP].mody   =  0.0f;
-
-    this->areas[AREA_CREATE_CONTEST_BOTTOM].base_x = MARGIN_X;
-    this->areas[AREA_CREATE_CONTEST_BOTTOM].base_y = MARGIN_Y + menu_shared::bar_height;
-    this->areas[AREA_CREATE_CONTEST_BOTTOM].imodx  =  1.25f;
-    this->areas[AREA_CREATE_CONTEST_BOTTOM].imody  =  1.0f;
-    this->areas[AREA_CREATE_CONTEST_BOTTOM].modx   =  1.0f;
-    this->areas[AREA_CREATE_CONTEST_BOTTOM].mody   =  0.0f;
-    this->areas[AREA_CREATE_CONTEST_BOTTOM].tmodx  = -1.0f;
-    this->areas[AREA_CREATE_CONTEST_BOTTOM].tmody  =  0.0f;
 }
 
 void
@@ -882,37 +855,6 @@ widget_manager::refresh_areas()
     } else if (this->get_home() == P.s_menu_create) {
         this->areas[AREA_CREATE_LEFT_SUB].base_y = this->areas[AREA_MENU_LEFT_HCENTER].bot.y;
 
-        this->areas[AREA_CREATE_CONTEST_BOTTOM].base_x =
-              this->areas[AREA_MENU_BOTTOM_LEFT].base_x
-            + MARGIN_X
-            + this->areas[AREA_MENU_BOTTOM_LEFT].last_width;
-
-        this->areas[AREA_CREATE_CONTEST_TOP].base_x =
-              this->areas[AREA_CREATE_CONTEST_BOTTOM].base_x;
-
-        this->areas[AREA_CREATE_CONTEST_TOP].base_y =
-              this->areas[AREA_CREATE_CONTEST_BOTTOM].first_pos.y
-            + this->areas[AREA_CREATE_CONTEST_BOTTOM].last_height;
-
-        //this->areas[AREA_CREATE_CONTEST_TOP].base_y = this->areas[AREA_MENU_BOTTOM_LEFT].top.y;
-        this->areas[AREA_CREATE_CONTEST_TOP].base_y = this->areas[AREA_CREATE_CONTEST_BOTTOM].top.y;
-
-
-        int32_t diff = this->areas[AREA_CREATE_LEFT_SUB].bot.y ;
-
-        int32_t min_diff = 135 + MARGIN_Y + menu_shared::bar_height;
-
-        tms_debugf("diff: %d < %d?", diff, min_diff);
-
-        if (diff < min_diff) {
-            this->areas[AREA_CREATE_CONTEST_TOP].enabled = false;
-            this->areas[AREA_CREATE_CONTEST_BOTTOM].enabled = false;
-            this->areas[AREA_MENU_BOTTOM_LEFT].enabled = false;
-        } else {
-            this->areas[AREA_CREATE_CONTEST_TOP].enabled = true;
-            this->areas[AREA_CREATE_CONTEST_BOTTOM].enabled = true;
-            this->areas[AREA_MENU_BOTTOM_LEFT].enabled = true;
-        }
     } else if (this->get_home() == P.s_menu_play) {
         this->areas[AREA_MENU_LEFT_HLEFT].base_y = this->areas[AREA_MENU_TOP_CENTER].bot.y;
 

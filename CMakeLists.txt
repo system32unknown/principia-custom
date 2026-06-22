@@ -15,6 +15,8 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
+include(DownloadLib)
+
 add_custom_target(GenerateGitVersion
 	COMMAND ${CMAKE_COMMAND}
 	-D "GENERATE_VERSION_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
@@ -25,18 +27,21 @@ add_custom_target(GenerateGitVersion
 option(UNITY_BUILD "Experimental unity build" FALSE)
 mark_as_advanced(UNITY_BUILD)
 
+option(USE_VENDORED_SDL3 "Build with vendored SDL3 library" FALSE)
+
 # Find core dependencies
 # ----------------------
+
+if(USE_VENDORED_SDL3)
+	include(cmake/SDL.cmake)
+else()
+	find_package(SDL3 REQUIRED)
+endif()
 
 if(ANDROID)
 	cmake_minimum_required(VERSION 3.20)
 	include(PrincipiaAndroidLibs)
-
 else()
-	if(NOT EMSCRIPTEN)
-		find_package(SDL2 REQUIRED)
-	endif()
-
 	set(OpenGL_GL_PREFERENCE GLVND)
 	find_package(OpenGL REQUIRED)
 endif()
@@ -104,9 +109,7 @@ include_directories(
 	src/
 	${CMAKE_CURRENT_BINARY_DIR})
 
-file(GLOB SRCS
-	src/*.c
-
+file(GLOB SRCS CONFIGURE_DEPENDS
 	lib/GLAD/src/gl.c
 	lib/lua/*.c
 	lib/SDL_image/*.c
@@ -126,7 +129,7 @@ if(UNITY_BUILD)
 
 		lib/Box2D/_unity_chunk.cc)
 else()
-	file(GLOB MAIN_SRCS
+	file(GLOB MAIN_SRCS CONFIGURE_DEPENDS
 		src/tms/core/*.c
 		src/tms/math/*.c
 		src/tms/cpp.cc
@@ -146,7 +149,7 @@ else()
 endif()
 
 if(BACKEND_IMGUI)
-	file(GLOB IMGUI_SRCS
+	file(GLOB IMGUI_SRCS CONFIGURE_DEPENDS
 		lib/imgui/*.cpp
 		lib/imgui/misc/freetype/*.cpp
 		src/ui/*.cc)
@@ -172,27 +175,10 @@ if(NOT SCREENSHOT_BUILD)
 		add_definitions(-DBUILD_CURL)
 	endif()
 
-	file(GLOB SDL_mixer_SRCS lib/SDL_mixer/*.c)
+	file(GLOB SDL_mixer_SRCS CONFIGURE_DEPENDS lib/SDL_mixer/*.c)
 	list(APPEND SRCS ${SDL_mixer_SRCS})
 endif()
 
-
-# Optional luasocket functionality
-
-if(NOT SCREENSHOT_BUILD AND NOT EMSCRIPTEN)
-	option(USE_LUASOCKET "Build with Luasocket support" TRUE)
-else()
-	set(USE_LUASOCKET FALSE)
-endif()
-
-if(USE_LUASOCKET)
-	add_definitions(-DBUILD_LUASOCKET)
-
-	file(GLOB LUASOCKET_SRCS
-		lib/luasocket/*.c)
-
-	list(APPEND SRCS ${LUASOCKET_SRCS})
-endif()
 
 if(NOT UNITY_BUILD)
 	if(SCREENSHOT_BUILD)
@@ -230,11 +216,6 @@ if(NOT EMSCRIPTEN)
 	    PNG::PNG
 	    ZLIB::ZLIB)
 
-	if(WIN32)
-		list(APPEND LIBS SDL2::SDL2main)
-	endif()
-	list(APPEND LIBS SDL2::SDL2)
-
 	if(NOT SCREENSHOT_BUILD AND NOT EMSCRIPTEN)
 		list(APPEND LIBS ${CURL_LIBRARIES})
 
@@ -244,6 +225,8 @@ if(NOT EMSCRIPTEN)
 	endif()
 endif()
 
+list(APPEND LIBS SDL3::SDL3)
+
 if(SHOULD_USE_GLES)
 	list(APPEND LIBS GLESv2)
 else()
@@ -252,8 +235,6 @@ endif()
 
 if(ANDROID)
 	list(APPEND LIBS android dl log OpenSLES)
-elseif(WIN32)
-	list(APPEND LIBS ws2_32.lib version.lib shlwapi.lib winmm.lib)
 endif()
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
@@ -272,7 +253,7 @@ if(UNITY_BUILD)
 endif()
 
 if(WIN32)
-	add_definitions(-D_WIN32_WINNT=0x0501 -DUNICODE)
+	add_definitions(-D_WIN32_WINNT=0x0501)
 elseif(SCREENSHOT_BUILD)
 	add_definitions(-DNO_UI -DSCREENSHOT_BUILD)
 endif()
@@ -292,7 +273,7 @@ set(COMMON_FLAGS "-fno-math-errno -fno-trapping-math -fno-signed-zeros")
 
 if(EMSCRIPTEN)
 	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "--preload-file ../data/")
-	set(LIBRARY_FLAGS "-sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 -sUSE_LIBPNG=1 -sUSE_ZLIB=1 -sUSE_SDL=2 -pthread")
+	set(LIBRARY_FLAGS "-sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 -sUSE_LIBPNG=1 -sUSE_ZLIB=1 -pthread")
 	string(APPEND COMMON_FLAGS " ${LIBRARY_FLAGS}")
 	set(CMAKE_EXE_LINKER_FLAGS " ${LIBRARY_FLAGS} -pthread -sPTHREAD_POOL_SIZE=20 -sINITIAL_MEMORY=2013265920 -sALLOW_MEMORY_GROWTH=1 -sTOTAL_STACK=16Mb -sFETCH=1")
 endif()
@@ -319,6 +300,15 @@ endif()
 # macOS Clang's linker doesn't like these flags
 if(NOT APPLE)
 	string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE "-Wl,-s ")
+endif()
+
+# Register protocol handler util on Windows
+# -----------------------------------------
+
+if(WIN32)
+	add_executable(register-protocol-handler
+		packaging/register-protocol-handler/main.c
+		packaging/register-protocol-handler/windows.rc)
 endif()
 
 # Installation

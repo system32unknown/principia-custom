@@ -24,7 +24,7 @@
 #include "gui.hh"
 #if defined(TMS_BACKEND_LINUX) && defined(DEBUG)
 #define CREATE_SANDBOX_TEXTURES
-#include "savepng.h"
+#include "SDL_image.h"
 #endif
 
 #ifndef UINT32_MAX
@@ -2030,11 +2030,9 @@ game::refresh_widgets()
     if (!W->is_puzzle() || G->state.sandbox)
         this->wdg_menu->add();
 
-#ifdef TMS_BACKEND_MOBILE
-    if (this->state.sandbox) {
+    if (settings["touch_controls"]->v.b && this->state.sandbox) {
         this->wdg_quickadd->add();
     }
-#endif
 
     if (this->get_mode() == GAME_MODE_DRAW && G->brush_layer_inclusion) {
         G->wdg_default_layer->s[0] = gui_spritesheet::get_sprite(S_ILAYER0+tclampi(G->state.edit_layer, 0, 2));
@@ -2506,7 +2504,7 @@ game::create_sandbox_menu()
             entity *e = menu_objects[n].e;
 
             char override_path[512];
-            snprintf(override_path, 512, "./data-src/override/%u.png", e->g_id);
+            snprintf(override_path, 512, "data-src/override/%u.png", e->g_id);
 
             if (!file_exists(override_path)) {
                 cam->width = 2.0f * 1.f/e->menu_scale;
@@ -2561,7 +2559,8 @@ game::create_sandbox_menu()
         /* Save all objects to an SDL_Surface. */
         char name[256];
         sprintf(name, "sandbox-menu-%u.png", y);
-        SDL_Surface *srf = SDL_CreateRGBSurface(SDL_SWSURFACE, twidth, theight, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+        SDL_Surface *srf = SDL_CreateSurface(twidth, theight,
+            SDL_GetPixelFormatForMasks(32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000));
         glReadPixels(0, 0, twidth, theight, GL_RGBA, GL_UNSIGNED_BYTE, srf->pixels);
 
         for (int x=0; x<of::get_num_objects(y); x++) {
@@ -2571,7 +2570,7 @@ game::create_sandbox_menu()
             entity *e = menu_objects[n].e;
 
             char override_path[512];
-            snprintf(override_path, 512, "./data-src/override/%u.png", e->g_id);
+            snprintf(override_path, 512, "data-src/override/%u.png", e->g_id);
 
             if (file_exists(override_path)) {
                 struct tms_texture tex;
@@ -2589,7 +2588,8 @@ game::create_sandbox_menu()
                 menu_objects[n].image.width  = SIZE_PER_MENU_ITEM;
                 menu_objects[n].image.height = SIZE_PER_MENU_ITEM;
 
-                SDL_Surface *img_srf = SDL_CreateRGBSurface(SDL_SWSURFACE, SIZE_PER_MENU_ITEM, SIZE_PER_MENU_ITEM, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+                SDL_Surface *img_srf = SDL_CreateSurface(SIZE_PER_MENU_ITEM, SIZE_PER_MENU_ITEM,
+                    SDL_GetPixelFormatForMasks(32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000));
 
                 size_t buf_size = tex.width * tex.height * tex.num_channels;
 
@@ -2615,16 +2615,18 @@ game::create_sandbox_menu()
 
                 SDL_BlitSurface(img_srf, &src_rect, srf, &dst_rect);
 
-                SDL_FreeSurface(img_srf);
+                SDL_DestroySurface(img_srf);
+
             }
+
             ++ n;
         }
 
         tms_infof("saved: %s", name);
 
         /* Save the surface as a PNG file. */
-        SDL_SavePNG(srf, name);
-        SDL_FreeSurface(srf);
+        IMG_SavePNG(srf, name);
+        SDL_DestroySurface(srf);
 
         tms_fb_unbind(fb);
     }
@@ -2703,11 +2705,12 @@ game::create_sandbox_menu()
         glViewport(0, 0, _tms.opengl_width, _tms.opengl_height);
 
         /* save to file */
-        SDL_Surface *srf = SDL_CreateRGBSurface(SDL_SWSURFACE, twidth, theight, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+        SDL_Surface *srf = SDL_CreateSurface(twidth, theight,
+            SDL_GetPixelFormatForMasks(32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000));
         glReadPixels(0, 0, twidth, theight, GL_RGBA, GL_UNSIGNED_BYTE, srf->pixels);
         tms_infof("saved: items.png");
-        SDL_SavePNG(srf, "items.png");
-        SDL_FreeSurface(srf);
+        IMG_SavePNG(srf, "items.png");
+        SDL_DestroySurface(srf);
 
         tms_fb_unbind(fb);
     }

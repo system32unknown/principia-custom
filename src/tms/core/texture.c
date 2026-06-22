@@ -134,15 +134,7 @@ tms_texture_load(struct tms_texture *tex, const char *filename)
 {
     int status;
 
-    SDL_RWops *rw = SDL_RWFromFile(filename,"rb");
-
-    if (!rw) {
-        tms_infof("file not found: '%s'", SDL_GetError());
-        return T_ERR;
-    }
-
-    SDL_Surface *s = IMG_Load_RW(rw, 1);
-
+    SDL_Surface *s = IMG_Load(filename);
     if (!s) {
         tms_errorf("could not open file: %s", filename);
         return T_ERR;
@@ -153,12 +145,7 @@ tms_texture_load(struct tms_texture *tex, const char *filename)
     tex->gamma_corrected = 0;
     tex->width = s->w;
     tex->height = s->h;
-    //tex->num_channels = 3 + s->format->Amask?1:0;
-    tex->num_channels = s->format->BytesPerPixel;
-
-    //tms_infof("bpp %d", s->format->BytesPerPixel);
-
-    //tms_assertf(tex->num_channels == s->format->BytesPerPixel, "unsupported texture type BLAH");
+    tex->num_channels = SDL_GetPixelFormatDetails(s->format)->bytes_per_pixel;
 
     tex->data = malloc(tex->width*tex->height*tex->num_channels);
 
@@ -170,8 +157,7 @@ tms_texture_load(struct tms_texture *tex, const char *filename)
         }
     }
 
-    SDL_FreeSurface(s);
-    //SDL_RWclose(rw);
+    SDL_DestroySurface(s);
 
     return T_OK;
 }
@@ -215,21 +201,21 @@ tms_texture_load_mem(struct tms_texture *tex, const char *buf,
  * @relates tms_texture
  **/
 int
-tms_texture_load_mem2(struct tms_texture *tex, const char *buf, size_t size, int freesrc)
+tms_texture_load_mem2(struct tms_texture *tex, const char *buf, size_t size, int freesrc, const char *type)
 {
     int status;
 
-    SDL_RWops *rw = SDL_RWFromConstMem(buf, size);
+    SDL_IOStream *rw = SDL_IOFromConstMem(buf, size);
 
     if (!rw) {
         tms_errorf("Error creating RW from memory: %s", SDL_GetError());
         return T_COULD_NOT_OPEN;
     }
 
-    SDL_Surface *s = IMG_Load_RW(rw, freesrc);
+    SDL_Surface *s = IMG_LoadTyped_IO(rw, freesrc, type);
 
     if (!s) {
-        tms_errorf("Error calling IMG_Load_RW: %s", IMG_GetError());
+        tms_errorf("Error loading image: %s", SDL_GetError());
         return T_COULD_NOT_OPEN;
     }
 
@@ -238,12 +224,7 @@ tms_texture_load_mem2(struct tms_texture *tex, const char *buf, size_t size, int
     tex->gamma_corrected = 0;
     tex->width = s->w;
     tex->height = s->h;
-    //tex->num_channels = 3 + s->format->Amask?1:0;
-    tex->num_channels = s->format->BytesPerPixel;
-
-    //tms_infof("bpp %d", s->format->BytesPerPixel);
-
-    //tms_assertf(tex->num_channels == s->format->BytesPerPixel, "unsupported texture type BLAH");
+    tex->num_channels = SDL_GetPixelFormatDetails(s->format)->bytes_per_pixel;
 
     tex->data = malloc(tex->width*tex->height*tex->num_channels);
 
@@ -255,8 +236,7 @@ tms_texture_load_mem2(struct tms_texture *tex, const char *buf, size_t size, int
         }
     }
 
-    SDL_FreeSurface(s);
-    //SDL_RWclose(rw);
+    SDL_DestroySurface(s);
 
     return T_OK;
 }

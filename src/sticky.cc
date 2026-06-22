@@ -1,13 +1,11 @@
 #include "sticky.hh"
-#include "model.hh"
-#include "material.hh"
-#include "world.hh"
-#include "ui.hh"
-
 #include "font.hh"
 #include "gui.hh"
-#include <SDL.h>
-
+#include "material.hh"
+#include "model.hh"
+#include "ui.hh"
+#include "world.hh"
+#include <SDL3/SDL.h>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -41,36 +39,16 @@ static int spacing[NUM_SIZES];
 bool sticky::initialized = false;
 tms_texture sticky::texture;
 
-// Decode one UTF-8 codepoint; advance *s. Returns codepoint or -1 on end/error.
-// TODO: Use SDL_StepUTF8() when we're on SDL3
-static int utf8_next(const char **s) {
-    const unsigned char *p = (const unsigned char*)*s;
-    if (*p == 0) return -1;
-    if (*p < 0x80) { int cp = *p; *s += 1; return cp; }
-    if ((*p & 0xE0) == 0xC0) {
-        unsigned char b0 = p[0], b1 = p[1];
-        if ((b1 & 0xC0) != 0x80) { *s += 1; return '?'; }
-        int cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F); *s += 2; return cp;
-    } else if ((*p & 0xF0) == 0xE0) {
-        unsigned char b0 = p[0], b1 = p[1], b2 = p[2];
-        if ((b1 & 0xC0) != 0x80 || (b2 & 0xC0) != 0x80) { *s += 1; return '?'; }
-        int cp = ((b0 & 0x0F) << 12) | ((b1 & 0x3F) << 6) | (b2 & 0x3F); *s += 3; return cp;
-    } else if ((*p & 0xF8) == 0xF0) {
-        unsigned char b0 = p[0], b1 = p[1], b2 = p[2], b3 = p[3];
-        if ((b1 & 0xC0) != 0x80 || (b2 & 0xC0) != 0x80 || (b3 & 0xC0) != 0x80) { *s += 1; return '?'; }
-        int cp = ((b0 & 0x07) << 18) | ((b1 & 0x3F) << 12) | ((b2 & 0x3F) << 6) | (b3 & 0x3F); *s += 4; return cp;
-    }
-    *s += 1; return '?';
-}
-
 // Convert UTF-8 string to Latin-1 in dst (dst_sz bytes). Returns number of bytes written (excluding null).
 static int utf8_to_latin1(const char *src, char *dst, int dst_sz) {
     const char *p = src;
     int out = 0;
+
     while (*p && out + 1 < dst_sz) {
-        int cp = utf8_next(&p);
-        if (cp < 0)
+        int cp = SDL_StepUTF8(&p, NULL);
+        if (cp == 0)
             break;
+
         if (cp == '\n') {
             dst[out++] = '\n';
             continue;
@@ -78,6 +56,7 @@ static int utf8_to_latin1(const char *src, char *dst, int dst_sz) {
 
         dst[out++] = ((cp >= 0 && cp <= 255) ? (unsigned char)cp : '?');
     }
+
     dst[out] = 0;
     return out;
 }
@@ -86,7 +65,16 @@ static int utf8_to_latin1(const char *src, char *dst, int dst_sz) {
 static void note_font_measure(p_font *f, const char *text, int *out_w, int *out_h) {
     size_t len = strlen(text);
     char *buf = (char*)malloc(len + 1);
-    if (!buf) { if (out_w) *out_w = 0; if (out_h) *out_h = f->height; return; }
+
+    if (!buf) {
+        if (out_w)
+            *out_w = 0;
+        if (out_h)
+            *out_h = f->height;
+
+        return;
+    }
+
     utf8_to_latin1(text, buf, (int)len + 1);
 
     int w = 0;
@@ -97,6 +85,7 @@ static void note_font_measure(p_font *f, const char *text, int *out_w, int *out_
 
         if (g->newline)
             break;
+
         w += g->ax;
     }
     if (out_w) *out_w = w;
@@ -112,7 +101,7 @@ static SDL_Surface* note_render_shaded(p_font *f, const char *text) {
     if (w <= 0) w = 1;
     if (h <= 0) h = 1;
 
-    SDL_Surface *srf = SDL_CreateRGBSurfaceWithFormat(0, w, h, 8, SDL_PIXELFORMAT_INDEX8);
+    SDL_Surface *srf = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_INDEX8);
     if (!srf) return NULL;
 
     // populate palette (white entries, alpha is simulated by byte value copied out later)
@@ -122,7 +111,9 @@ static SDL_Surface* note_render_shaded(p_font *f, const char *text) {
         pal[i].g = 0xFF;
         pal[i].b = 0xFF;
     }
-    if (srf->format && srf->format->palette) SDL_SetPaletteColors(srf->format->palette, pal, 0, 256);
+    SDL_Palette *palette = SDL_CreateSurfacePalette(srf);
+    if (srf->format && palette)
+        SDL_SetPaletteColors(palette, pal, 0, 256);
 
     // clear
     memset(srf->pixels, 0, srf->pitch * srf->h);
@@ -417,7 +408,7 @@ void sticky::draw_text(const char *txt) {
                 }
             }
         }
-        SDL_FreeSurface(srf);
+        SDL_DestroySurface(srf);
     }
 }
 

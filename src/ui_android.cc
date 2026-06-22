@@ -41,13 +41,13 @@
 #include "treasure_chest.hh"
 #include "ui.hh"
 #include "wheel.hh"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <sstream>
 #include <tms/cpp.hh>
 
 #if defined(TMS_BACKEND_ANDROID)
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 #include "network.hh"
 #include <jni.h>
 #include <sstream>
@@ -89,8 +89,8 @@ void ui::emit_signal(int signal_id, void *data/*=0*/)
         default:
             {
                 /* By default, passthrough the signal to the Java part */
-                JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
-                jobject activity = (jobject)SDL_AndroidGetActivity();
+                JNIEnv *env = (JNIEnv *) SDL_GetAndroidJNIEnv();
+                jobject activity = (jobject) SDL_GetAndroidActivity();
                 jclass cls = env->GetObjectClass(activity);
 
                 jmethodID mid = env->GetStaticMethodID(cls, "emit_signal", "(I)V");
@@ -107,8 +107,8 @@ void ui::emit_signal(int signal_id, void *data/*=0*/)
 
 void ui::open_url(const char *url)
 {
-    JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
-    jobject activity = (jobject)SDL_AndroidGetActivity();
+    JNIEnv *env = (JNIEnv *) SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject) SDL_GetAndroidActivity();
     jclass cls = env->GetObjectClass(activity);
 
     jmethodID mid = env->GetStaticMethodID(cls, "open_url", "(Ljava/lang/String;)V");
@@ -127,8 +127,8 @@ ui::confirm(const char *text,
         struct confirm_data _confirm_data/*=none*/
         )
 {
-    JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
-    jobject activity = (jobject)SDL_AndroidGetActivity();
+    JNIEnv *env = (JNIEnv *) SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject) SDL_GetAndroidActivity();
     jclass cls = env->GetObjectClass(activity);
 
     jmethodID mid = env->GetStaticMethodID(cls, "confirm", "(Ljava/lang/String;Ljava/lang/String;IJLjava/lang/String;IJLjava/lang/String;IJZ)V");
@@ -165,8 +165,8 @@ void
 ui::open_dialog(int num, void *data/*=0*/)
 {
     if (num == DIALOG_LEVEL_INFO) {
-        JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
-        jobject activity = (jobject)SDL_AndroidGetActivity();
+        JNIEnv *env = (JNIEnv *) SDL_GetAndroidJNIEnv();
+        jobject activity = (jobject) SDL_GetAndroidActivity();
         jclass cls = env->GetObjectClass(activity);
 
         jmethodID mid = env->GetStaticMethodID(cls, "showInfoDialog", "(Ljava/lang/String;)V");
@@ -180,8 +180,8 @@ ui::open_dialog(int num, void *data/*=0*/)
         return;
     }
 
-    JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
-    jobject activity = (jobject)SDL_AndroidGetActivity();
+    JNIEnv *env = (JNIEnv *) SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject) SDL_GetAndroidActivity();
     jclass cls = env->GetObjectClass(activity);
 
     jmethodID mid = env->GetStaticMethodID(cls, "open_dialog", "(IZ)V");
@@ -200,8 +200,8 @@ ui::quit()
 void
 ui::open_sandbox_tips()
 {
-    JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
-    jobject activity = (jobject)SDL_AndroidGetActivity();
+    JNIEnv *env = (JNIEnv *) SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject) SDL_GetAndroidActivity();
     jclass cls = env->GetObjectClass(activity);
 
     jmethodID mid = env->GetStaticMethodID(cls, "showSandboxTips", "()V");
@@ -215,7 +215,7 @@ ui::open_sandbox_tips()
 /** ++Generic **/
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getLevelPage(JNIEnv *env, jclass jcls)
+Java_com_bithack_principia_PrincipiaBackend_getLevelPage(JNIEnv *env, jclass jcls)
 {
     COMMUNITY_URL("level/%d", W->level.community_id);
 
@@ -223,13 +223,13 @@ Java_org_libsdl_app_PrincipiaBackend_getLevelPage(JNIEnv *env, jclass jcls)
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getCommunityHost(JNIEnv *env, jclass jcls)
+Java_com_bithack_principia_PrincipiaBackend_getCommunityHost(JNIEnv *env, jclass jcls)
 {
     return env->NewStringUTF(P.community_host);
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getCookies(JNIEnv *env, jclass jcls)
+Java_com_bithack_principia_PrincipiaBackend_getCookies(JNIEnv *env, jclass jcls)
 {
     char *token;
     P_get_cookie_data(&token);
@@ -238,7 +238,7 @@ Java_org_libsdl_app_PrincipiaBackend_getCookies(JNIEnv *env, jclass jcls)
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_addAction(JNIEnv *env, jclass jcls,
+Java_com_bithack_principia_PrincipiaBackend_addAction(JNIEnv *env, jclass jcls,
         jint action_id, jstring action_string)
 {
     SDL_LockMutex(P.action_mutex);
@@ -256,7 +256,7 @@ Java_org_libsdl_app_PrincipiaBackend_addAction(JNIEnv *env, jclass jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_addActionAsInt(JNIEnv *env, jclass jcls,
+Java_com_bithack_principia_PrincipiaBackend_addActionAsInt(JNIEnv *env, jclass jcls,
         jint action_id, jlong action_data)
 {
     uint32_t d = (uint32_t)((int64_t)action_data);
@@ -264,7 +264,7 @@ Java_org_libsdl_app_PrincipiaBackend_addActionAsInt(JNIEnv *env, jclass jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_addActionAsVec4(JNIEnv *env, jclass jcls,
+Java_com_bithack_principia_PrincipiaBackend_addActionAsVec4(JNIEnv *env, jclass jcls,
         jint action_id, jfloat r, jfloat g, jfloat b, jfloat a)
 {
     tvec4 *vec = (tvec4*)malloc(sizeof(tvec4));
@@ -276,7 +276,7 @@ Java_org_libsdl_app_PrincipiaBackend_addActionAsVec4(JNIEnv *env, jclass jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_addActionAsPair(JNIEnv *env, jclass jcls,
+Java_com_bithack_principia_PrincipiaBackend_addActionAsPair(JNIEnv *env, jclass jcls,
         jint action_id, jlong data0, jlong data1)
 {
     uint32_t *vec = (uint32_t*)malloc(sizeof(uint32_t)*2);
@@ -286,7 +286,7 @@ Java_org_libsdl_app_PrincipiaBackend_addActionAsPair(JNIEnv *env, jclass jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_addActionAsTriple(JNIEnv *env, jclass jcls,
+Java_com_bithack_principia_PrincipiaBackend_addActionAsTriple(JNIEnv *env, jclass jcls,
         jint action_id, jlong data0, jlong data1, jlong data2)
 {
     uint32_t *vec = (uint32_t*)malloc(sizeof(uint32_t)*3);
@@ -297,7 +297,7 @@ Java_org_libsdl_app_PrincipiaBackend_addActionAsTriple(JNIEnv *env, jclass jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_openState(JNIEnv *env, jclass jcls,
+Java_com_bithack_principia_PrincipiaBackend_openState(JNIEnv *env, jclass jcls,
         jint level_type, jint local_id, jint save_id, jboolean from_menu)
 {
     uint32_t *info = (uint32_t*)malloc(sizeof(uint32_t)*3);
@@ -314,21 +314,21 @@ Java_org_libsdl_app_PrincipiaBackend_openState(JNIEnv *env, jclass jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setMultiemitterObject(JNIEnv *env, jclass jcls,
+Java_com_bithack_principia_PrincipiaBackend_setMultiemitterObject(JNIEnv *env, jclass jcls,
         jlong level_id)
 {
     P.add_action(ACTION_MULTIEMITTER_SET, (uint32_t)level_id);
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setImportObject(JNIEnv *env, jclass jcls,
+Java_com_bithack_principia_PrincipiaBackend_setImportObject(JNIEnv *env, jclass jcls,
         jlong level_id)
 {
     P.add_action(ACTION_SELECT_IMPORT_OBJECT, (uint32_t)level_id);
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getPropertyString(JNIEnv *env, jclass _jcls, jint property_index)
+Java_com_bithack_principia_PrincipiaBackend_getPropertyString(JNIEnv *env, jclass _jcls, jint property_index)
 {
     char *nm = 0;
     entity *e = G->selection.e;
@@ -345,7 +345,7 @@ Java_org_libsdl_app_PrincipiaBackend_getPropertyString(JNIEnv *env, jclass _jcls
 }
 
 extern "C" jlong
-Java_org_libsdl_app_PrincipiaBackend_getPropertyInt(JNIEnv *env, jclass _jcls, jint property_index)
+Java_com_bithack_principia_PrincipiaBackend_getPropertyInt(JNIEnv *env, jclass _jcls, jint property_index)
 {
     entity *e = G->selection.e;
 
@@ -357,7 +357,7 @@ Java_org_libsdl_app_PrincipiaBackend_getPropertyInt(JNIEnv *env, jclass _jcls, j
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getPropertyInt8(JNIEnv *env, jclass _jcls, jint property_index)
+Java_com_bithack_principia_PrincipiaBackend_getPropertyInt8(JNIEnv *env, jclass _jcls, jint property_index)
 {
     entity *e = G->selection.e;
 
@@ -369,7 +369,7 @@ Java_org_libsdl_app_PrincipiaBackend_getPropertyInt8(JNIEnv *env, jclass _jcls, 
 }
 
 extern "C" jfloat
-Java_org_libsdl_app_PrincipiaBackend_getPropertyFloat(JNIEnv *env, jclass _jcls, jint property_index)
+Java_com_bithack_principia_PrincipiaBackend_getPropertyFloat(JNIEnv *env, jclass _jcls, jint property_index)
 {
     entity *e = G->selection.e;
 
@@ -381,7 +381,7 @@ Java_org_libsdl_app_PrincipiaBackend_getPropertyFloat(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setPropertyString(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setPropertyString(JNIEnv *env, jclass _jcls,
         jint property_index, jstring value)
 {
     entity *e = G->selection.e;
@@ -396,7 +396,7 @@ Java_org_libsdl_app_PrincipiaBackend_setPropertyString(JNIEnv *env, jclass _jcls
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setPropertyInt(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setPropertyInt(JNIEnv *env, jclass _jcls,
         jint property_index, jlong value)
 {
     entity *e = G->selection.e;
@@ -409,7 +409,7 @@ Java_org_libsdl_app_PrincipiaBackend_setPropertyInt(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setPropertyInt8(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setPropertyInt8(JNIEnv *env, jclass _jcls,
         jint property_index, jint value)
 {
     entity *e = G->selection.e;
@@ -422,7 +422,7 @@ Java_org_libsdl_app_PrincipiaBackend_setPropertyInt8(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setPropertyFloat(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setPropertyFloat(JNIEnv *env, jclass _jcls,
         jint property_index, jfloat value)
 {
     entity *e = G->selection.e;
@@ -435,7 +435,7 @@ Java_org_libsdl_app_PrincipiaBackend_setPropertyFloat(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_createObject(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_createObject(JNIEnv *env, jclass _jcls,
         jstring _name)
 {
     const char *name = env->GetStringUTFChars(_name, 0);
@@ -463,7 +463,7 @@ Java_org_libsdl_app_PrincipiaBackend_createObject(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getObjects(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getObjects(JNIEnv *env, jclass _jcls)
 {
     std::stringstream b("", std::ios_base::app | std::ios_base::out);
 
@@ -482,7 +482,7 @@ Java_org_libsdl_app_PrincipiaBackend_getObjects(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getSandboxTip(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getSandboxTip(JNIEnv *env, jclass _jcls)
 {
     jstring str;
     char *nm = 0;
@@ -497,7 +497,7 @@ Java_org_libsdl_app_PrincipiaBackend_getSandboxTip(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_updateRubberEntity(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_updateRubberEntity(JNIEnv *env, jclass _jcls,
         jfloat restitution, jfloat friction)
 {
     entity *e = G->selection.e;
@@ -518,7 +518,7 @@ Java_org_libsdl_app_PrincipiaBackend_updateRubberEntity(JNIEnv *env, jclass _jcl
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_updateShapeExtruder(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_updateShapeExtruder(JNIEnv *env, jclass _jcls,
         jfloat right, jfloat up, jfloat left, jfloat down)
 {
     entity *e = G->selection.e;
@@ -535,7 +535,7 @@ Java_org_libsdl_app_PrincipiaBackend_updateShapeExtruder(JNIEnv *env, jclass _jc
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_updateJumper(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_updateJumper(JNIEnv *env, jclass _jcls,
         jfloat value)
 {
     entity *e = G->selection.e;
@@ -553,7 +553,7 @@ Java_org_libsdl_app_PrincipiaBackend_updateJumper(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" jobject
-Java_org_libsdl_app_PrincipiaBackend_getSettings(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getSettings(JNIEnv *env, jclass _jcls)
 {
     jobject ret = 0;
     jclass cls = 0;
@@ -643,7 +643,7 @@ Java_org_libsdl_app_PrincipiaBackend_getSettings(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setSetting(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setSetting(JNIEnv *env, jclass _jcls,
         jstring setting_name, jboolean value)
 {
     const char *str = env->GetStringUTFChars(setting_name, 0);
@@ -654,7 +654,7 @@ Java_org_libsdl_app_PrincipiaBackend_setSetting(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" jboolean
-Java_org_libsdl_app_PrincipiaBackend_getSettingBool(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_getSettingBool(JNIEnv *env, jclass _jcls,
         jstring setting_name)
 {
     const char *str = env->GetStringUTFChars(setting_name, 0);
@@ -665,7 +665,7 @@ Java_org_libsdl_app_PrincipiaBackend_getSettingBool(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_login(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_login(JNIEnv *env, jclass _jcls,
         jstring username, jstring password)
 {
     const char *tmp_username = env->GetStringUTFChars(username, 0);
@@ -682,7 +682,7 @@ Java_org_libsdl_app_PrincipiaBackend_login(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_register(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_register(JNIEnv *env, jclass _jcls,
         jstring username, jstring email, jstring password)
 {
     const char *tmp_username = env->GetStringUTFChars(username, 0);
@@ -702,7 +702,7 @@ Java_org_libsdl_app_PrincipiaBackend_register(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_focusGL(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_focusGL(JNIEnv *env, jclass _jcls,
         jboolean focus)
 {
     P.focused = (int)(bool)focus;
@@ -715,20 +715,20 @@ Java_org_libsdl_app_PrincipiaBackend_focusGL(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" jboolean
-Java_org_libsdl_app_PrincipiaBackend_isPaused(JNIEnv *env, jclass _cls)
+Java_com_bithack_principia_PrincipiaBackend_isPaused(JNIEnv *env, jclass _cls)
 {
-    return (jboolean)(_tms.is_paused == 1 ? true : false);
+    return (jboolean)(_tms.is_paused == true);
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setPaused(JNIEnv *env, jclass _cls,
+Java_com_bithack_principia_PrincipiaBackend_setPaused(JNIEnv *env, jclass _cls,
         jboolean b)
 {
-    _tms.is_paused = (b ? 1 : 0);
+    _tms.is_paused = (b ? true : false);
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setSettings(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setSettings(JNIEnv *env, jclass _jcls,
         jboolean enable_shadows,
         jboolean enable_ao, jint shadow_quality,
         jint shadow_map_resx, jint shadow_map_resy, jint ao_map_res,
@@ -824,7 +824,7 @@ Java_org_libsdl_app_PrincipiaBackend_setSettings(JNIEnv *env, jclass _jcls,
 
 /** ++Prompt **/
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setPromptResponse(JNIEnv *env, jclass _jcls, jint new_response)
+Java_com_bithack_principia_PrincipiaBackend_setPromptResponse(JNIEnv *env, jclass _jcls, jint new_response)
 {
     if (G->current_prompt) {
         base_prompt *bp = G->current_prompt->get_base_prompt();
@@ -835,7 +835,7 @@ Java_org_libsdl_app_PrincipiaBackend_setPromptResponse(JNIEnv *env, jclass _jcls
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setPromptPropertyString(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setPromptPropertyString(JNIEnv *env, jclass _jcls,
         jint property_index, jstring value)
 {
     if (G->current_prompt) {
@@ -846,7 +846,7 @@ Java_org_libsdl_app_PrincipiaBackend_setPromptPropertyString(JNIEnv *env, jclass
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getPromptPropertyString(JNIEnv *env, jclass _jcls, jint property_index)
+Java_com_bithack_principia_PrincipiaBackend_getPromptPropertyString(JNIEnv *env, jclass _jcls, jint property_index)
 {
     char *nm = 0;
 
@@ -865,7 +865,7 @@ Java_org_libsdl_app_PrincipiaBackend_getPromptPropertyString(JNIEnv *env, jclass
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_refreshPrompt(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_refreshPrompt(JNIEnv *env, jclass _jcls)
 {
     if (G->current_prompt) {
         ui::message("Prompt properties saved!");
@@ -875,7 +875,7 @@ Java_org_libsdl_app_PrincipiaBackend_refreshPrompt(JNIEnv *env, jclass _jcls)
 
 /** ++Sticky **/
 extern "C" jboolean
-Java_org_libsdl_app_PrincipiaBackend_getStickyCenterHoriz(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getStickyCenterHoriz(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->g_id == 60)
         return (jboolean)G->selection.e->properties[1].v.i8;
@@ -884,7 +884,7 @@ Java_org_libsdl_app_PrincipiaBackend_getStickyCenterHoriz(JNIEnv *env, jclass _j
 }
 
 extern "C" jboolean
-Java_org_libsdl_app_PrincipiaBackend_getStickyCenterVert(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getStickyCenterVert(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->g_id == 60)
         return (jboolean)G->selection.e->properties[2].v.i8;
@@ -893,7 +893,7 @@ Java_org_libsdl_app_PrincipiaBackend_getStickyCenterVert(JNIEnv *env, jclass _jc
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getStickySize(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getStickySize(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->g_id == 60)
         return (jint)G->selection.e->properties[3].v.i8;
@@ -902,7 +902,7 @@ Java_org_libsdl_app_PrincipiaBackend_getStickySize(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getStickyText(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getStickyText(JNIEnv *env, jclass _jcls)
 {
     jstring str;
     char *nm = 0;
@@ -920,7 +920,7 @@ Java_org_libsdl_app_PrincipiaBackend_getStickyText(JNIEnv *env, jclass _jcls)
 
 /** ++Cam targeter **/
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getCamTargeterFollowMode(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getCamTargeterFollowMode(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->g_id == 133)
         return (jint)G->selection.e->properties[1].v.i;
@@ -929,7 +929,7 @@ Java_org_libsdl_app_PrincipiaBackend_getCamTargeterFollowMode(JNIEnv *env, jclas
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setCamTargeterFollowMode(
+Java_com_bithack_principia_PrincipiaBackend_setCamTargeterFollowMode(
         JNIEnv *env, jclass _jcls,
         jint follow_mode)
 {
@@ -943,7 +943,7 @@ Java_org_libsdl_app_PrincipiaBackend_setCamTargeterFollowMode(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getConsumables(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getConsumables(JNIEnv *env, jclass _jcls)
 {
     std::stringstream b("", std::ios_base::app | std::ios_base::out);
 
@@ -958,7 +958,7 @@ Java_org_libsdl_app_PrincipiaBackend_getConsumables(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getConsumableType(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getConsumableType(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->g_id == O_ITEM) {
         return (jint)(((item*)G->selection.e)->get_item_type());
@@ -968,7 +968,7 @@ Java_org_libsdl_app_PrincipiaBackend_getConsumableType(JNIEnv *env, jclass _jcls
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setConsumableType(JNIEnv *env, jclass _jcls, jint t)
+Java_com_bithack_principia_PrincipiaBackend_setConsumableType(JNIEnv *env, jclass _jcls, jint t)
 {
     if (G->selection.e && G->selection.e->g_id == O_ITEM) {
         tms_debugf("New item type: %d", t);
@@ -980,7 +980,7 @@ Java_org_libsdl_app_PrincipiaBackend_setConsumableType(JNIEnv *env, jclass _jcls
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getCurrentCommunityUrl(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getCurrentCommunityUrl(JNIEnv *env, jclass _jcls)
 {
     COMMUNITY_URL("level/%d", W->level.community_id);
 
@@ -988,14 +988,14 @@ Java_org_libsdl_app_PrincipiaBackend_getCurrentCommunityUrl(JNIEnv *env, jclass 
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setGameMode(JNIEnv *env, jclass _jcls, jint mode)
+Java_com_bithack_principia_PrincipiaBackend_setGameMode(JNIEnv *env, jclass _jcls, jint mode)
 {
     G->set_mode(mode);
 }
 
 /** ++Command pad **/
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getCommandPadCommand(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getCommandPadCommand(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->g_id == 64) {
         return (jint)((command*)G->selection.e)->get_command();
@@ -1005,7 +1005,7 @@ Java_org_libsdl_app_PrincipiaBackend_getCommandPadCommand(JNIEnv *env, jclass _j
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setCommandPadCommand(
+Java_com_bithack_principia_PrincipiaBackend_setCommandPadCommand(
         JNIEnv *env, jclass _jcls,
         jint cmd)
 {
@@ -1020,7 +1020,7 @@ Java_org_libsdl_app_PrincipiaBackend_setCommandPadCommand(
 
 /** ++FX Emitter **/
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getFxEmitterEffects(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getFxEmitterEffects(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->g_id == 135) {
         entity *e = G->selection.e;
@@ -1041,7 +1041,7 @@ Java_org_libsdl_app_PrincipiaBackend_getFxEmitterEffects(JNIEnv *env, jclass _jc
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setFxEmitterEffects(
+Java_com_bithack_principia_PrincipiaBackend_setFxEmitterEffects(
         JNIEnv *env, jclass _jcls,
         jint effect_1, jint effect_2, jint effect_3, jint effect_4)
 {
@@ -1080,7 +1080,7 @@ Java_org_libsdl_app_PrincipiaBackend_setFxEmitterEffects(
 
 /** ++Event Listener **/
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getEventListenerEventType(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getEventListenerEventType(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->g_id == 156) {
         return (jint)G->selection.e->properties[0].v.i;
@@ -1090,7 +1090,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEventListenerEventType(JNIEnv *env, jcla
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setEventListenerEventType(
+Java_com_bithack_principia_PrincipiaBackend_setEventListenerEventType(
         JNIEnv *env, jclass _jcls,
         jint event_type)
 {
@@ -1105,7 +1105,7 @@ Java_org_libsdl_app_PrincipiaBackend_setEventListenerEventType(
 
 /** ++Package level chooser **/
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getPkgItemLevelId(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getPkgItemLevelId(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && (G->selection.e->g_id == 131 || G->selection.e->g_id == 132)) {
         return (jint)G->selection.e->properties[0].v.i8;
@@ -1115,7 +1115,7 @@ Java_org_libsdl_app_PrincipiaBackend_getPkgItemLevelId(JNIEnv *env, jclass _jcls
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setPkgItemLevelId(
+Java_com_bithack_principia_PrincipiaBackend_setPkgItemLevelId(
         JNIEnv *env, jclass _jcls,
         jint level_id)
 {
@@ -1129,7 +1129,7 @@ Java_org_libsdl_app_PrincipiaBackend_setPkgItemLevelId(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_resetVariable(
+Java_com_bithack_principia_PrincipiaBackend_resetVariable(
         JNIEnv *env, jclass _jcls,
         jstring variable_name)
 {
@@ -1150,7 +1150,7 @@ Java_org_libsdl_app_PrincipiaBackend_resetVariable(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_resetAllVariables(
+Java_com_bithack_principia_PrincipiaBackend_resetAllVariables(
         JNIEnv *env, jclass _jcls)
 {
     W->level_variables.clear();
@@ -1162,14 +1162,14 @@ Java_org_libsdl_app_PrincipiaBackend_resetAllVariables(
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getLevelIdType(
+Java_com_bithack_principia_PrincipiaBackend_getLevelIdType(
         JNIEnv *env, jclass _jcls)
 {
     return W->level_id_type;
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getEquipmentsHeadEquipment(
+Java_com_bithack_principia_PrincipiaBackend_getEquipmentsHeadEquipment(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1189,7 +1189,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEquipmentsHeadEquipment(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getEquipmentsHead(
+Java_com_bithack_principia_PrincipiaBackend_getEquipmentsHead(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1208,7 +1208,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEquipmentsHead(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getEquipmentsBackEquipment(
+Java_com_bithack_principia_PrincipiaBackend_getEquipmentsBackEquipment(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1227,7 +1227,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEquipmentsBackEquipment(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getEquipmentsFrontEquipment(
+Java_com_bithack_principia_PrincipiaBackend_getEquipmentsFrontEquipment(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1246,7 +1246,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEquipmentsFrontEquipment(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getEquipmentsFeet(
+Java_com_bithack_principia_PrincipiaBackend_getEquipmentsFeet(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1265,7 +1265,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEquipmentsFeet(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getEquipmentsBoltSet(
+Java_com_bithack_principia_PrincipiaBackend_getEquipmentsBoltSet(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1280,7 +1280,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEquipmentsBoltSet(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getEquipmentsWeapons(
+Java_com_bithack_principia_PrincipiaBackend_getEquipmentsWeapons(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1296,7 +1296,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEquipmentsWeapons(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getEquipmentsTools(
+Java_com_bithack_principia_PrincipiaBackend_getEquipmentsTools(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1316,7 +1316,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEquipmentsTools(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getCompatibleCircuits(
+Java_com_bithack_principia_PrincipiaBackend_getCompatibleCircuits(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1343,7 +1343,7 @@ Java_org_libsdl_app_PrincipiaBackend_getCompatibleCircuits(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_fixed(
+Java_com_bithack_principia_PrincipiaBackend_fixed(
         JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e) {
@@ -1374,7 +1374,7 @@ Java_org_libsdl_app_PrincipiaBackend_fixed(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getKeys(
+Java_com_bithack_principia_PrincipiaBackend_getKeys(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1392,7 +1392,7 @@ Java_org_libsdl_app_PrincipiaBackend_getKeys(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getDecorations(
+Java_com_bithack_principia_PrincipiaBackend_getDecorations(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1405,7 +1405,7 @@ Java_org_libsdl_app_PrincipiaBackend_getDecorations(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getAnimals(
+Java_com_bithack_principia_PrincipiaBackend_getAnimals(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1418,7 +1418,7 @@ Java_org_libsdl_app_PrincipiaBackend_getAnimals(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getSounds(
+Java_com_bithack_principia_PrincipiaBackend_getSounds(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1431,7 +1431,7 @@ Java_org_libsdl_app_PrincipiaBackend_getSounds(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setResourceType(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setResourceType(JNIEnv *env, jclass _jcls,
         jlong value)
 {
     entity *e = G->selection.e;
@@ -1444,7 +1444,7 @@ Java_org_libsdl_app_PrincipiaBackend_setResourceType(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getRobotData(
+Java_com_bithack_principia_PrincipiaBackend_getRobotData(
         JNIEnv *env, jclass _jcls)
 {
     std::stringstream ss;
@@ -1478,7 +1478,7 @@ Java_org_libsdl_app_PrincipiaBackend_getRobotData(
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getRobotEquipment(
+Java_com_bithack_principia_PrincipiaBackend_getRobotEquipment(
         JNIEnv *env, jclass _jcls)
 {
     if (!G->selection.e || !G->selection.e->is_robot()) {
@@ -1492,7 +1492,7 @@ Java_org_libsdl_app_PrincipiaBackend_getRobotEquipment(
 
 /** ++Color Chooser **/
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getEntityColor(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getEntityColor(JNIEnv *env, jclass _jcls)
 {
     int color = 0;
 
@@ -1510,7 +1510,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEntityColor(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setEntityColor(
+Java_com_bithack_principia_PrincipiaBackend_setEntityColor(
         JNIEnv *env, jclass _jcls,
         jint color)
 {
@@ -1539,7 +1539,7 @@ Java_org_libsdl_app_PrincipiaBackend_setEntityColor(
 }
 
 extern "C" jfloat
-Java_org_libsdl_app_PrincipiaBackend_getEntityAlpha(
+Java_com_bithack_principia_PrincipiaBackend_getEntityAlpha(
         JNIEnv *env, jclass _jcls,
         jfloat alpha)
 {
@@ -1553,7 +1553,7 @@ Java_org_libsdl_app_PrincipiaBackend_getEntityAlpha(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setEntityAlpha(
+Java_com_bithack_principia_PrincipiaBackend_setEntityAlpha(
         JNIEnv *env, jclass _jcls,
         jfloat alpha)
 {
@@ -1564,7 +1564,7 @@ Java_org_libsdl_app_PrincipiaBackend_setEntityAlpha(
 
 /** ++Digital Display **/
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setDigitalDisplayStuff(
+Java_com_bithack_principia_PrincipiaBackend_setDigitalDisplayStuff(
         JNIEnv *env, jclass _jcls,
         jboolean wrap_around,
         jint initial_position,
@@ -1592,7 +1592,7 @@ Java_org_libsdl_app_PrincipiaBackend_setDigitalDisplayStuff(
 
 /** ++Frequency Dialog **/
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setFrequency(
+Java_com_bithack_principia_PrincipiaBackend_setFrequency(
         JNIEnv *env, jclass _jcls,
         jlong frequency)
 {
@@ -1611,7 +1611,7 @@ Java_org_libsdl_app_PrincipiaBackend_setFrequency(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setFrequencyRange(
+Java_com_bithack_principia_PrincipiaBackend_setFrequencyRange(
         JNIEnv *env, jclass _jcls,
         jlong frequency, jlong range)
 {
@@ -1635,7 +1635,7 @@ Java_org_libsdl_app_PrincipiaBackend_setFrequencyRange(
 
 /** ++Export **/
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_saveObject(
+Java_com_bithack_principia_PrincipiaBackend_saveObject(
         JNIEnv *env, jclass _jcls,
         jstring name)
 {
@@ -1650,7 +1650,7 @@ Java_org_libsdl_app_PrincipiaBackend_saveObject(
 
 /** ++Sequencer **/
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setSequencerData(
+Java_com_bithack_principia_PrincipiaBackend_setSequencerData(
         JNIEnv *env, jclass _jcls,
         jstring _sequence,
         jint _seconds, jint _milliseconds,
@@ -1683,7 +1683,7 @@ Java_org_libsdl_app_PrincipiaBackend_setSequencerData(
 
 /** ++Timer **/
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setTimerData(
+Java_com_bithack_principia_PrincipiaBackend_setTimerData(
         JNIEnv *env, jclass _jcls,
         jint _seconds, jint _milliseconds, jint _num_ticks, jboolean use_system_time)
 {
@@ -1712,7 +1712,7 @@ Java_org_libsdl_app_PrincipiaBackend_setTimerData(
 
 /** ++Robot **/
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getRobotState(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getRobotState(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->flag_active(ENTITY_IS_ROBOT))
         return (jint)G->selection.e->properties[1].v.i8;
@@ -1721,7 +1721,7 @@ Java_org_libsdl_app_PrincipiaBackend_getRobotState(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jboolean
-Java_org_libsdl_app_PrincipiaBackend_getRobotRoam(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getRobotRoam(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->flag_active(ENTITY_IS_ROBOT))
         return (jboolean)G->selection.e->properties[2].v.i8;
@@ -1730,7 +1730,7 @@ Java_org_libsdl_app_PrincipiaBackend_getRobotRoam(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getRobotDir(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getRobotDir(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e && G->selection.e->flag_active(ENTITY_IS_ROBOT))
         return (jint)G->selection.e->properties[4].v.i8;
@@ -1739,7 +1739,7 @@ Java_org_libsdl_app_PrincipiaBackend_getRobotDir(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setRobotStuff(
+Java_com_bithack_principia_PrincipiaBackend_setRobotStuff(
         JNIEnv *env, jclass _jcls,
         jint state,
         jint faction,
@@ -1771,7 +1771,7 @@ static char *_tmp_args[2];
 static char _tmp_arg1[256];
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setarg(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setarg(JNIEnv *env, jclass _jcls,
         jstring arg)
 {
     _tmp_args[0] = 0;
@@ -1792,7 +1792,7 @@ Java_org_libsdl_app_PrincipiaBackend_setarg(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setLevelName(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setLevelName(JNIEnv *env, jclass _jcls,
         jstring name)
 {
     const char *tmp = env->GetStringUTFChars(name, 0);
@@ -1809,7 +1809,7 @@ Java_org_libsdl_app_PrincipiaBackend_setLevelName(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getLevelName(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getLevelName(JNIEnv *env, jclass _jcls)
 {
     jstring str;
     char tmp[257];
@@ -1824,7 +1824,7 @@ Java_org_libsdl_app_PrincipiaBackend_getLevelName(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getLevels(JNIEnv *env, jclass _jcls, jint level_type)
+Java_com_bithack_principia_PrincipiaBackend_getLevels(JNIEnv *env, jclass _jcls, jint level_type)
 {
     std::stringstream b("", std::ios_base::app | std::ios_base::out);
 
@@ -1849,7 +1849,7 @@ Java_org_libsdl_app_PrincipiaBackend_getLevels(JNIEnv *env, jclass _jcls, jint l
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getSelectionGid(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getSelectionGid(JNIEnv *env, jclass _jcls)
 {
     if (G->selection.e) {
         return (jint)G->selection.e->g_id;
@@ -1859,7 +1859,7 @@ Java_org_libsdl_app_PrincipiaBackend_getSelectionGid(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getSfxSounds(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getSfxSounds(JNIEnv *env, jclass _jcls)
 {
     std::stringstream b("", std::ios_base::app | std::ios_base::out);
 
@@ -1874,20 +1874,20 @@ Java_org_libsdl_app_PrincipiaBackend_getSfxSounds(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jboolean
-Java_org_libsdl_app_PrincipiaBackend_isAdventure(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_isAdventure(JNIEnv *env, jclass _jcls)
 {
     return (jboolean)W->is_adventure();
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getLevelType(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getLevelType(JNIEnv *env, jclass _jcls)
 {
     tms_infof("Level type: %d", W->level.type);
     return (jint)W->level.type;
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setLevelType(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setLevelType(JNIEnv *env, jclass _jcls,
         jint type)
 {
     if (type >= LCAT_PUZZLE && type <= LCAT_CUSTOM) {
@@ -1896,7 +1896,7 @@ Java_org_libsdl_app_PrincipiaBackend_setLevelType(JNIEnv *env, jclass _jcls,
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getSynthWaveforms(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getSynthWaveforms(JNIEnv *env, jclass _jcls)
 {
     std::stringstream b("", std::ios_base::app | std::ios_base::out);
 
@@ -1911,7 +1911,7 @@ Java_org_libsdl_app_PrincipiaBackend_getSynthWaveforms(JNIEnv *env, jclass _jcls
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getAvailableBgs(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getAvailableBgs(JNIEnv *env, jclass _jcls)
 {
     std::stringstream b("", std::ios_base::app | std::ios_base::out);
 
@@ -1926,7 +1926,7 @@ Java_org_libsdl_app_PrincipiaBackend_getAvailableBgs(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getLevelDescription(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getLevelDescription(JNIEnv *env, jclass _jcls)
 {
     char *descr = W->level.descr;
     if (descr == 0 || W->level.descr_len == 0) {
@@ -1937,7 +1937,7 @@ Java_org_libsdl_app_PrincipiaBackend_getLevelDescription(JNIEnv *env, jclass _jc
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setLevelDescription(JNIEnv *env, jclass _jcls,
+Java_com_bithack_principia_PrincipiaBackend_setLevelDescription(JNIEnv *env, jclass _jcls,
         jstring descr)
 {
     lvlinfo *l = &W->level;
@@ -1964,7 +1964,7 @@ Java_org_libsdl_app_PrincipiaBackend_setLevelDescription(JNIEnv *env, jclass _jc
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getFactoryResources(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getFactoryResources(JNIEnv *env, jclass _jcls)
 {
     char info[2048];
     char *target = info;
@@ -1985,7 +1985,7 @@ Java_org_libsdl_app_PrincipiaBackend_getFactoryResources(JNIEnv *env, jclass _jc
 
 /* Returns a list of all resources, including "Oil" */
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getResources(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getResources(JNIEnv *env, jclass _jcls)
 {
     char info[2048];
 
@@ -2002,13 +2002,13 @@ Java_org_libsdl_app_PrincipiaBackend_getResources(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getFactoryNumExtraProperties(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getFactoryNumExtraProperties(JNIEnv *env, jclass _jcls)
 {
     return FACTORY_NUM_EXTRA_PROPERTIES;
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getRecipes(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getRecipes(JNIEnv *env, jclass _jcls)
 {
     char info[2048];
     char *target = info;
@@ -2048,7 +2048,7 @@ Java_org_libsdl_app_PrincipiaBackend_getRecipes(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jstring
-Java_org_libsdl_app_PrincipiaBackend_getLevelInfo(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getLevelInfo(JNIEnv *env, jclass _jcls)
 {
     char info[2048];
 
@@ -2113,7 +2113,7 @@ Java_org_libsdl_app_PrincipiaBackend_getLevelInfo(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getLevelVersion(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getLevelVersion(JNIEnv *env, jclass _jcls)
 {
     lvlinfo *l = &W->level;
 
@@ -2121,13 +2121,13 @@ Java_org_libsdl_app_PrincipiaBackend_getLevelVersion(JNIEnv *env, jclass _jcls)
 }
 
 extern "C" jint
-Java_org_libsdl_app_PrincipiaBackend_getMaxLevelVersion(JNIEnv *env, jclass _jcls)
+Java_com_bithack_principia_PrincipiaBackend_getMaxLevelVersion(JNIEnv *env, jclass _jcls)
 {
     return (jint)LEVEL_VERSION;
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setStickyStuff(
+Java_com_bithack_principia_PrincipiaBackend_setStickyStuff(
         JNIEnv *env, jclass _jcls,
         jstring text,
         jint center_horiz, jint center_vert,
@@ -2147,7 +2147,7 @@ Java_org_libsdl_app_PrincipiaBackend_setStickyStuff(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setLevelLocked(
+Java_com_bithack_principia_PrincipiaBackend_setLevelLocked(
         JNIEnv *env, jclass _jcls,
         jboolean locked)
 {
@@ -2157,7 +2157,7 @@ Java_org_libsdl_app_PrincipiaBackend_setLevelLocked(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setLevelInfo(
+Java_com_bithack_principia_PrincipiaBackend_setLevelInfo(
         JNIEnv *env, jclass _jcls,
         jint bg,
         jint border_left, jint border_right, jint border_bottom, jint border_top,
@@ -2234,7 +2234,7 @@ Java_org_libsdl_app_PrincipiaBackend_setLevelInfo(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_resetLevelFlags(
+Java_com_bithack_principia_PrincipiaBackend_resetLevelFlags(
         JNIEnv *env, jclass _jcls,
         jlong flag)
 {
@@ -2244,7 +2244,7 @@ Java_org_libsdl_app_PrincipiaBackend_resetLevelFlags(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_setLevelFlag(
+Java_com_bithack_principia_PrincipiaBackend_setLevelFlag(
         JNIEnv *env, jclass _jcls,
         jlong _flag)
 {
@@ -2262,7 +2262,7 @@ Java_org_libsdl_app_PrincipiaBackend_setLevelFlag(
 }
 
 extern "C" jboolean
-Java_org_libsdl_app_PrincipiaBackend_getLevelFlag(
+Java_com_bithack_principia_PrincipiaBackend_getLevelFlag(
         JNIEnv *env, jclass _jcls,
         jlong _flag)
 {
@@ -2275,7 +2275,7 @@ Java_org_libsdl_app_PrincipiaBackend_getLevelFlag(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_triggerSave(
+Java_com_bithack_principia_PrincipiaBackend_triggerSave(
         JNIEnv *env, jclass _jcls, jboolean save_copy)
 {
     if (save_copy)
@@ -2285,7 +2285,7 @@ Java_org_libsdl_app_PrincipiaBackend_triggerSave(
 }
 
 extern "C" void
-Java_org_libsdl_app_PrincipiaBackend_triggerCreateLevel(
+Java_com_bithack_principia_PrincipiaBackend_triggerCreateLevel(
         JNIEnv *env, jclass _jcls, jint level_type)
 {
     P.add_action(ACTION_NEW_LEVEL, level_type);

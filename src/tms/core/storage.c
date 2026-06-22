@@ -1,15 +1,11 @@
 #include "storage.h"
 #include "tms/backend/print.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#ifdef __ANDROID__
-    #include <SDL3_polyfills.h>
-#endif
 
 #ifdef TMS_BACKEND_WINDOWS
     #include <direct.h>
@@ -64,7 +60,7 @@ _create_dir(const char *path, mode_t mode)
 const char *tms_storage_path(void)
 {
 #ifdef __ANDROID__
-    return SDL_AndroidGetExternalStoragePath();
+    return SDL_GetAndroidExternalStoragePath();
 #elif defined(__EMSCRIPTEN__)
     return SDL_GetPrefPath("Bithack", "Principia");
 #elif defined(SCREENSHOT_BUILD)
@@ -77,7 +73,7 @@ const char *tms_storage_path(void)
     char *path = (char *)malloc(1024);
 
     if (_storage_portable) { // Portable
-        char* exedir = SDL_GetBasePath();
+        const char* exedir = SDL_GetBasePath();
         strcpy(path, exedir);
         strcat(path, "userdata");
     } else { // System
@@ -186,8 +182,8 @@ static void move_matching_files(const char *srcdir, const char *dstdir, const ch
     wchar_t pattern[MAX_PATH];
     swprintf(pattern, MAX_PATH, L"%hs\\*.%hs", srcdir, ext);
 
-    WIN32_FIND_DATA ffd;
-    HANDLE hFind = FindFirstFile(pattern, &ffd);
+    WIN32_FIND_DATAW ffd;
+    HANDLE hFind = FindFirstFileW(pattern, &ffd);
     if (hFind == INVALID_HANDLE_VALUE) return;
 
     do {
@@ -197,8 +193,8 @@ static void move_matching_files(const char *srcdir, const char *dstdir, const ch
         swprintf(src, MAX_PATH, L"%hs\\%s", srcdir, ffd.cFileName);
         swprintf(dst, MAX_PATH, L"%hs\\%s", dstdir, ffd.cFileName);
 
-        MoveFile(src, dst);
-    } while (FindNextFile(hFind, &ffd) != 0);
+        MoveFileW(src, dst);
+    } while (FindNextFileW(hFind, &ffd) != 0);
 
     FindClose(hFind);
 #else
@@ -248,8 +244,10 @@ static void migrate_principia_data() {
             snprintf(newpath, sizeof(newpath), "%s/principia", xdg);
 
 #elif defined(TMS_BACKEND_ANDROID)
-        snprintf(oldpath, sizeof(oldpath), "%s", SDL_AndroidGetExternalStoragePath());
-        snprintf(newpath, sizeof(newpath), "%s", SDL_AndroidGetExternalStoragePath());
+        snprintf(oldpath, sizeof(oldpath), "%s",
+                 SDL_GetAndroidExternalStoragePath());
+        snprintf(newpath, sizeof(newpath), "%s",
+                 SDL_GetAndroidExternalStoragePath());
 #else
         // No migration for this platform
         return;

@@ -6,10 +6,6 @@
 #include <time.h>
 #include <zlib.h>
 
-#ifdef TMS_BACKEND_WINDOWS
-    #include <windows.h>
-#endif
-
 // for lvledit command line tool
 #ifdef _NO_TMS
     #include <stdlib.h>
@@ -26,6 +22,8 @@
 #else
     #include <tms/cpp.hh>
 #endif
+
+#include <cinttypes>
 
 static char _level_path[4][1024];
 static char _state_path[1024];
@@ -1506,7 +1504,7 @@ void lvlbuf::zuncompress(const lvlinfo &level) {
             break;
     }
 
-    tms_infof("Uncompression status: Old: %" PRIu64 ". New: %u. Total: %.2f", this->size-header_size, (unsigned)dest_len, (float)(float)dest_len/((this->size-header_size)));
+    tms_infof("Uncompression status: Old: %" SDL_PRIu64 ". New: %u. Total: %.2f", this->size-header_size, (unsigned)dest_len, (float)(float)dest_len/((this->size-header_size)));
 
     this->size = header_size;
     this->ensure(dest_len);
