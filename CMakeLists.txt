@@ -69,22 +69,6 @@ else()
 	option(BACKEND_IMGUI "Enable incomplete Dear Imgui dialog backend (Experimental)" FALSE)
 endif()
 
-set(TMS_FORMFACTOR "PC")
-if(WIN32)
-	set(TMS_BACKEND "WINDOWS")
-elseif(ANDROID)
-	set(TMS_BACKEND "ANDROID")
-	set(TMS_FORMFACTOR "MOBILE")
-elseif(HAIKU)
-	set(TMS_BACKEND "HAIKU")
-elseif(APPLE)
-	set(TMS_BACKEND "MACOS")
-elseif(EMSCRIPTEN)
-	set(TMS_BACKEND "EMSCRIPTEN")
-else()
-	set(TMS_BACKEND "LINUX")
-endif()
-
 if(LINUX)
 	option(USE_GLES "Use OpenGL ES on Linux (Experimental)" FALSE)
 endif()
@@ -123,9 +107,7 @@ if(UNITY_BUILD)
 		src/game-gearbox-edit.cc
 		src/game-gui.cc
 		src/game-panel-edit.cc
-		src/menu_pkg.cc
 		src/repair_station.cc
-		src/solver_ingame.cc
 
 		lib/Box2D/_unity_chunk.cc)
 else()
@@ -149,11 +131,15 @@ else()
 endif()
 
 if(BACKEND_IMGUI)
-	file(GLOB IMGUI_SRCS CONFIGURE_DEPENDS
-		lib/imgui/*.cpp
-		lib/imgui/misc/freetype/*.cpp
-		src/ui/*.cc)
-	list(APPEND SRCS ${IMGUI_SRCS})
+	if(UNITY_BUILD)
+		list(APPEND SRCS lib/imgui/_unity_chunk.cc)
+	else()
+		file(GLOB IMGUI_SRCS CONFIGURE_DEPENDS
+			lib/imgui/*.cpp
+			lib/imgui/misc/freetype/*.cpp
+			src/ui/*.cc)
+		list(APPEND SRCS ${IMGUI_SRCS})
+	endif()
 endif()
 
 # Optional dependencies not found on Android or in the screenshot build
@@ -265,8 +251,6 @@ if(BACKEND_IMGUI)
 		add_definitions(-DIMGUI_IMPL_OPENGL_ES2)
 	endif()
 endif()
-
-add_definitions(-DTMS_BACKEND_${TMS_FORMFACTOR} -DTMS_BACKEND_${TMS_BACKEND})
 
 # Use a safe subset of fast math flags
 set(COMMON_FLAGS "-fno-math-errno -fno-trapping-math -fno-signed-zeros")

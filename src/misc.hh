@@ -9,7 +9,7 @@
 #include <tms/cpp.hh>
 #endif
 
-#if defined(TMS_BACKEND_ANDROID)
+#ifdef SDL_PLATFORM_ANDROID
 #include <SDL3/SDL.h>
 
 #define _FILE void
@@ -29,6 +29,8 @@
 #define _fseek fseek
 #define _ftell ftell
 #endif
+
+#define MAX_P 24
 
 #define DOUBLETIME_TO_INT64(x) (int64_t)(x * 1000000.0)
 #define VOID_TO_UINT64(x) (uint64_t)(uintptr_t)(x)

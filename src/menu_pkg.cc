@@ -12,9 +12,6 @@
 // Disables level completion check in packages
 #define UNLOCK_ALL_LVLS false
 
-//#define MAX_P 20
-// defined in game.hh
-
 #define _BASE_X (_tms.xppcm*1.f)
 #define _ICON_WIDTH  (_tms.window_height/5.f)
 #define _BASE_Y (-(_ICON_WIDTH / 2.f))
@@ -41,10 +38,6 @@ static void menu_pkg_render(struct tms_wdg *w, struct tms_surface *s) {
         tms_ddraw_sprite_r(s->ddraw, w->s[1], px, py, w->size.x/2.f, w->size.y/2.f, 0.f);
 }
 
-static bool                down[MAX_P];
-static tvec2               touch_pos[MAX_P];
-static uint64_t            touch_time[MAX_P];
-static bool                dragging[MAX_P];
 static struct tms_texture *tex_overlay = 0;
 static struct tms_atlas   *tex_icons = 0;
 
@@ -427,8 +420,6 @@ int menu_pkg::handle_input(tms::event *ev, int action) {
                 bool test_playing = false;
                 G->screen_back = this;
                 if (this->pkg.type == LEVEL_MAIN && this->pkg.id == 7) {
-                    // XXX: causes segfaults on android
-#ifndef TMS_BACKEND_ANDROID
                     char filename[1024];
                     snprintf(filename, 1023, "%s/7.%d.psol", pkgman::get_level_path(LEVEL_LOCAL), level_id);
 
@@ -438,9 +429,7 @@ int menu_pkg::handle_input(tms::event *ev, int action) {
                                 "Yes",    principia_action(ACTION_OPEN_MAIN_PUZZLE_SOLUTION, opd),
                                 "No",     principia_action(ACTION_CREATE_MAIN_PUZZLE_SOLUTION, opd),
                                 "Cancel", principia_action(ACTION_IGNORE, 0));
-                    } else
-#endif
-                    {
+                    } else {
                         P.add_action(ACTION_CREATE_MAIN_PUZZLE_SOLUTION, new open_play_data(LEVEL_LOCAL, level_id, &pkg, false, 1));
                     }
 

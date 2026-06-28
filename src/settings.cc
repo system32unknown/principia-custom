@@ -29,7 +29,7 @@ static void apply_very_bad_settings()
     settings["hide_tips"]->v.b = true;
 }
 
-#ifdef TMS_BACKEND_EMSCRIPTEN
+#ifdef SDL_PLATFORM_EMSCRIPTEN
     #define ENABLE_SHADOWS_DEFAULT false
     #define ENABLE_AO_DEFAULT false
     #define WINDOW_RESIZABLE_DEFAULT true
@@ -42,7 +42,7 @@ static void apply_very_bad_settings()
     #define NUM_WORKERS_DEFAULT SDL_GetNumLogicalCPUCores()
 #endif
 
-#ifdef TMS_BACKEND_MOBILE
+#ifdef SDL_PLATFORM_ANDROID
     #define AO_MAP_RES_DEFAULT 256
 #else
     #define AO_MAP_RES_DEFAULT 512
@@ -50,8 +50,10 @@ static void apply_very_bad_settings()
 
 #ifdef TMS_USE_GLES
     #define GAMMA_CORRECT_DEFAULT false
+    #define USE_GLES true
 #else
     #define GAMMA_CORRECT_DEFAULT -1
+    #define USE_GLES false
 #endif
 
 void
@@ -61,6 +63,8 @@ _settings::init()
 
     /** -Graphics **/
     this->add("debug",              S_BOOL,  false);
+
+    this->add("use_gles",            S_BOOL,  USE_GLES);
 
     // Shadows
     this->add("enable_shadows",           S_BOOL,  ENABLE_SHADOWS_DEFAULT);
@@ -127,7 +131,7 @@ _settings::init()
     this->add("display_wireless_frequency", S_BOOL, true);
     this->add("disable_overloader", S_BOOL, true);
 
-#ifdef TMS_BACKEND_MOBILE
+#ifdef SDL_PLATFORM_ANDROID
     this->add("touch_controls",     S_BOOL, true);
 #else
     this->add("touch_controls",     S_BOOL, false);
@@ -157,7 +161,7 @@ _settings::init()
             this->save();
         } else {
             /* todo: is the dir Principia created before this is called? */
-            tms_infof("another error occured, no permissinos to the dir/file?");
+            tms_infof("another error occurred, no permissinos to the dir/file?");
         }
     } else {
         fclose(fh);
@@ -274,7 +278,7 @@ _settings::save(void)
     FILE *fh = fopen(this->filename, "w+");
 
     if (!fh) {
-        tms_errorf("An error occured when attempting to open settings file.");
+        tms_errorf("An error occurred when attempting to open settings file.");
         return false;
     }
 

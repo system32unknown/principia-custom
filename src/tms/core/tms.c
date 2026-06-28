@@ -7,7 +7,6 @@
 #include "screen.h"
 #include "event.h"
 #include "material.h"
-#include "backend.h"
 #include "shader.h"
 #include "project.h"
 #include "hash.h"
@@ -20,6 +19,7 @@ struct tms_singleton _tms = {
     .gl_extensions = "",
     .delta_cap = 0,
     .emulating_portrait = 0,
+    .use_gles = false
 };
 
 int tms_preinit(void) {
@@ -39,14 +39,15 @@ tms_init(void)
 
     tmat4_set_ortho(tms.window_projection, 0, tms.window_width, 0, tms.window_height, 1, -1);
 
-#ifndef TMS_USE_GLES
-    tms_shader_global_define_vs("lowp", "");
-    tms_shader_global_define_fs("lowp", "");
-    tms_shader_global_define_vs("mediump", "");
-    tms_shader_global_define_fs("mediump", "");
-    tms_shader_global_define_vs("highp", "");
-    tms_shader_global_define_fs("highp", "");
-#endif
+
+    if (!tms.use_gles) {
+        tms_shader_global_define_vs("lowp", "");
+        tms_shader_global_define_fs("lowp", "");
+        tms_shader_global_define_vs("mediump", "");
+        tms_shader_global_define_fs("mediump", "");
+        tms_shader_global_define_vs("highp", "");
+        tms_shader_global_define_fs("highp", "");
+    }
 
     tproject_init();
     tproject_init_pipelines();
@@ -82,24 +83,14 @@ tms_set_screen(struct tms_screen *screen)
     return T_OK;
 }
 
-#ifdef TMS_BACKEND_IOS
-uint64_t tms_IOS_get_time();
-#endif
-
 static inline void
 init_frame_time(void)
 {
-#ifndef TMS_BACKEND_IOS
     struct timeval t;
-#endif
     uint64_t curr_time, delta;
 
-#ifdef TMS_BACKEND_IOS
-    curr_time = tms_IOS_get_time();
-#else
     gettimeofday(&t, 0);
     curr_time = t.tv_usec + t.tv_sec * 1000000ull;
-#endif
 
     if (tms.last_time == 0)
         tms.last_time = curr_time;
@@ -111,12 +102,8 @@ init_frame_time(void)
         SDL_Delay((tms.delta_cap - delta)/1000);
         delta = tms.delta_cap;
 
-#ifdef TMS_BACKEND_IOS
-        curr_time = tms_IOS_get_time();
-#else
         gettimeofday(&t, 0);
         curr_time = t.tv_usec + t.tv_sec * 1000000ull;
-#endif
     }
     tms.last_time = curr_time;
 
@@ -149,7 +136,7 @@ tms_begin_frame(void)
     tms.active_screen = tms.screen;
     tms.in_frame = 1;
 
-#ifdef TMS_BACKEND_IOS
+#ifdef SDL_PLATFORM_IOS
     glBindFramebuffer(GL_FRAMEBUFFER, viewFramebuffer);
 #endif
 

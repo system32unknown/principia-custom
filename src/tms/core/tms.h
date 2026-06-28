@@ -61,7 +61,7 @@ struct tms_mesh;
 #define tms _tms
 #endif
 
-#ifndef TMS_BACKEND_IOS
+#ifndef SDL_PLATFORM_IOS
 #define opengl_width window_width
 #define opengl_height window_height
 #endif
@@ -75,7 +75,7 @@ struct tms_mesh;
 extern struct tms_singleton {
     int window_width;
     int window_height;
-#ifdef TMS_BACKEND_IOS
+#ifdef SDL_PLATFORM_IOS
     int opengl_width;
     int opengl_height;
 #endif
@@ -86,6 +86,16 @@ extern struct tms_singleton {
     int gamma_correct;
     int emulating_portrait;
     int in_frame;
+
+    /// Whether to use OpenGL ES 2.0 or not. (False uses desktop OpenGL 2.1+ codepaths)
+    /// This variable is set from the "use_gles" setting during preinit and is the same as
+    /// `settings["use_gles"]->v.b`, but is also available in TMS code.
+    bool use_gles;
+
+    /// Whether we should be expecting touch input or not.
+    /// This variable is set from the "touch_controls" setting during preinit and is the same as
+    /// `settings["touch_controls"]->v.b`, but is also available in TMS code.
+    bool touch_controls;
 
     float window_projection[16];
     struct tms_screen      *screen; /**< current screen */

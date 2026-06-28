@@ -45,7 +45,7 @@
 #include <sstream>
 #include <tms/cpp.hh>
 
-#if defined(TMS_BACKEND_ANDROID)
+#if defined(SDL_PLATFORM_ANDROID)
 
 #include <SDL3/SDL.h>
 #include "network.hh"
@@ -259,7 +259,7 @@ extern "C" void
 Java_com_bithack_principia_PrincipiaBackend_addActionAsInt(JNIEnv *env, jclass jcls,
         jint action_id, jlong action_data)
 {
-    uint32_t d = (uint32_t)((int64_t)action_data);
+    uint64_t d = (uint64_t)((int64_t)action_data);
     P.add_action(action_id, d);
 }
 
@@ -487,11 +487,11 @@ Java_com_bithack_principia_PrincipiaBackend_getSandboxTip(JNIEnv *env, jclass _j
     jstring str;
     char *nm = 0;
 
-    if (ctip == -1) ctip = rand()%num_tips;
+    if (ctip == -1) ctip = rand()%num_tips_mobile;
 
-    str = env->NewStringUTF(tips[ctip]);
+    str = env->NewStringUTF(tips_mobile[ctip]);
 
-    ctip = (ctip+1)%num_tips;
+    ctip = (ctip+1)%num_tips_mobile;
 
     return str;
 }

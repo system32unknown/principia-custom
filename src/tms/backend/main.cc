@@ -47,7 +47,7 @@ to reproduce it, if possible.
 }
 
 void redirect_log_output() {
-#if !defined(DEBUG) && !defined(TMS_BACKEND_EMSCRIPTEN)
+#if !defined(DEBUG) && !defined(SDL_PLATFORM_EMSCRIPTEN)
     char logfile[1024];
     snprintf(logfile, 1023, "%s/run.log", tms_storage_path());
 
@@ -73,7 +73,7 @@ void print_log_header() {
 }
 
 static void find_data_dir() {
-#ifndef TMS_BACKEND_ANDROID
+#ifndef SDL_PLATFORM_ANDROID
     // Check if we're in the right place
     struct stat st{};
     if (stat("data", &st) != 0) {
@@ -98,13 +98,12 @@ static void find_data_dir() {
 
 static int do_step = 1;
 
-SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
-{
+SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 
-#ifndef TMS_BACKEND_ANDROID
+#ifndef SDL_PLATFORM_ANDROID
     signal(SIGSEGV, _catch_signal);
 
-#ifdef TMS_BACKEND_WINDOWS
+#ifdef SDL_PLATFORM_WINDOWS
     setlocale(LC_ALL, "C");
 #endif
 
@@ -127,7 +126,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     // Linux we want to use se.principia_web.principia as it's a domain we have better access to for
     // e.g. Flatpak domain verification and such. SDL does not actually use the app ID currently, but
     // if they do we want to report something that's consistent with the APK itself.
-#if TMS_BACKEND_ANDROID
+#if SDL_PLATFORM_ANDROID
     #define PRINCIPIA_ID "com.bithack.principia"
 #else
     #define PRINCIPIA_ID "se.principia_web.principia"
@@ -156,11 +155,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     tms_infof("Initializing SDL...");
     SDL_Init(SDL_INIT_VIDEO);
 
-#ifdef TMS_BACKEND_EMSCRIPTEN
+#ifdef SDL_PLATFORM_EMSCRIPTEN
     _tms.window_width = 1280;
     _tms.window_height = 720;
 
-#elif !defined(TMS_BACKEND_ANDROID)
+#elif !defined(SDL_PLATFORM_ANDROID)
     const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
     SDL_Point screen;
     if (mode) {
@@ -190,7 +189,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 
     uint32_t flags = SDL_WINDOW_OPENGL | 0;
 
-#ifdef TMS_BACKEND_ANDROID
+#ifdef SDL_PLATFORM_ANDROID
     flags |= SDL_WINDOW_FULLSCREEN;
 #else
     _tms.window_width = settings["window_width"]->v.i;
@@ -222,7 +221,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 
     _tms._window = _window;
 
-#ifdef TMS_BACKEND_ANDROID
+#ifdef SDL_PLATFORM_ANDROID
     SDL_GetWindowSizeInPixels(_window, &_tms.window_width, &_tms.window_height);
 
     float content_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
@@ -233,33 +232,33 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     tms_infof("Device PPCM: %f %f", _tms.xppcm, _tms.yppcm);
 #endif
 
-#ifdef TMS_USE_GLES
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    if (_tms.use_gles) {
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
-#else
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-#endif
+        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+    } else {
+        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    }
 
     SDL_GLContext gl_context = SDL_GL_CreateContext(_window);
 
     if (gl_context == NULL)
         tms_fatalf("Error creating GL Context: %s", SDL_GetError());
 
-#ifdef TMS_USE_GLES
-    int version = gladLoadGLES2((GLADloadfunc)SDL_GL_GetProcAddress);
-#else
-    int version = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
-#endif
+    int version;
+    if (_tms.use_gles)
+        version = gladLoadGLES2((GLADloadfunc)SDL_GL_GetProcAddress);
+    else
+        version = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
     tms_infof("Loaded GL version %d.%d", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
 
     tms_infof("GL Info: %s/%s/%s", glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION));
     tms_infof("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-#ifdef TMS_BACKEND_WINDOWS
+#ifdef SDL_PLATFORM_WINDOWS
 
     if (!GLAD_GL_VERSION_1_2) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Principia",
@@ -383,9 +382,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     return SDL_APP_CONTINUE;
 }
 
-int
-mouse_button_to_pointer_id(int button)
-{
+int mouse_button_to_pointer_id(int button) {
     switch (button) {
         case SDL_BUTTON_LEFT: return 0;
         case SDL_BUTTON_RIGHT: return 1;
@@ -394,9 +391,41 @@ mouse_button_to_pointer_id(int button)
     }
 }
 
-int
-T_intercept_input(SDL_Event ev)
-{
+#ifdef MAX_P
+#undef MAX_P
+#endif
+
+#define MAX_P 10
+
+static uint64_t finger_ids[MAX_P];
+
+static int finger_to_pointer(uint64_t finger, bool create) {
+#ifdef SDL_PLATFORM_WINDOWS
+    // Windows gives each finger tap session an unique incrementing ID that starts on each boot, so
+    // we need to keep track of them and allocate in slots that fit TMS' pointer ID system.
+
+    for (int x = 0; x < MAX_P; x++) {
+        // If create=true, find first empty slot
+        // else, find the slot that matches the finger ID returned from Windows
+        if ((finger_ids[x] == 0 && create) || finger_ids[x] == finger) {
+            tms_infof("found %" PRIu64 " at %d", finger, x);
+            finger_ids[x] = finger;
+            return x;
+        }
+    }
+
+    // No slot found... Who has more than ten fingers?
+
+    // Just replace the last one with this new finger ID.
+    finger_ids[MAX_P-1] = finger;
+    return MAX_P-1;
+#else
+    // Linux, Android - Easy, they handle finger IDs basically the way we want them to.
+    return finger - 1;
+#endif
+}
+
+int T_intercept_input(SDL_Event ev) {
     struct tms_event spec;
     spec.type = -1;
 
@@ -432,21 +461,25 @@ T_intercept_input(SDL_Event ev)
 
         case SDL_EVENT_FINGER_DOWN:
             spec.type = TMS_EV_POINTER_DOWN;
-            spec.data.button.pointer_id = ev.tfinger.fingerID - 1;
+            spec.data.button.pointer_id = finger_to_pointer(ev.tfinger.fingerID, true);
             spec.data.button.x = (int)(ev.tfinger.x*(float)_tms.window_width);
             spec.data.button.y = _tms.window_height-(int)(ev.tfinger.y*(float)_tms.window_height);
             break;
 
         case SDL_EVENT_FINGER_UP:
             spec.type = TMS_EV_POINTER_UP;
-            spec.data.button.pointer_id = ev.tfinger.fingerID - 1;
+            f = finger_to_pointer(ev.tfinger.fingerID, false);
+            spec.data.button.pointer_id = f;
             spec.data.button.x = (int)(ev.tfinger.x*(float)_tms.window_width);
             spec.data.button.y = _tms.window_height-(int)(ev.tfinger.y*(float)_tms.window_height);
+
+            // Free up the slot for this finger ID
+            finger_ids[SDL_min(f, MAX_P - 1)] = 0;
             break;
 
         case SDL_EVENT_FINGER_MOTION:
             spec.type = TMS_EV_POINTER_DRAG;
-            spec.data.button.pointer_id = ev.tfinger.fingerID - 1;
+            spec.data.button.pointer_id = finger_to_pointer(ev.tfinger.fingerID, false);
             spec.data.button.x = (int)(ev.tfinger.x*(float)_tms.window_width);
             spec.data.button.y = _tms.window_height-(int)(ev.tfinger.y*(float)_tms.window_height);
             break;
