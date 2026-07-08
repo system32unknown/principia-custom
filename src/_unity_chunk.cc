@@ -73,12 +73,12 @@
 #include "fxemitter.cc"
 //#include "game.cc"
 #include "game-edit.cc"
-//#include "game-gearbox-edit.cc"
+#include "game-gearbox-edit.cc"
 #include "game-graph.cc"
-//#include "game-gui.cc"
+#include "game-gui.cc"
 #include "gameman.cc"
 #include "game-message.cc"
-//#include "game-panel-edit.cc"
+#include "game-panel-edit.cc"
 #include "gearbox.cc"
 #include "gear.cc"
 #include "generator.cc"
@@ -94,6 +94,8 @@
 #include "i1o1gate.cc"
 #include "i2o0gate.cc"
 #include "i2o1gate.cc"
+#include "imgui.cc"
+#include "imgui_impl_tms.cc"
 #include "impact_sensor.cc"
 #include "invertergate.cc"
 #include "iomiscgate.cc"
@@ -152,7 +154,7 @@
 #include "rand.cc"
 #include "rc_activator.cc"
 #include "receiver.cc"
-//#include "repair_station.cc"
+#include "repair_station.cc"
 #include "resistor.cc"
 #include "resource.cc"
 #include "robot_base.cc"
@@ -241,7 +243,7 @@
 	#include "tms/backend/pipe.cc"
 #endif
 
-#ifdef PRINCIPIA_BACKEND_IMGUI
+#if defined(PRINCIPIA_BACKEND_IMGUI) || defined(UI_IMGUI_IN_GTK)
 	#include "ui/animal.cc"
 	#include "ui/confirm.cc"
 	#include "ui/decoration.cc"

@@ -1,6 +1,8 @@
 #include "settings.hh"
+#include "main.hh"
 #include "soundmanager.hh"
-#include "ui_imgui.hh"
+#include "imgui.hh"
+#include <string>
 #include <thread>
 #include <unordered_map>
 
@@ -84,6 +86,7 @@ namespace UiSettings {
         tms_assertf(settings.save(), "Unable to save settings.");
         on_after_apply();
         tms_infof("Successfully saved settings, returning...");
+        _tms.touch_controls = settings["touch_controls"]->v.b;
         P.can_reload_graphics = true;
         is_saving = false;
         tms_debugf("save_thread() completed");

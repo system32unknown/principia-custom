@@ -69,6 +69,13 @@ else()
 	option(BACKEND_IMGUI "Enable incomplete Dear Imgui dialog backend (Experimental)" FALSE)
 endif()
 
+option(GTK_LEGACY_DIALOGS "Use old GTK implementations for dialogs that are provided by Dear Imgui" FALSE)
+if(ANDROID OR SCREENSHOT_BUILD)
+	set(IMGUI_IN_GTK FALSE)
+elseif(NOT GTK_LEGACY_DIALOGS)
+	set(IMGUI_IN_GTK TRUE)
+endif()
+
 if(LINUX)
 	option(USE_GLES "Use OpenGL ES on Linux (Experimental)" FALSE)
 endif()
@@ -104,10 +111,6 @@ if(UNITY_BUILD)
 		src/tms/_unity_chunk.c
 		src/_unity_chunk.cc
 		src/game.cc
-		src/game-gearbox-edit.cc
-		src/game-gui.cc
-		src/game-panel-edit.cc
-		src/repair_station.cc
 
 		lib/Box2D/_unity_chunk.cc)
 else()
@@ -130,7 +133,7 @@ else()
 	list(APPEND SRCS ${MAIN_SRCS})
 endif()
 
-if(BACKEND_IMGUI)
+if(BACKEND_IMGUI OR IMGUI_IN_GTK)
 	if(UNITY_BUILD)
 		list(APPEND SRCS lib/imgui/_unity_chunk.cc)
 	else()
@@ -244,12 +247,20 @@ elseif(SCREENSHOT_BUILD)
 	add_definitions(-DNO_UI -DSCREENSHOT_BUILD)
 endif()
 
-if(BACKEND_IMGUI)
-	add_definitions(-DPRINCIPIA_BACKEND_IMGUI -DIMGUI_DEFINE_MATH_OPERATORS)
+if(BACKEND_IMGUI OR IMGUI_IN_GTK)
+	add_definitions(-DIMGUI_DEFINE_MATH_OPERATORS)
 
 	if(SHOULD_USE_GLES)
 		add_definitions(-DIMGUI_IMPL_OPENGL_ES2)
 	endif()
+endif()
+
+if(BACKEND_IMGUI)
+	add_definitions(-DPRINCIPIA_BACKEND_IMGUI)
+endif()
+
+if(IMGUI_IN_GTK)
+	add_definitions(-DUI_IMGUI_IN_GTK)
 endif()
 
 # Use a safe subset of fast math flags

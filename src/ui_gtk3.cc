@@ -41,27 +41,13 @@
 #include <sstream>
 #include <tms/cpp.hh>
 
-#ifdef BUILD_VALGRIND
-#include <valgrind/valgrind.h>
-#endif
-
 #if !defined(SDL_PLATFORM_ANDROID) && !defined(PRINCIPIA_BACKEND_IMGUI) && !defined(NO_UI)
 
-#define SAVE_REGULAR 0
-#define SAVE_COPY 1
-
-#define MAX_GRAVITY 75.f
-
-// fuckgtk3
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-
-#ifdef USE_GTK_SOURCE_VIEW
-#include <gtksourceview/gtksource.h>
-#endif
 
 static gboolean _close_all_dialogs(gpointer unused);
 
@@ -169,9 +155,6 @@ GtkMenuItem     *editor_menu_toggle_mark_entity;
 GtkMenuItem     *editor_menu_lvl_prop;
 GtkMenuItem     *editor_menu_save;
 GtkMenuItem     *editor_menu_save_copy;
-#ifdef BUILD_PKGMGR
-GtkMenuItem     *editor_menu_package_manager;
-#endif
 GtkMenuItem     *editor_menu_publish;
 GtkMenuItem     *editor_menu_settings;
 GtkMenuItem     *editor_menu_login;
@@ -191,9 +174,7 @@ static guint valid_keys[9] = {
     GDK_KEY_9
 };
 
-static void
-refresh_mark_menuitems()
-{
+static void refresh_mark_menuitems() {
     GtkAccelGroup *accel_group = gtk_menu_get_accel_group(editor_menu);
     int x=0;
 
@@ -277,7 +258,6 @@ GtkEntry  *save_entry;
 GtkLabel  *save_status;
 GtkButton *save_ok;
 GtkButton *save_cancel;
-uint8_t    save_type = SAVE_REGULAR;
 
 /* --Export */
 GtkWindow *export_window;
@@ -285,29 +265,6 @@ GtkEntry  *export_entry;
 GtkLabel  *export_status;
 GtkButton *export_ok;
 GtkButton *export_cancel;
-
-/** --Package manager **/
-GtkWindow       *package_window;
-GtkTreeModel    *pk_pkg_treemodel;
-GtkTreeView     *pk_pkg_treeview;
-GtkCheckButton  *pk_pkg_first_is_menu;
-GtkCheckButton  *pk_pkg_return_on_finish;
-GtkSpinButton   *pk_pkg_unlock_count;
-//GtkWidget       *pk_pkg_delete;
-GtkWidget       *pk_pkg_create;
-GtkWidget       *pk_pkg_play;
-GtkWidget       *pk_pkg_publish;
-GtkTreeModel    *pk_lvl_treemodel;
-GtkTreeView     *pk_lvl_treeview;
-GtkWidget       *pk_lvl_add;
-GtkWidget       *pk_lvl_del;
-GtkWidget       *pk_lvl_play;
-bool pk_ignore_lvl_changes = true;
-
-/* --Package name dialog */
-GtkDialog *pkg_name_dialog;
-GtkEntry  *pkg_name_entry;
-GtkButton *pkg_name_ok;
 
 /** --Level properties **/
 GtkDialog       *properties_dialog;
@@ -348,8 +305,7 @@ enum ROW_TYPES {
     ROW_HSCALE,
 };
 
-struct setting_row_type
-{
+struct setting_row_type {
     int type;
 
     /* hscale */
@@ -357,18 +313,14 @@ struct setting_row_type
     double max;
     double step;
 
-    static const struct setting_row_type
-    create_checkbox()
-    {
+    static const struct setting_row_type create_checkbox() {
         struct setting_row_type srt;
         srt.type = ROW_CHECKBOX;
 
         return srt;
     }
 
-    static const struct setting_row_type
-    create_hscale(double min, double max, double step)
-    {
+    static const struct setting_row_type create_hscale(double min, double max, double step) {
         struct setting_row_type srt;
         srt.type = ROW_HSCALE;
 
@@ -489,7 +441,7 @@ struct table_setting_row settings_interface_rows[] = {
         "UI scale",
         "A restart is required for this change to take effect",
         "uiscale",
-        setting_row_type::create_hscale(0.25, 2.0, 0.05),
+        setting_row_type::create_hscale(0.5, 2.0, 0.10),
     },{
         "Fullscreen mode",
         "Toggle fullscreen mode",
@@ -726,8 +678,7 @@ GtkSpinButton   *factory_resources[NUM_RESOURCES];
 GtkListStore    *factory_liststore;
 GtkTreeView     *factory_treeview;
 GtkButton       *factory_cancel;
-enum
-{
+enum {
   FACTORY_COLUMN_ENABLED,
   FACTORY_COLUMN_INDEX,
   FACTORY_COLUMN_RECIPE,
@@ -748,8 +699,7 @@ GtkButton       *tchest_cancel;
 
 uint32_t tchest_translations[MAX_OF_ID] = {0, };
 
-enum
-{
+enum {
   TCHEST_COLUMN_G_ID,
   TCHEST_COLUMN_SUB_ID,
   TCHEST_COLUMN_NAME,
@@ -941,8 +891,7 @@ GtkRadioButton  *robot_dir_right;
 GtkRadioButton  *robot_faction[NUM_FACTIONS];
 GtkListStore    *robot_ls_equipment;
 GtkTreeView     *robot_tv_equipment;
-enum
-{
+enum {
   ROBOT_COLUMN_EQUIPPED,
   ROBOT_COLUMN_ITEM,
   ROBOT_COLUMN_ITEM_ID,
@@ -1054,28 +1003,19 @@ gboolean on_digi_insert_click(GtkWidget *w, GdkEventButton *ev, gpointer user_da
 gboolean on_digi_append_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data);
 gboolean on_digi_delete_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data);
 
-static gboolean
-on_window_close(GtkWidget *w, void *unused)
-{
+static gboolean on_window_close(GtkWidget *w, void *unused) {
     P.focused = true;
     gtk_widget_hide(w);
     return true;
 }
 
-/* Generate help widget with a tooltip */
 static GtkWidget* help_widget(const char *text) {
-    //help-about
-    //help-browser-symbolic
-    //dialog-information-symbolic
     GtkWidget *r = gtk_image_new_from_icon_name("help-about", GTK_ICON_SIZE_MENU); //16px
     gtk_widget_set_tooltip_text(r, text);
-
     return r;
 }
 
-static GtkCellRenderer*
-add_text_column(GtkTreeView *tv, const char *title, int id)
-{
+static GtkCellRenderer *add_text_column(GtkTreeView *tv, const char *title, int id) {
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
 
@@ -1088,21 +1028,16 @@ add_text_column(GtkTreeView *tv, const char *title, int id)
     return renderer;
 }
 
-static GtkWidget*
-new_lbl(const char *text)
-{
+static GtkWidget *new_lbl(const char *text) {
     GtkWidget *r = gtk_label_new(0);
     gtk_label_set_markup(GTK_LABEL(r), text);
 
     return r;
 }
 
-static GtkComboBoxText*
-new_item_cb()
-{
+static GtkComboBoxText *new_item_cb() {
     GtkListStore *store;
     GtkComboBoxText *cb;
-
 
     store = gtk_list_store_new(1, G_TYPE_STRING);
 
@@ -1112,37 +1047,27 @@ new_item_cb()
     return cb;
 }
 
-static void
-item_cb_append(GtkComboBoxText *cb, uint32_t item_id, bool first_is_none)
-{
+static void item_cb_append(GtkComboBoxText *cb, uint32_t item_id, bool first_is_none) {
     GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(cb));
     int num = gtk_tree_model_iter_n_children(model, 0);
 
-    if (first_is_none && num == 0) {
+    if (first_is_none && num == 0)
         gtk_combo_box_text_append_text(cb, "None");
-    } else {
+    else
         gtk_combo_box_text_append_text(cb, item::get_ui_name(item_id));
-    }
 }
 
-static void
-clear_cb(GtkComboBoxText *cb)
-{
+static void clear_cb(GtkComboBoxText *cb) {
     GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(cb));
     gtk_list_store_clear(GTK_LIST_STORE(model));
 }
 
-static GtkCheckButton*
-new_check_button(const char *lbl)
-{
+static GtkCheckButton *new_check_button(const char *lbl) {
     GtkCheckButton *ret = GTK_CHECK_BUTTON(gtk_check_button_new_with_label(lbl));
-
     return ret;
 }
 
-static GtkButton*
-new_lbtn(const char *text, gboolean (*on_click)(GtkWidget*, GdkEventButton*, gpointer))
-{
+static GtkButton *new_lbtn(const char *text, gboolean (*on_click)(GtkWidget*, GdkEventButton*, gpointer)) {
     GtkButton *btn = GTK_BUTTON(gtk_button_new_with_label(text));
     g_signal_connect(btn, "clicked",
             G_CALLBACK(on_click), 0);
@@ -1150,9 +1075,7 @@ new_lbtn(const char *text, gboolean (*on_click)(GtkWidget*, GdkEventButton*, gpo
     return btn;
 }
 
-static GtkWidget*
-new_clbl(const char *text)
-{
+static GtkWidget *new_clbl(const char *text) {
     GtkWidget *r = gtk_label_new(0);
     gtk_label_set_markup(GTK_LABEL(r), text);
     gtk_label_set_xalign(GTK_LABEL(r), 0.0f);
@@ -1160,9 +1083,7 @@ new_clbl(const char *text)
     return r;
 }
 
-static GtkWidget*
-new_rlbl(const char *text)
-{
+static GtkWidget *new_rlbl(const char *text) {
     GtkWidget *r = gtk_label_new(0);
     gtk_label_set_markup(GTK_LABEL(r), text);
     gtk_label_set_xalign(GTK_LABEL(r), 1.0f);
@@ -1170,9 +1091,7 @@ new_rlbl(const char *text)
     return r;
 }
 
-static void
-notebook_append(GtkNotebook *nb, const char *title, GtkBox *base)
-{
+static void notebook_append(GtkNotebook *nb, const char *title, GtkBox *base) {
     gtk_notebook_append_page(nb, GTK_WIDGET(base), new_lbl(title));
 }
 
@@ -1185,15 +1104,14 @@ static void apply_dialog_defaults(
     gtk_window_set_keep_above(GTK_WINDOW(w), TRUE);
     g_signal_connect(w, "delete-event", G_CALLBACK(on_window_close), 0);
 
-    if (on_show) {
+    if (on_show)
         g_signal_connect(w, "show", G_CALLBACK(on_show), 0);
-    }
-    if (on_keypress) {
+
+    if (on_keypress)
         g_signal_connect(w, "key-press-event", G_CALLBACK(on_keypress), 0);
-    }
 }
 
-static GtkGrid* create_settings_table() {
+static GtkGrid *create_settings_table() {
     GtkGrid *tbl = GTK_GRID(gtk_grid_new());
 
     gtk_grid_set_column_spacing(tbl, 15);
@@ -1219,7 +1137,6 @@ static void add_setting_row(GtkGrid *tbl, int y, const char *label, GtkWidget *w
         1, 1
     );
 
-
     //widget
     gtk_widget_set_hexpand(widget, true);
     gtk_grid_attach(
@@ -1238,37 +1155,29 @@ static void add_setting_row(GtkGrid *tbl, int y, const char *label, GtkWidget *w
     }
 }
 
-static GtkMenuItem*
-add_menuitem_m(GtkMenu *menu, const char *label, void (*on_activate)(GtkMenuItem*, gpointer userdata)=0, gpointer userdata=0)
-{
+static GtkMenuItem *add_menuitem_m(GtkMenu *menu, const char *label, void (*on_activate)(GtkMenuItem*, gpointer userdata)=0, gpointer userdata=0) {
     GtkMenuItem *i = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic(label));
 
-    if (on_activate) {
+    if (on_activate)
         g_signal_connect(i, "activate", G_CALLBACK(on_activate), userdata);
-    }
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), GTK_WIDGET(i));
 
     return i;
 }
 
-static GtkMenuItem*
-add_menuitem(GtkMenu *menu, const char *label, void (*on_activate)(GtkMenuItem*, gpointer userdata)=0, gpointer userdata=0)
-{
+static GtkMenuItem *add_menuitem(GtkMenu *menu, const char *label, void (*on_activate)(GtkMenuItem*, gpointer userdata)=0, gpointer userdata=0) {
     GtkMenuItem *i = GTK_MENU_ITEM(gtk_menu_item_new_with_label(label));
 
-    if (on_activate) {
+    if (on_activate)
         g_signal_connect(i, "activate", G_CALLBACK(on_activate), userdata);
-    }
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), GTK_WIDGET(i));
 
     return i;
 }
 
-static GtkMenuItem*
-add_separator(GtkMenu *menu)
-{
+static GtkMenuItem *add_separator(GtkMenu *menu) {
     GtkMenuItem *i = GTK_MENU_ITEM(gtk_separator_menu_item_new());
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), GTK_WIDGET(i));
@@ -1276,11 +1185,7 @@ add_separator(GtkMenu *menu)
     return i;
 }
 
-static GtkDialog* new_dialog_defaults(const char *title, GtkCallback on_show=0, gboolean (*on_keypress)(GtkWidget*, GdkEventKey*, gpointer)=0);
-
-static GtkDialog*
-new_dialog_defaults(const char *title, GtkCallback on_show/*=0*/, gboolean (*on_keypress)(GtkWidget*, GdkEventKey*, gpointer)/*=0*/)
-{
+static GtkDialog *new_dialog_defaults(const char *title, GtkCallback on_show=0, gboolean (*on_keypress)(GtkWidget*, GdkEventKey*, gpointer)=0) {
     GtkWidget *r = gtk_dialog_new_with_buttons(
             title,
             0, (GtkDialogFlags)(0),
@@ -1293,11 +1198,7 @@ new_dialog_defaults(const char *title, GtkCallback on_show/*=0*/, gboolean (*on_
     return GTK_DIALOG(r);
 }
 
-static GtkWindow* new_window_defaults(const char *title, GtkCallback on_show=0, gboolean (*on_keypress)(GtkWidget*, GdkEventKey*, gpointer)=0);
-
-static GtkWindow*
-new_window_defaults(const char *title, GtkCallback on_show/*=0*/, gboolean (*on_keypress)(GtkWidget*, GdkEventKey*, gpointer)/*=0*/)
-{
+static GtkWindow *new_window_defaults(const char *title, GtkCallback on_show=0, gboolean (*on_keypress)(GtkWidget*, GdkEventKey*, gpointer)=0) {
     GtkWidget *r = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_container_set_border_width(GTK_CONTAINER(r), 10);
     gtk_window_set_title(GTK_WINDOW(r), title);
@@ -1308,14 +1209,11 @@ new_window_defaults(const char *title, GtkCallback on_show/*=0*/, gboolean (*on_
     return GTK_WINDOW(r);
 }
 
-static inline void
-update_all_spin_buttons(GtkWidget *wdg, gpointer unused)
-{
-    if (GTK_IS_SPIN_BUTTON(wdg)) {
+static inline void update_all_spin_buttons(GtkWidget *wdg, gpointer unused) {
+    if (GTK_IS_SPIN_BUTTON(wdg))
         gtk_spin_button_update(GTK_SPIN_BUTTON(wdg));
-    } else if (GTK_IS_CONTAINER(wdg)) {
+    else if (GTK_IS_CONTAINER(wdg))
         gtk_container_forall(GTK_CONTAINER(wdg), update_all_spin_buttons, NULL);
-    }
 }
 
 struct cb_find_data {
@@ -1323,29 +1221,21 @@ struct cb_find_data {
     const char *str;
 };
 
-static gchar*
-format_joint_strength(GtkScale *scale, gdouble value)
-{
-    if (value >= 1.0) {
+static gchar *format_joint_strength(GtkScale *scale, gdouble value) {
+    if (value >= 1.0)
         return g_strdup("Indestructible");
-    } else {
+    else
         return g_strdup_printf("%0.*f", gtk_scale_get_digits(scale), value);
-    }
 }
 
-static gchar*
-format_auto_absorb(GtkScale *scale, gdouble value)
-{
-    if (value <= 1.0) {
+static gchar *format_auto_absorb(GtkScale *scale, gdouble value) {
+    if (value <= 1.0)
         return g_strdup("Don't absorb");
-    } else {
+    else
         return g_strdup_printf("%0.*f seconds", gtk_scale_get_digits(scale), value);
-    }
 }
 
-gboolean
-foreach_model_find_str(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, struct cb_find_data** user_data)
-{
+gboolean foreach_model_find_str(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, struct cb_find_data** user_data) {
     GValue val = {0, };
     gtk_tree_model_get_value(model, iter, 0, &val);
 
@@ -1361,9 +1251,7 @@ foreach_model_find_str(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter
     return false;
 }
 
-const char*
-get_cb_val(GtkComboBoxText *cb)
-{
+const char *get_cb_val(GtkComboBoxText *cb) {
     GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(cb));
     GtkTreeIter iter;
     gboolean r = false;
@@ -1383,9 +1271,7 @@ get_cb_val(GtkComboBoxText *cb)
     return ret;
 }
 
-gint
-find_cb_val(GtkComboBoxText *cb, const char *str)
-{
+gint find_cb_val(GtkComboBoxText *cb, const char *str) {
     gint ret = -1;
     struct cb_find_data *d = (struct cb_find_data*)malloc(sizeof(struct cb_find_data));
     d->index = -1;
@@ -1399,9 +1285,7 @@ find_cb_val(GtkComboBoxText *cb, const char *str)
     return ret;
 }
 
-bool
-btn_pressed(GtkWidget *ref, GtkButton *btn, gpointer user_data)
-{
+bool btn_pressed(GtkWidget *ref, GtkButton *btn, gpointer user_data) {
     return (
         ref == GTK_WIDGET(btn) &&
         (
@@ -1411,392 +1295,16 @@ btn_pressed(GtkWidget *ref, GtkButton *btn, gpointer user_data)
     );
 }
 
-void
-pk_reload_pkg_list()
-{
-    GtkTreeIter iter;
-    gtk_list_store_clear(GTK_LIST_STORE(pk_pkg_treemodel));
-
-    pkginfo *p = pkgman::get_pkgs(LEVEL_LOCAL);
-
-    while (p) {
-        gtk_list_store_append(GTK_LIST_STORE(pk_pkg_treemodel), &iter);
-        gtk_list_store_set(GTK_LIST_STORE(pk_pkg_treemodel), &iter,
-                0, p->id,
-                1, p->name,
-                -1
-                );
-        p = p->next;
-    }
-}
-
-bool
-pk_get_current(pkginfo *out)
-{
-    GtkTreeSelection *sel;
-    GtkTreeIter       iter;
-    GValue            val = {0, };
-    sel = gtk_tree_view_get_selection(pk_pkg_treeview);
-    if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-        gtk_tree_model_get_value(pk_pkg_treemodel,
-                                 &iter,
-                                 0,
-                                 &val);
-
-        uint32_t pkg_id = g_value_get_uint(&val);
-
-        out->open(LEVEL_LOCAL, pkg_id);
-
-        return true;
-    }
-
-    return false;
-}
-
-void pk_update_level_list()
-{
-    /* update the list of levels in the package according to the
-     * level treemodel */
-    GtkTreeIter iter;
-
-    tms_infof("update level list");
-
-    pkginfo p;
-    if (pk_get_current(&p)) {
-        p.clear_levels();
-
-        if (gtk_tree_model_get_iter_first(
-                GTK_TREE_MODEL(pk_lvl_treemodel),
-                &iter)) {
-            do {
-                GValue val = {0, };
-                gtk_tree_model_get_value(pk_lvl_treemodel,
-                                         &iter,
-                                         0,
-                                         &val);
-                p.add_level((uint32_t)g_value_get_uint(&val));
-            } while (gtk_tree_model_iter_next(GTK_TREE_MODEL(pk_lvl_treemodel), &iter));
-        } else {
-        }
-
-        p.save();
-    }
-}
-
-void pk_lvl_row_inserted(GtkTreeModel *treemodel,
-                         GtkTreePath *arg1,
-                         GtkTreeIter *arg2,
-                         gpointer user_data)
-{
-    if (!pk_ignore_lvl_changes)
-        pk_update_level_list();
-}
-
-void pk_lvl_row_deleted(GtkTreeModel *treemodel,
-                           GtkTreePath *arg1,
-                           gpointer user_data)
-{
-    if (!pk_ignore_lvl_changes)
-        pk_update_level_list();
-}
-
-void
-pk_lvl_row_activated(GtkTreeView *view,
-                     GtkTreePath *path,
-                     GtkTreeViewColumn *col,
-                     gpointer user_data)
-{
-    GtkTreeIter iter;
-    GtkTreeModel *model = gtk_tree_view_get_model(view);
-    gtk_tree_model_get_iter_from_string(model, &iter, gtk_tree_path_to_string(path));
-
-    guint lvl_id;
-    gtk_tree_model_get(model, &iter,
-                       0, &lvl_id,
-                       -1);
-
-    P.add_action(ACTION_OPEN, (uint32_t)lvl_id);
-}
-
-void
-pk_reload_level_list()
-{
-    GtkTreeIter iter;
-    char tmp[257];
-
-    pk_ignore_lvl_changes = true;
-
-    pkginfo p;
-    gtk_list_store_clear(GTK_LIST_STORE(pk_lvl_treemodel));
-
-    if (pk_get_current(&p)) {
-
-        for (int x=0; x<p.num_levels; x++) {
-            pkgman::get_level_name(p.type, p.levels[x], 0, tmp);
-            gtk_list_store_append(GTK_LIST_STORE(pk_lvl_treemodel), &iter);
-            gtk_list_store_set(GTK_LIST_STORE(pk_lvl_treemodel), &iter,
-                    0, p.levels[x],
-                    1, tmp,
-                    -1
-                    );
-        }
-
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(pk_pkg_first_is_menu), (bool)p.first_is_menu);
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(pk_pkg_return_on_finish), (bool)p.return_on_finish);
-        gtk_spin_button_set_value(pk_pkg_unlock_count, p.unlock_count);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_unlock_count), true);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_return_on_finish), true);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_first_is_menu), true);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_lvl_treeview), true);
-
-        if (G->state.sandbox) {
-            gtk_widget_set_sensitive(GTK_WIDGET(pk_lvl_add), true);
-        } else {
-            gtk_widget_set_sensitive(GTK_WIDGET(pk_lvl_add), false);
-        }
-
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_lvl_del), true);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_lvl_play), true);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_play), true);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_publish), true);
-    } else {
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_unlock_count), false);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_return_on_finish), false);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_first_is_menu), false);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_lvl_treeview), false);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_lvl_add), false);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_play), false);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_pkg_publish), false);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_lvl_del), false);
-        gtk_widget_set_sensitive(GTK_WIDGET(pk_lvl_play), false);
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(pk_pkg_first_is_menu), false);
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(pk_pkg_return_on_finish), false);
-    }
-
-    pk_ignore_lvl_changes = false;
-}
-
-void
-value_changed_unlock_count(GtkSpinButton *btn, gpointer unused)
-{
-    pkginfo p;
-
-    if (pk_get_current(&p)) {
-        p.unlock_count = (uint8_t)gtk_spin_button_get_value(pk_pkg_unlock_count);
-        p.save();
-    }
-}
-
-void
-toggle_first_is_menu(GtkToggleButton *btn, gpointer unused)
-{
-    pkginfo p;
-
-    if (pk_get_current(&p)) {
-        p.first_is_menu = (uint8_t)gtk_toggle_button_get_active(btn);
-        p.save();
-    }
-}
-
-void
-toggle_return_on_finish(GtkToggleButton *btn, gpointer unused)
-{
-    pkginfo p;
-
-    if (pk_get_current(&p)) {
-        p.return_on_finish = (uint8_t)gtk_toggle_button_get_active(btn);
-        p.save();
-    }
-}
-
-void
-pk_name_edited(GtkCellRendererText *cell, gchar *path, gchar *new_text, gpointer unused)
-{
-    GtkTreeIter iter;
-    GValue val = {0, };
-
-    gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(pk_pkg_treemodel),
-            &iter, path);
-
-    gtk_tree_model_get_value(pk_pkg_treemodel,
-                             &iter,
-                             0,
-                             &val);
-
-    uint32_t pkg_id = g_value_get_uint(&val);
-
-    pkginfo p;
-    if (p.open(LEVEL_LOCAL, pkg_id)) {
-
-        if (strcmp(p.name, new_text) == 0)
-            return;
-
-        strncpy(p.name, new_text, 255);
-        p.save();
-        pk_reload_pkg_list();
-        pk_reload_level_list();
-        //
-        //gtk_cell_renderer_text_set_text(cell, new_text);
-        tms_infof("name edited of %u", pkg_id);
-    }
-}
-
-void
-press_add_current_level(GtkButton *w, gpointer unused)
-{
-    GtkTreeSelection *sel;
-    GtkTreeIter       iter;
-    GValue            val = {0, };
-
-    if (W->level.local_id == 0) {
-        ui::message("Please save the current level before adding it.");
-    } else if (!G->state.sandbox) {
-        ui::message("You must be in edit mode of the level when adding it.");
-    } else {
-        sel = gtk_tree_view_get_selection(pk_pkg_treeview);
-        if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-            gtk_tree_model_get_value(pk_pkg_treemodel,
-                                     &iter,
-                                     0,
-                                     &val);
-
-            uint32_t pkg_id = g_value_get_uint(&val);
-
-            pkginfo p;
-
-            p.open(LEVEL_LOCAL, pkg_id);
-
-            if (!p.add_level(W->level.local_id))
-                ui::message("Level already added to package.");
-            else
-                p.save();
-
-            pk_reload_level_list();
-        } else
-            ui::message("No package selected!");
-    }
-}
-
-void
-press_del_selected(GtkButton *w, gpointer unused)
-{
-    GtkTreeSelection *sel;
-    GtkTreeIter       iter;
-
-    sel = gtk_tree_view_get_selection(pk_lvl_treeview);
-    if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-        gtk_list_store_remove(GTK_LIST_STORE(pk_lvl_treemodel), &iter);
-    }
-}
-
-void
-press_play_selected(GtkButton *w, gpointer unused)
-{
-    GtkTreeSelection *sel;
-    GtkTreeIter       iter;
-    GValue            val = {0, };
-
-    sel = gtk_tree_view_get_selection(pk_lvl_treeview);
-    if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-        gtk_tree_model_get_value(pk_lvl_treemodel, &iter, 0, &val);
-        uint32_t lvl_id = g_value_get_uint(&val);
-        P.add_action(ACTION_OPEN, lvl_id);
-    }
-}
-
-#ifdef BUILD_PKGMGR
-
-void
-cursor_changed_pk_pkg(GtkTreeView *w, gpointer unused)
-{
-    pk_reload_level_list();
-
-}
-
-void
-press_publish_pkg(GtkButton *w, gpointer unused)
-{
-    GtkTreeSelection *sel;
-    GtkTreePath      *path;
-    GtkTreeIter       iter;
-    GValue            val = {0, };
-
-    sel = gtk_tree_view_get_selection(pk_pkg_treeview);
-    if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-        gtk_tree_model_get_value(pk_pkg_treemodel,
-                                 &iter,
-                                 0,
-                                 &val);
-
-        uint32_t pkg_id = g_value_get_uint(&val);
-        P.add_action(ACTION_PUBLISH_PKG, pkg_id);
-    } else
-        ui::message("Please select a package");
-}
-
-void
-press_play_pkg(GtkButton *w, gpointer unused)
-{
-    GtkTreeSelection *sel;
-    GtkTreePath      *path;
-    GtkTreeIter       iter;
-    GValue            val = {0, };
-
-    sel = gtk_tree_view_get_selection(pk_pkg_treeview);
-    if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-        gtk_tree_model_get_value(pk_pkg_treemodel,
-                                 &iter,
-                                 0,
-                                 &val);
-
-        uint32_t pkg_id = g_value_get_uint(&val);
-        P.add_action(ACTION_PLAY_PKG, pkg_id);
-    } else
-        ui::message("Please select a package");
-}
-
-void
-press_create_pkg(GtkButton *w, gpointer unused)
-{
-    if (gtk_dialog_run(pkg_name_dialog) == GTK_RESPONSE_ACCEPT) {
-        pkginfo p;
-        p.type = LEVEL_LOCAL;
-        p.id = pkgman::get_next_pkg_id();
-        const char *nm = gtk_entry_get_text(pkg_name_entry);
-        strncpy(p.name, nm, 255);
-
-        if (!p.save())
-            ui::message("Could not create package!");
-        else
-            ui::message("Package created successfully!");
-
-        pk_reload_pkg_list();
-    }
-    gtk_widget_hide(GTK_WIDGET(pkg_name_dialog));
-}
-
-void
-activate_pkg_lvl_chooser(GtkEntry *e, gpointer unused)
-{
-    gtk_widget_show(GTK_WIDGET(pkg_lvl_chooser));
-}
-
-#endif
-
-void
-editor_mark_activate(GtkMenuItem *i, gpointer mark_pointer)
-{
+void editor_mark_activate(GtkMenuItem *i, gpointer mark_pointer) {
     struct goto_mark *mark = static_cast<struct goto_mark*>(mark_pointer);
     tvec2 prev_pos = tvec2f(G->cam->_position.x, G->cam->_position.y);
 
     switch (mark->type) {
-        case MARK_ENTITY:
-            {
+        case MARK_ENTITY: {
                 entity *e = W->get_entity_by_id(mark->id);
 
-                if (!e) {
+                if (!e)
                     return;
-                }
 
                 G->cam->_position.x = e->get_position().x;
                 G->cam->_position.y = e->get_position().y;
@@ -1819,121 +1327,11 @@ editor_mark_activate(GtkMenuItem *i, gpointer mark_pointer)
     editor_menu_last_cam_pos->pos = prev_pos;
 }
 
-void
-editor_menu_activate(GtkMenuItem *i, gpointer unused)
-{
+static gboolean _open_level_properties(gpointer unused);
+
+void editor_menu_activate(GtkMenuItem *i, gpointer unused) {
     if (i == editor_menu_lvl_prop) {
-        if (gtk_dialog_run(properties_dialog) == GTK_RESPONSE_ACCEPT) {
-            const char *name = gtk_entry_get_text(lvl_title);
-            int name_len = strlen(name);
-            W->level.name_len = name_len;
-            memcpy(W->level.name, name, name_len);
-
-            GtkTextIter start, end;
-            GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(lvl_descr);
-
-            gtk_text_buffer_get_bounds(text_buffer, &start, &end);
-
-            const char *descr = gtk_text_buffer_get_text(text_buffer, &start, &end, FALSE);
-            int descr_len = strlen(descr);
-
-            if (descr_len > 0) {
-                W->level.descr_len = descr_len;
-                W->level.descr = (char*)realloc(W->level.descr, descr_len);
-
-                memcpy(W->level.descr, descr, descr_len);
-            } else {
-                W->level.descr_len = 0;
-            }
-
-            uint16_t left  = (uint16_t)atoi(gtk_entry_get_text(lvl_width_left));
-            uint16_t right = (uint16_t)atoi(gtk_entry_get_text(lvl_width_right));
-            uint16_t down  = (uint16_t)atoi(gtk_entry_get_text(lvl_height_down));
-            uint16_t up    = (uint16_t)atoi(gtk_entry_get_text(lvl_height_up));
-
-            float w = (float)left + (float)right;
-            float h = (float)down + (float)up;
-
-            bool resized = false;
-
-            if (w < 5.f) {
-                resized = true;
-                left += 6-(uint16_t)w;
-            }
-            if (h < 5.f) {
-                resized = true;
-                down += 6-(uint16_t)w;
-            }
-
-            if (resized)
-                ui::message("Your level size was increased to the minimum allowed.");
-
-            W->level.size_x[0] = left;
-            W->level.size_x[1] = right;
-            W->level.size_y[0] = down;
-            W->level.size_y[1] = up;
-            W->level.gravity_x = (float)gtk_spin_button_get_value(lvl_gx);
-            W->level.gravity_y = (float)gtk_spin_button_get_value(lvl_gy);
-
-            W->level.dead_enemy_absorb_time = gtk_range_get_value(GTK_RANGE(lvl_enemy_absorb_time));
-            W->level.time_before_player_can_respawn = gtk_range_get_value(GTK_RANGE(lvl_player_respawn_time));
-
-            uint8_t vel_iter = (uint8_t)gtk_range_get_value(GTK_RANGE(lvl_vel_iter));
-            uint8_t pos_iter = (uint8_t)gtk_range_get_value(GTK_RANGE(lvl_pos_iter));
-
-            float prismatic_tolerance = gtk_range_get_value(GTK_RANGE(lvl_prismatic_tol));
-            float pivot_tolerance = gtk_range_get_value(GTK_RANGE(lvl_pivot_tol));
-
-            float angular_damping = gtk_range_get_value(GTK_RANGE(lvl_angular_damping));
-            float joint_friction = gtk_range_get_value(GTK_RANGE(lvl_joint_friction));
-            float linear_damping = gtk_range_get_value(GTK_RANGE(lvl_linear_damping));
-
-            W->level.angular_damping = angular_damping;
-            W->level.joint_friction = joint_friction;
-            W->level.linear_damping = linear_damping;
-
-            W->level.prismatic_tolerance = prismatic_tolerance;
-            W->level.pivot_tolerance = pivot_tolerance;
-
-            tms_infof("vel_iter: %d,  pos_iter: %d", vel_iter, pos_iter);
-            W->level.velocity_iterations = vel_iter;
-            W->level.position_iterations = pos_iter;
-            W->level.final_score = (uint32_t)atoi(gtk_entry_get_text(lvl_score));
-
-            if (W->level.version >= 7) {
-                W->level.show_score = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_show_score));
-                W->level.pause_on_finish = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_pause_on_win));
-            }
-
-            if (W->level.version >= 9) {
-                W->level.show_score = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_show_score));
-                W->level.flags = 0;
-                for (int x=0; x<num_gtk_level_properties; ++x) {
-                    W->level.flags |= ((int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_level_properties[x].checkbutton)) * gtk_level_properties[x].flag);
-                }
-            }
-
-            W->level.bg = gtk_combo_box_get_active(GTK_COMBO_BOX(lvl_bg));
-            W->level.bg_color = new_bg_color;
-
-            if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_radio_adventure))) {
-                P.add_action(ACTION_SET_LEVEL_TYPE, (void*)LCAT_ADVENTURE);
-            } else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_radio_puzzle))) {
-                P.add_action(ACTION_SET_LEVEL_TYPE, (void*)LCAT_PUZZLE);
-            } else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_radio_custom))) {
-                P.add_action(ACTION_SET_LEVEL_TYPE, (void*)LCAT_CUSTOM);
-            }
-
-            P.add_action(ACTION_RELOAD_LEVEL, 0);
-        }
-
-        gtk_widget_hide(GTK_WIDGET(properties_dialog));
-
-#ifdef BUILD_PKGMGR
-    } else if (i == editor_menu_package_manager) {
-        gtk_widget_show(GTK_WIDGET(package_window));
-#endif
-
+        _open_level_properties(NULL);
     } else if (i == editor_menu_move_here_player) {
 
         if (adventure::player) {
@@ -2002,9 +1400,7 @@ editor_menu_activate(GtkMenuItem *i, gpointer unused)
     }
 }
 
-void
-activate_mode_dialog(GtkMenuItem *i, gpointer unused)
-{
+void activate_mode_dialog(GtkMenuItem *i, gpointer unused) {
     gint result = gtk_dialog_run(mode_dialog);
 
     switch (result) {
@@ -2024,9 +1420,7 @@ activate_mode_dialog(GtkMenuItem *i, gpointer unused)
     gtk_widget_hide(GTK_WIDGET(mode_dialog));
 }
 
-void
-activate_new_level(GtkMenuItem *i, gpointer unused)
-{
+void activate_new_level(GtkMenuItem *i, gpointer unused) {
     gint result = gtk_dialog_run(new_level_dialog);
 
     switch (result) {
@@ -2049,23 +1443,17 @@ activate_new_level(GtkMenuItem *i, gpointer unused)
     gtk_widget_hide(GTK_WIDGET(new_level_dialog));
 }
 
-void
-activate_frequency(GtkMenuItem *i, gpointer unused)
-{
+void activate_frequency(GtkMenuItem *i, gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(frequency_window));
 }
 
 /** --Confirm Quit Dialog **/
-void
-on_confirm_quit_show(GtkWidget *wdg, gpointer unused)
-{
+void on_confirm_quit_show(GtkWidget *wdg, gpointer unused) {
     gtk_widget_grab_focus(GTK_WIDGET(confirm_btn_quit));
 }
 
 /** --Command pad **/
-void
-on_command_pad_show(GtkWidget *wdg, void *ununused)
-{
+void on_command_pad_show(GtkWidget *wdg, void *ununused) {
     char tmp[64];
     entity *e = G->selection.e;
 
@@ -2100,9 +1488,7 @@ on_command_pad_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Frequency range Dialog **/
-void
-on_freq_range_show(GtkWidget *wdg, void *unused)
-{
+void on_freq_range_show(GtkWidget *wdg, void *unused) {
     GtkTreeIter iter;
     std::map<uint32_t, entity*> all_entities;
     // <Frequency, <Num Receivers, Num Transmitters> >
@@ -2165,9 +1551,7 @@ on_freq_range_show(GtkWidget *wdg, void *unused)
 
 }
 
-gboolean
-on_freq_range_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_freq_range_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, freq_range_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(freq_range_window));
     } else if (btn_pressed(w, freq_range_ok, user_data)) {
@@ -2189,9 +1573,7 @@ on_freq_range_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_freq_range_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_freq_range_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     switch (key->keyval) {
         case GDK_KEY_Escape:
             gtk_widget_hide(w);
@@ -2210,9 +1592,7 @@ on_freq_range_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-void
-activate_freq_range_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data)
-{
+void activate_freq_range_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data) {
     GtkTreeIter iter;
     GtkTreeModel *model = gtk_tree_view_get_model(view);
     gtk_tree_model_get_iter_from_string(model, &iter, gtk_tree_path_to_string(path));
@@ -2225,15 +1605,11 @@ activate_freq_range_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn 
     gtk_spin_button_set_value(freq_range_value, _freq_range);
 }
 
-void
-activate_freq_range(GtkMenuItem *i, gpointer unused)
-{
+void activate_freq_range(GtkMenuItem *i, gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(freq_range_window));
 }
 
-static void
-freq_range_value_changed(GtkSpinButton *btn, gpointer unused)
-{
+static void freq_range_value_changed(GtkSpinButton *btn, gpointer unused) {
     gtk_spin_button_update(freq_range_value);
     gtk_spin_button_update(freq_range_offset);
 
@@ -2246,9 +1622,7 @@ freq_range_value_changed(GtkSpinButton *btn, gpointer unused)
     gtk_label_set_text(freq_range_info, tmp);
 }
 
-static void
-freq_range_value_text_changed(GtkEditable *editable, gpointer unused)
-{
+static void freq_range_value_text_changed(GtkEditable *editable, gpointer unused) {
     gtk_spin_button_update(freq_range_value);
     gtk_spin_button_update(freq_range_offset);
 
@@ -2267,8 +1641,7 @@ uint64_t symbols[DISPLAY_MAX_SYMBOLS];
 int num_digi_symbols = 0;
 int curr_digi_symbol = 0;
 
-void digi_load_symbols()
-{
+void digi_load_symbols() {
     display *e = (display*)G->selection.e;
 
     num_digi_symbols = e->num_symbols;
@@ -2277,8 +1650,7 @@ void digi_load_symbols()
     memcpy(symbols, e->symbols, DISPLAY_MAX_SYMBOLS*sizeof(uint64_t));
 }
 
-void digi_refresh_symbol()
-{
+void digi_refresh_symbol() {
     char txt[256];
 
     if (curr_digi_symbol < 0) curr_digi_symbol = num_digi_symbols-1;
@@ -2297,37 +1669,28 @@ void digi_refresh_symbol()
     }
 }
 
-void on_digi_toggle(GtkToggleButton *togglebutton,
-                    gpointer user_data)
-{
+void on_digi_toggle(GtkToggleButton *togglebutton, gpointer user_data) {
     uint64_t which = (uint64_t)user_data;
 
-    if (gtk_toggle_button_get_active(togglebutton)) {
+    if (gtk_toggle_button_get_active(togglebutton))
         symbols[curr_digi_symbol] |= (1ull << which);
-    } else {
+    else
         symbols[curr_digi_symbol] &= ~(1ull << which);
-    }
 }
 
-gboolean
-on_digi_next_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_digi_next_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     curr_digi_symbol ++;
     digi_refresh_symbol();
     return false;
 }
 
-gboolean
-on_digi_prev_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_digi_prev_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     curr_digi_symbol --;
     digi_refresh_symbol();
     return false;
 }
 
-gboolean
-on_digi_insert_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_digi_insert_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (num_digi_symbols < DISPLAY_MAX_SYMBOLS) {
         num_digi_symbols ++;
 
@@ -2340,9 +1703,7 @@ on_digi_insert_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_digi_append_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_digi_append_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (num_digi_symbols < DISPLAY_MAX_SYMBOLS) {
         num_digi_symbols ++;
         digi_refresh_symbol();
@@ -2350,9 +1711,7 @@ on_digi_append_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_digi_delete_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_digi_delete_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (num_digi_symbols > 1) {
         if (curr_digi_symbol == num_digi_symbols-1) {
             num_digi_symbols --;
@@ -2368,9 +1727,7 @@ on_digi_delete_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-void
-on_digi_show(GtkWidget *wdg, void *unused)
-{
+void on_digi_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && (e->g_id == O_PASSIVE_DISPLAY || e->g_id == O_ACTIVE_DISPLAY)) {
@@ -2381,18 +1738,15 @@ on_digi_show(GtkWidget *wdg, void *unused)
         gtk_spin_button_set_value(digi_initial, e->properties[1].v.i8+1);
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(digi_wrap), e->properties[0].v.i8);
 
-        if (e->g_id == O_ACTIVE_DISPLAY) {
+        if (e->g_id == O_ACTIVE_DISPLAY)
             gtk_widget_set_sensitive(GTK_WIDGET(digi_wrap), false);
-        } else {
+        else
             gtk_widget_set_sensitive(GTK_WIDGET(digi_wrap), true);
-        }
     }
 }
 
 /** --Sticky **/
-void
-on_sticky_show(GtkWidget *wdg, void *ununused)
-{
+void on_sticky_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_STICKY_NOTE) {
@@ -2406,9 +1760,7 @@ on_sticky_show(GtkWidget *wdg, void *ununused)
 
 #define MAX_BUFFER_LENGTH 255
 
-void
-sticky_text_changed(GtkTextBuffer *buffer, void *unused)
-{
+void sticky_text_changed(GtkTextBuffer *buffer, void *unused) {
     GtkTextIter start, end;
     char *text;
 
@@ -2429,9 +1781,7 @@ sticky_text_changed(GtkTextBuffer *buffer, void *unused)
 }
 
 /** --Shape extruder **/
-void
-on_shapeextruder_show(GtkWidget *wdg, void *unused)
-{
+void on_shapeextruder_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_SHAPE_EXTRUDER) {
@@ -2443,9 +1793,7 @@ on_shapeextruder_show(GtkWidget *wdg, void *unused)
 }
 
 /** --Polygon **/
-static void
-on_polygon_show(GtkWidget *wdg, void *unused)
-{
+static void on_polygon_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_PLASTIC_POLYGON) {
@@ -2455,9 +1803,7 @@ on_polygon_show(GtkWidget *wdg, void *unused)
 }
 
 /** --cursorfield **/
-void
-on_cursorfield_show(GtkWidget *wdg, void *unused)
-{
+void on_cursorfield_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_CURSOR_FIELD) {
@@ -2469,9 +1815,7 @@ on_cursorfield_show(GtkWidget *wdg, void *unused)
 }
 
 /** --escript **/
-static void
-on_escript_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+static void on_escript_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, escript_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(escript_window));
     } else if (btn_pressed(w, escript_save, user_data)) {
@@ -2521,9 +1865,7 @@ on_escript_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     }
 }
 
-static void
-on_escript_external_editor_toggled(GtkToggleButton *tb, gpointer userdata)
-{
+static void on_escript_external_editor_toggled(GtkToggleButton *tb, gpointer userdata) {
     bool external_editor_active = gtk_toggle_button_get_active(tb);
 
     gtk_widget_set_sensitive(GTK_WIDGET(escript_code), !external_editor_active);
@@ -2535,17 +1877,13 @@ on_escript_external_editor_toggled(GtkToggleButton *tb, gpointer userdata)
     }
 }
 
-static void
-on_escript_open_external_cache_clicked(GtkWidget *w, gpointer user_data)
-{
+static void on_escript_open_external_cache_clicked(GtkWidget *w, gpointer user_data) {
     char url[2048];
     snprintf(url, 2047, "file://%s", pkgman::get_cache_path(W->level_id_type));
     ui::open_url(url);
 }
 
-void
-on_escript_show(GtkWidget *wdg, void *unused)
-{
+void on_escript_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_ESCRIPT) {
@@ -2590,9 +1928,7 @@ on_escript_show(GtkWidget *wdg, void *unused)
     }
 }
 
-gboolean
-on_escript_keypress(GtkWidget *w, GdkEventKey *event, gpointer unused)
-{
+gboolean on_escript_keypress(GtkWidget *w, GdkEventKey *event, gpointer unused) {
     if (GDK_KEY_s && event->state & GDK_CONTROL_MASK) {
         on_escript_btn_click(GTK_WIDGET(escript_save), NULL, GINT_TO_POINTER(1));
         return true;
@@ -2601,9 +1937,7 @@ on_escript_keypress(GtkWidget *w, GdkEventKey *event, gpointer unused)
     return false;
 }
 
-static void
-on_escript_mark_set(GtkTextBuffer *buffer, const GtkTextIter *new_location, GtkTextMark *mark, gpointer data)
-{
+static void on_escript_mark_set(GtkTextBuffer *buffer, const GtkTextIter *new_location, GtkTextMark *mark, gpointer data) {
     gchar *msg;
     gint row, col;
     GtkTextIter iter;
@@ -2622,9 +1956,7 @@ on_escript_mark_set(GtkTextBuffer *buffer, const GtkTextIter *new_location, GtkT
 }
 
 /** --Jumper **/
-gboolean
-on_jumper_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_jumper_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     switch (key->keyval) {
         case GDK_KEY_Escape:
             gtk_dialog_response(jumper_dialog, GTK_RESPONSE_CANCEL);
@@ -2640,9 +1972,7 @@ on_jumper_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-void
-on_jumper_show(GtkWidget *wdg, void *unused)
-{
+void on_jumper_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_JUMPER) {
@@ -2655,9 +1985,7 @@ on_jumper_show(GtkWidget *wdg, void *unused)
     }
 }
 
-void
-jumper_value_changed(GtkRange *range, void *unused)
-{
+void jumper_value_changed(GtkRange *range, void *unused) {
     if (gtk_widget_has_focus(GTK_WIDGET(range))) {
         char tmp[8];
         sprintf(tmp, "%.5f", gtk_range_get_value(range));
@@ -2665,9 +1993,7 @@ jumper_value_changed(GtkRange *range, void *unused)
     }
 }
 
-void
-jumper_value_entry_changed(GtkEditable *editable, void *unused)
-{
+void jumper_value_entry_changed(GtkEditable *editable, void *unused) {
     if (gtk_widget_has_focus(GTK_WIDGET(editable))) {
         float v = atof(gtk_editable_get_chars(editable, 0, -1));
         if (v < 0.f) {
@@ -2687,10 +2013,8 @@ jumper_value_entry_changed(GtkEditable *editable, void *unused)
     }
 }
 
-void
-jumper_value_entry_insert_text(GtkEditable *editable, gchar *new_text,
-        gint new_text_length, gpointer position, gpointer *user_data)
-{
+void jumper_value_entry_insert_text(GtkEditable *editable, gchar *new_text,
+        gint new_text_length, gpointer position, gpointer *user_data) {
     for (int n=0; n<new_text_length; ++n) {
         if (!isdigit(new_text[n]) && new_text[n] != '.' && new_text[n] != ',') {
             g_signal_stop_emission_by_name(editable, "insert-text");
@@ -2700,9 +2024,7 @@ jumper_value_entry_insert_text(GtkEditable *editable, gchar *new_text,
 }
 
 /** --Key Listener **/
-void
-on_key_listener_show(GtkWidget *wdg, void *unused)
-{
+void on_key_listener_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_KEY_LISTENER) {
@@ -2733,9 +2055,7 @@ on_key_listener_show(GtkWidget *wdg, void *unused)
 }
 
 /** --Synthesizer **/
-void
-on_synth_show(GtkWidget *wdg, void *unused)
-{
+void on_synth_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_SYNTHESIZER) {
@@ -2758,9 +2078,7 @@ on_synth_show(GtkWidget *wdg, void *unused)
 }
 
 /** --Rubber **/
-void
-on_rubber_show(GtkWidget *wdg, void *unused)
-{
+void on_rubber_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && (e->g_id == O_WHEEL || e->g_id == O_RUBBER_BEAM)) {
@@ -2769,45 +2087,39 @@ on_rubber_show(GtkWidget *wdg, void *unused)
     }
 }
 
-gboolean
-on_rubber_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_rubber_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     switch (key->keyval) {
         case GDK_KEY_Escape:
             gtk_widget_hide(w);
             return false;
 
-        case GDK_KEY_Return:
-            {
-                entity *e = G->selection.e;
+        case GDK_KEY_Return: {
+            entity *e = G->selection.e;
 
-                if (e && (e->g_id == O_WHEEL || e->g_id == O_RUBBER_BEAM)) {
-                    float restitution = gtk_range_get_value(GTK_RANGE(rubber_restitution));
-                    float friction = gtk_range_get_value(GTK_RANGE(rubber_friction));
+            if (e && (e->g_id == O_WHEEL || e->g_id == O_RUBBER_BEAM)) {
+                float restitution = gtk_range_get_value(GTK_RANGE(rubber_restitution));
+                float friction = gtk_range_get_value(GTK_RANGE(rubber_friction));
 
-                    e->properties[1].v.f = restitution;
-                    e->properties[2].v.f = friction;
+                e->properties[1].v.f = restitution;
+                e->properties[2].v.f = friction;
 
-                    if (e->g_id == O_RUBBER_BEAM) {
-                        ((beam*)e)->do_update_fixture = true;
-                    } else {
-                        ((wheel*)e)->do_update_fixture = true;
-                    }
-
-                    P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-                    P.add_action(ACTION_RESELECT, 0);
+                if (e->g_id == O_RUBBER_BEAM) {
+                    ((beam*)e)->do_update_fixture = true;
+                } else {
+                    ((wheel*)e)->do_update_fixture = true;
                 }
+
+                P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
+                P.add_action(ACTION_RESELECT, 0);
             }
-            break;
+        } break;
     }
 
     return false;
 }
 
 /** --Timer **/
-void
-on_timer_show(GtkWidget *wdg, void *unused)
-{
+void on_timer_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_TIMER) {
@@ -2822,9 +2134,7 @@ on_timer_show(GtkWidget *wdg, void *unused)
     }
 }
 
-void
-timer_time_changed(GtkSpinButton *btn, gpointer unused)
-{
+void timer_time_changed(GtkSpinButton *btn, gpointer unused) {
     char tmp[64];
     int seconds = gtk_spin_button_get_value(timer_seconds);
     int milliseconds = gtk_spin_button_get_value(timer_milliseconds);
@@ -2840,9 +2150,7 @@ timer_time_changed(GtkSpinButton *btn, gpointer unused)
     gtk_label_set_text(timer_time, tmp);
 }
 
-gboolean
-on_timer_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_timer_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     switch (key->keyval) {
         case GDK_KEY_Escape:
             gtk_dialog_response(timer_dialog, GTK_RESPONSE_CANCEL);
@@ -2857,9 +2165,7 @@ on_timer_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Sequencer **/
-void
-sequencer_time_changed(GtkSpinButton *btn, gpointer unused)
-{
+void sequencer_time_changed(GtkSpinButton *btn, gpointer unused) {
     char tmp[128];
     int seconds = gtk_spin_button_get_value(sequencer_seconds);
     int milliseconds = gtk_spin_button_get_value(sequencer_milliseconds);
@@ -2875,9 +2181,7 @@ sequencer_time_changed(GtkSpinButton *btn, gpointer unused)
     gtk_label_set_text(sequencer_state, tmp);
 }
 
-gboolean
-sequencer_sequence_focus_out(GtkWidget *wdg, GdkEventFocus *event, gpointer unused)
-{
+gboolean sequencer_sequence_focus_out(GtkWidget *wdg, GdkEventFocus *event, gpointer unused) {
     const char *tmp = gtk_entry_get_text(sequencer_sequence);
     sequencer_num_steps = 0;
 
@@ -2894,9 +2198,7 @@ sequencer_sequence_focus_out(GtkWidget *wdg, GdkEventFocus *event, gpointer unus
     return false;
 }
 
-void
-on_sequencer_show(GtkWidget *wdg, void *unused)
-{
+void on_sequencer_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_SEQUENCER) {
@@ -2917,9 +2219,7 @@ on_sequencer_show(GtkWidget *wdg, void *unused)
     }
 }
 
-gboolean
-on_sequencer_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_sequencer_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, sequencer_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(sequencer_window));
     } else if (btn_pressed(w, sequencer_save, user_data)) {
@@ -2957,9 +2257,7 @@ on_sequencer_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_sequencer_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_sequencer_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     switch (key->keyval) {
         case GDK_KEY_Escape:
             gtk_widget_hide(w);
@@ -2983,9 +2281,7 @@ on_sequencer_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Prompt Settings Dialog **/
-void
-on_prompt_show(GtkWidget *wdg, void *unused)
-{
+void on_prompt_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_PROMPT) {
@@ -2998,9 +2294,7 @@ on_prompt_show(GtkWidget *wdg, void *unused)
     }
 }
 
-gboolean
-on_prompt_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_prompt_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -3009,9 +2303,7 @@ on_prompt_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-gboolean
-on_prompt_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_prompt_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, prompt_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(prompt_settings_dialog));
     } else if (btn_pressed(w, prompt_save, user_data)) {
@@ -3056,9 +2348,7 @@ on_prompt_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
 }
 
 /** --Variable Chooser **/
-gboolean
-on_variable_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_variable_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, variable_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(variable_dialog));
     } else if (btn_pressed(w, variable_ok, user_data)) {
@@ -3109,9 +2399,7 @@ on_variable_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_variable_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_variable_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -3125,9 +2413,7 @@ on_variable_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --SFX Emitter **/
-void
-on_sfx_show(GtkWidget *wdg, void *ununused)
-{
+void on_sfx_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_SFX_EMITTER) {
@@ -3139,9 +2425,7 @@ on_sfx_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --SFX Emitter 2 **/
-static void
-on_sfx2_cb_changed(GtkComboBoxText *cb, gpointer user_data)
-{
+static void on_sfx2_cb_changed(GtkComboBoxText *cb, gpointer user_data) {
     int index = gtk_combo_box_get_active(GTK_COMBO_BOX(cb));
     if (index < 0) {
         return;
@@ -3170,9 +2454,7 @@ on_sfx2_cb_changed(GtkComboBoxText *cb, gpointer user_data)
 
     gtk_combo_box_set_active(GTK_COMBO_BOX(sfx2_sub_cb), 0);
 }
-void
-on_sfx2_show(GtkWidget *wdg, void *ununused)
-{
+void on_sfx2_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_SFX_EMITTER) {
@@ -3187,9 +2469,7 @@ on_sfx2_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Item **/
-void
-on_item_show(GtkWidget *wdg, void *ununused)
-{
+void on_item_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_ITEM) {
@@ -3206,9 +2486,7 @@ on_item_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Decoration **/
-void
-on_decoration_show(GtkWidget *wdg, void *ununused)
-{
+void on_decoration_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_DECORATION) {
@@ -3219,9 +2497,7 @@ on_decoration_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Resource **/
-void
-on_resource_show(GtkWidget *wdg, void *ununused)
-{
+void on_resource_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_RESOURCE) {
@@ -3232,9 +2508,7 @@ on_resource_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Vendor **/
-void
-on_vendor_show(GtkWidget *wdg, void *ununused)
-{
+void on_vendor_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_VENDOR) {
@@ -3243,9 +2517,7 @@ on_vendor_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Animal **/
-void
-on_animal_show(GtkWidget *wdg, void *ununused)
-{
+void on_animal_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_ANIMAL) {
@@ -3256,9 +2528,7 @@ on_animal_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Soundman **/
-void
-on_soundman_show(GtkWidget *wdg, void *ununused)
-{
+void on_soundman_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_SOUNDMAN) {
@@ -3270,9 +2540,7 @@ on_soundman_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Faction **/
-void
-on_faction_show(GtkWidget *wdg, void *ununused)
-{
+void on_faction_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && (e->g_id == O_GUARDPOINT)) {
@@ -3284,9 +2552,7 @@ on_faction_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Factory **/
-static void
-factory_calculate_indices()
-{
+static void factory_calculate_indices() {
     tms_debugf("Calculating indices...");
     GtkTreeModel *model = GTK_TREE_MODEL(factory_liststore);
     GtkTreeIter iter;
@@ -3311,9 +2577,7 @@ factory_calculate_indices()
     }
 }
 
-static void
-factory_enable_toggled(GtkCellRendererToggle *cell, gchar *path_str, gpointer data)
-{
+static void factory_enable_toggled(GtkCellRendererToggle *cell, gchar *path_str, gpointer data) {
     GtkTreeModel *model = (GtkTreeModel *)data;
     GtkTreeIter iter;
     GtkTreePath *path = gtk_tree_path_new_from_string(path_str);
@@ -3331,9 +2595,7 @@ factory_enable_toggled(GtkCellRendererToggle *cell, gchar *path_str, gpointer da
     factory_calculate_indices();
 }
 
-gboolean
-on_factory_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_factory_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -3347,9 +2609,7 @@ on_factory_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-void
-on_factory_show(GtkWidget *wdg, void *ununused)
-{
+void on_factory_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && IS_FACTORY(e->g_id)) {
@@ -3396,9 +2656,7 @@ on_factory_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Treasure chest **/
-static void
-on_tchest_entity_changed(GtkComboBoxText *cb, gpointer user_data)
-{
+static void on_tchest_entity_changed(GtkComboBoxText *cb, gpointer user_data) {
     int index = gtk_combo_box_get_active(GTK_COMBO_BOX(cb));
     if (index < 0) {
         return;
@@ -3416,12 +2674,9 @@ on_tchest_entity_changed(GtkComboBoxText *cb, gpointer user_data)
         return;
     }
 
-    //gtk_cell_layout_clear(GTK_CELL_LAYOUT(tchest_sub_entity));
-
     GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(tchest_sub_entity));
     int num = gtk_tree_model_iter_n_children(model, 0);
     for (int x=0; x<num; ++x) {
-        //gtk_combo_box_text_remove(tchest_sub_entity, x);
         gtk_combo_box_text_remove(tchest_sub_entity, 0);
     }
 
@@ -3443,9 +2698,7 @@ on_tchest_entity_changed(GtkComboBoxText *cb, gpointer user_data)
     }
 }
 
-static void
-on_tchest_selection_changed(GtkTreeView *tv, gpointer user_data)
-{
+static void on_tchest_selection_changed(GtkTreeView *tv, gpointer user_data) {
     GtkTreeSelection *sel;
     GtkTreeIter       iter;
 
@@ -3457,9 +2710,7 @@ on_tchest_selection_changed(GtkTreeView *tv, gpointer user_data)
     }
 }
 
-static gboolean
-on_tchest_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+static gboolean on_tchest_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, tchest_add_entity, user_data)) {
         char search[128];
         strcpy(search, get_cb_val(tchest_entity));
@@ -3529,9 +2780,7 @@ on_tchest_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_tchest_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_tchest_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -3545,9 +2794,7 @@ on_tchest_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-void
-on_tchest_show(GtkWidget *wdg, void *ununused)
-{
+void on_tchest_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (!e || e->g_id != O_TREASURE_CHEST)
@@ -3588,9 +2835,7 @@ on_tchest_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Event listener **/
-void
-on_elistener_show(GtkWidget *wdg, void *ununused)
-{
+void on_elistener_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && e->g_id == O_EVENT_LISTENER) {
@@ -3601,9 +2846,7 @@ on_elistener_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Emitter **/
-void
-on_emitter_show(GtkWidget *wdg, void *ununused)
-{
+void on_emitter_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (e && (e->g_id == O_EMITTER || e->g_id == O_MINI_EMITTER)) {
@@ -3612,9 +2855,7 @@ on_emitter_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --FX Emitter **/
-void
-on_fxemitter_show(GtkWidget *wdg, void *ununused)
-{
+void on_fxemitter_show(GtkWidget *wdg, void *ununused) {
     entity *e = G->selection.e;
 
     if (!e || e->g_id != O_FX_EMITTER)
@@ -3634,10 +2875,7 @@ on_fxemitter_show(GtkWidget *wdg, void *ununused)
 }
 
 /** --Cam targeter **/
-void
-camtargeter_insert_text(GtkEditable *editable, gchar *new_text,
-        gint new_text_length, gpointer position, gpointer *user_data)
-{
+void camtargeter_insert_text(GtkEditable *editable, gchar *new_text, gint new_text_length, gpointer position, gpointer *user_data) {
     for (int n=0; n<new_text_length; ++n) {
         if (!isdigit(new_text[n]) && new_text[n] != '.' && new_text[n] != ',' && new_text[n] != '-') {
             g_signal_stop_emission_by_name(editable, "insert-text");
@@ -3645,9 +2883,7 @@ camtargeter_insert_text(GtkEditable *editable, gchar *new_text,
         }
     }
 }
-void
-camtargeter_entry_changed(GtkEditable *unused_editable, void *unused)
-{
+void camtargeter_entry_changed(GtkEditable *unused_editable, void *unused) {
     GtkEntry *entry = 0;
     GtkRange *range = 0;
     GtkEditable *editable = 0;
@@ -3681,9 +2917,7 @@ camtargeter_entry_changed(GtkEditable *unused_editable, void *unused)
     }
 }
 
-void
-camtargeter_value_changed(GtkRange *unused_range, void *unused)
-{
+void camtargeter_value_changed(GtkRange *unused_range, void *unused) {
     GtkRange *range = 0;
     GtkEntry *entry = 0;
     if (gtk_widget_has_focus(GTK_WIDGET(camtargeter_x_offset))) {
@@ -3701,9 +2935,7 @@ camtargeter_value_changed(GtkRange *unused_range, void *unused)
     }
 }
 
-gboolean
-on_camtargeter_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_camtargeter_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     switch (key->keyval) {
         case GDK_KEY_Escape:
             gtk_dialog_response(camtargeter_dialog, GTK_RESPONSE_CANCEL);
@@ -3721,9 +2953,7 @@ on_camtargeter_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-void
-on_camtargeter_show(GtkWidget *wdg, void *ununused)
-{
+void on_camtargeter_show(GtkWidget *wdg, void *ununused) {
     char tmp[8];
     entity *e = G->selection.e;
 
@@ -3741,9 +2971,7 @@ on_camtargeter_show(GtkWidget *wdg, void *ununused)
     }
 }
 
-void
-activate_frequency_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data)
-{
+void activate_frequency_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data) {
     GtkTreeIter iter;
     GtkTreeModel *model = gtk_tree_view_get_model(view);
     gtk_tree_model_get_iter_from_string(model, &iter, gtk_tree_path_to_string(path));
@@ -3756,15 +2984,7 @@ activate_frequency_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *
     gtk_spin_button_set_value(frequency_value, _frequency);
 }
 
-void
-on_pkg_name_show(GtkWidget *wdg, void *unused)
-{
-    gtk_entry_set_text(pkg_name_entry, "");
-}
-
-void
-on_tips_show(GtkWidget *wdg, void *unused)
-{
+void on_tips_show(GtkWidget *wdg, void *unused) {
     bool touch = settings["touch_controls"]->v.b;
     int num_tips = touch ? num_tips_mobile : num_tips_pc;
 
@@ -3776,9 +2996,7 @@ on_tips_show(GtkWidget *wdg, void *unused)
     ctip = (ctip+1)%num_tips;
 }
 
-void
-on_publish_show(GtkWidget *wdg, void *unused)
-{
+void on_publish_show(GtkWidget *wdg, void *unused) {
     char *current_descr = (char*)malloc(W->level.descr_len+1);
     memcpy(current_descr, W->level.descr, W->level.descr_len);
     current_descr[W->level.descr_len] = '\0';
@@ -3795,26 +3013,14 @@ on_publish_show(GtkWidget *wdg, void *unused)
     free(current_descr);
 }
 
-void
-on_package_manager_show(GtkWidget *wdg, void *unused)
-{
-    pk_reload_pkg_list();
-    pk_reload_level_list();
-}
 
-void
-on_pkg_lvl_chooser_show(GtkWidget *wdg, void *unused)
-{
+void on_pkg_lvl_chooser_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
-
-    if (e && (e->g_id == O_VAR_GETTER || e->g_id == O_VAR_SETTER)) {
+    if (e && (e->g_id == O_PKG_WARP || e->g_id == O_PKG_STATUS))
         gtk_spin_button_set_value(pkg_lvl_chooser_lvl_id, e->properties[0].v.i8);
-    }
 }
 
-void
-on_variable_show(GtkWidget *wdg, void *unused)
-{
+void on_variable_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
 
     if (e && (e->g_id == O_VAR_GETTER || e->g_id == O_VAR_SETTER)) {
@@ -3823,9 +3029,7 @@ on_variable_show(GtkWidget *wdg, void *unused)
     }
 }
 
-void
-on_object_show(GtkWidget *wdg, void *unused)
-{
+void on_object_show(GtkWidget *wdg, void *unused) {
     GtkTreeIter iter;
 
     gtk_list_store_clear(GTK_LIST_STORE(object_treemodel));
@@ -3868,9 +3072,7 @@ on_object_show(GtkWidget *wdg, void *unused)
 }
 
 /** --Open state **/
-void
-on_open_state_show(GtkWidget *wdg, void *unused)
-{
+void on_open_state_show(GtkWidget *wdg, void *unused) {
     GtkTreeIter iter;
 
     gtk_list_store_clear(GTK_LIST_STORE(open_state_treemodel));
@@ -3915,12 +3117,9 @@ on_open_state_show(GtkWidget *wdg, void *unused)
     gtk_tree_path_free(path);
 }
 
-static void
-open_state_row(GtkTreeIter *iter)
-{
-    if (!iter) {
+static void open_state_row(GtkTreeIter *iter) {
+    if (!iter)
         return;
-    }
 
     guint _level_id;
     gtk_tree_model_get(open_state_treemodel, iter,
@@ -3957,9 +3156,7 @@ open_state_row(GtkTreeIter *iter)
     gtk_widget_hide(GTK_WIDGET(open_state_window));
 }
 
-static void
-activate_open_state_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data)
-{
+static void activate_open_state_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data) {
     GtkTreeIter iter;
     GtkTreeModel *model = gtk_tree_view_get_model(view);
     gtk_tree_model_get_iter_from_string(model, &iter, gtk_tree_path_to_string(path));
@@ -3968,9 +3165,7 @@ activate_open_state_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn 
 }
 
 /** --Open level **/
-void
-on_open_show(GtkWidget *wdg, void *unused)
-{
+void on_open_show(GtkWidget *wdg, void *unused) {
     GtkTreeIter iter;
 
     gtk_list_store_clear(GTK_LIST_STORE(open_treemodel));
@@ -4015,9 +3210,7 @@ on_open_show(GtkWidget *wdg, void *unused)
     gtk_tree_path_free(path);
 }
 
-static void
-activate_open_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data)
-{
+static void activate_open_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data) {
     GtkTreeIter iter;
     GtkTreeModel *model = gtk_tree_view_get_model(view);
     gtk_tree_model_get_iter_from_string(model, &iter, gtk_tree_path_to_string(path));
@@ -4036,9 +3229,7 @@ activate_open_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, 
     gtk_widget_hide(GTK_WIDGET(open_window));
 }
 
-static void
-open_menu_item_activated(GtkMenuItem *i, gpointer userdata)
-{
+static void open_menu_item_activated(GtkMenuItem *i, gpointer userdata) {
     if (i == open_menu_information) {
         static GtkMessageDialog *msg_dialog = 0;
 
@@ -4165,9 +3356,7 @@ open_menu_item_activated(GtkMenuItem *i, gpointer userdata)
     }
 }
 
-static gboolean
-open_row_button_press(GtkWidget *wdg, GdkEvent *event, gpointer userdata)
-{
+static gboolean open_row_button_press(GtkWidget *wdg, GdkEvent *event, gpointer userdata) {
     if (event->type == GDK_BUTTON_PRESS) {
         GdkEventButton *bevent = (GdkEventButton*)event;
         if (bevent->button == 3) {
@@ -4178,19 +3367,14 @@ open_row_button_press(GtkWidget *wdg, GdkEvent *event, gpointer userdata)
     return FALSE;
 }
 
-static void
-confirm_import(uint32_t level_id)
-{
-    if (object_window_multiemitter) {
+static void confirm_import(uint32_t level_id) {
+    if (object_window_multiemitter)
         P.add_action(ACTION_MULTIEMITTER_SET, level_id);
-    } else {
+    else
         P.add_action(ACTION_SELECT_IMPORT_OBJECT, level_id);
-    }
 }
 
-void
-activate_object_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data)
-{
+void activate_object_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data) {
     GtkTreeIter iter;
     GtkTreeModel *model = gtk_tree_view_get_model(view);
     gtk_tree_model_get_iter_from_string(model, &iter, gtk_tree_path_to_string(path));
@@ -4205,18 +3389,14 @@ activate_object_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col
     gtk_widget_hide(GTK_WIDGET(object_window));
 }
 
-gboolean
-on_autofit_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
-    if (btn_pressed(w, (GtkButton*)w, user_data)) {
+gboolean on_autofit_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
+    if (btn_pressed(w, (GtkButton*)w, user_data))
         P.add_action(ACTION_AUTOFIT_LEVEL_BORDERS, 0);
-    }
 
     return false;
 }
 
-gboolean
-on_lvl_bg_changed(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
+gboolean on_lvl_bg_changed(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     for (const int *ptr = colored_bgs; ; ++ptr) {
         if ((*ptr == -1) || (*ptr == gtk_combo_box_get_active(GTK_COMBO_BOX(lvl_bg)))) {
             gtk_widget_set_visible(GTK_WIDGET(lvl_bg_color), *ptr != -1);
@@ -4227,11 +3407,7 @@ on_lvl_bg_changed(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     return false;
 }
 
-gboolean
-on_lvl_bg_color_set(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
-    tms_debugf("bg color button COLOR SET");
-
+gboolean on_lvl_bg_color_set(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     GtkColorChooser *sel = GTK_COLOR_CHOOSER(lvl_bg_color);
 
     GdkRGBA new_color;
@@ -4246,9 +3422,7 @@ on_lvl_bg_color_set(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_upgrade_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_upgrade_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, (GtkButton*)w, user_data)) {
         gint result = gtk_dialog_run(confirm_upgrade_dialog);
 
@@ -4263,9 +3437,7 @@ on_upgrade_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_open_state_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_open_state_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, open_state_btn_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(open_state_window));
     } else if (btn_pressed(w, open_state_btn_open, user_data)) {
@@ -4286,9 +3458,7 @@ on_open_state_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_open_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_open_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, open_btn_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(open_window));
     } else if (btn_pressed(w, open_btn_open, user_data)) {
@@ -4322,9 +3492,7 @@ on_open_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_object_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_object_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, object_btn_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(object_window));
     } else if (btn_pressed(w, object_btn_open, user_data)) {
@@ -4357,9 +3525,7 @@ on_object_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
 }
 
 /** --Robot **/
-static void
-robot_item_toggled(GtkCellRendererToggle *cell, gchar *path_str, gpointer data)
-{
+static void robot_item_toggled(GtkCellRendererToggle *cell, gchar *path_str, gpointer data) {
     GtkTreeModel *model = (GtkTreeModel *)data;
     GtkTreeIter iter;
     GtkTreePath *path = gtk_tree_path_new_from_string(path_str);
@@ -4375,9 +3541,7 @@ robot_item_toggled(GtkCellRendererToggle *cell, gchar *path_str, gpointer data)
     gtk_tree_path_free(path);
 }
 
-static void
-on_robot_show(GtkWidget *wdg, void *unused)
-{
+static void on_robot_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
     if (e && e->flag_active(ENTITY_IS_ROBOT)) {
         clear_cb(robot_head_equipment);
@@ -4531,9 +3695,7 @@ on_robot_show(GtkWidget *wdg, void *unused)
     }
 }
 
-gboolean
-on_robot_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_robot_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, robot_btn_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(robot_window));
     } else if (btn_pressed(w, robot_btn_ok, user_data)) {
@@ -4642,9 +3804,7 @@ on_robot_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_robot_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_robot_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape) {
         gtk_widget_hide(w);
     } else if (key->keyval == GDK_KEY_Return) {
@@ -4658,9 +3818,7 @@ on_robot_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-gboolean
-on_object_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_object_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -4692,9 +3850,7 @@ on_object_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-gboolean
-on_synth_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_synth_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -4740,9 +3896,7 @@ on_synth_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-gboolean
-on_open_state_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_open_state_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -4789,9 +3943,7 @@ on_open_state_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-gboolean
-on_open_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_open_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -4825,9 +3977,7 @@ on_open_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-gboolean
-on_color_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_color_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     GtkWidget *ok_button = gtk_dialog_get_widget_for_response(GTK_DIALOG(beam_color_dialog), GTK_RESPONSE_OK);
 
     if (key->keyval == GDK_KEY_Escape) {
@@ -4842,9 +3992,7 @@ on_color_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-gboolean
-on_lvl_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_lvl_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape) {
         gtk_widget_hide(GTK_WIDGET(save_window));
         return true;
@@ -4858,9 +4006,7 @@ on_lvl_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-static void
-save_setting_row(struct table_setting_row *r)
-{
+static void save_setting_row(struct table_setting_row *r) {
     const struct setting_row_type &row = r->row;
 
     switch (row.type) {
@@ -4878,9 +4024,7 @@ save_setting_row(struct table_setting_row *r)
     }
 }
 
-static void
-load_setting_row(struct table_setting_row *r)
-{
+static void load_setting_row(struct table_setting_row *r) {
     const struct setting_row_type &row = r->row;
 
     switch (row.type) {
@@ -4898,9 +4042,7 @@ load_setting_row(struct table_setting_row *r)
     }
 }
 
-static void
-create_setting_row_widget(struct table_setting_row *r)
-{
+static void create_setting_row_widget(struct table_setting_row *r) {
     const struct setting_row_type &row = r->row;
 
     switch (row.type) {
@@ -4919,9 +4061,7 @@ create_setting_row_widget(struct table_setting_row *r)
 }
 
 /** --Settings **/
-void
-save_settings()
-{
+void save_settings() {
     P.can_reload_graphics = false;
     P.can_set_settings = false;
     P.add_action(ACTION_RELOAD_GRAPHICS, 0);
@@ -4976,6 +4116,8 @@ save_settings()
     P.update_uiscale(settings["uiscale"]->v.f);
 #endif
 
+    _tms.touch_controls = settings["touch_controls"]->v.b;
+
     sm::load_settings();
 
     strcpy(tmp, get_cb_val(settings_shadow_res));
@@ -5029,9 +4171,7 @@ save_settings()
 }
 
 /* SETTINGS LOAD */
-void
-on_settings_show(GtkWidget *wdg, void *unused)
-{
+void on_settings_show(GtkWidget *wdg, void *unused) {
     char tmp[64];
 
     gtk_spin_button_set_value(settings_shadow_quality, settings["shadow_quality"]->v.u8);
@@ -5107,14 +4247,12 @@ on_settings_show(GtkWidget *wdg, void *unused)
         }
     }
 
-    if (settings["control_type"]->v.u8 == 0) {
+    if (settings["control_type"]->v.u8 == 0)
         strcpy(tmp, "Keyboard");
-    } else if (settings["control_type"]->v.u8 == 1) {
+    else if (settings["control_type"]->v.u8 == 1)
         strcpy(tmp, "Keyboard+Mouse");
-    } else {
-        /* default to keyboard-only controls */
+    else // default to keyboard-only controls
         strcpy(tmp, "Keyboard");
-    }
 
     gint index = find_cb_val(settings_control_type, tmp);
     if (index != -1) {
@@ -5132,9 +4270,7 @@ on_settings_show(GtkWidget *wdg, void *unused)
 }
 
 /** --Save and Save as copy **/
-void
-on_save_show(GtkWidget *wdg, void *unused)
-{
+void on_save_show(GtkWidget *wdg, void *unused) {
     char tmp[257];
     memcpy(tmp, W->level.name, W->level.name_len);
     tmp[W->level.name_len] = '\0';
@@ -5143,9 +4279,7 @@ on_save_show(GtkWidget *wdg, void *unused)
     gtk_widget_grab_focus(GTK_WIDGET(save_entry));
 }
 
-gboolean
-on_save_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_save_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, save_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(save_window));
     } else if (btn_pressed(w, save_ok, user_data)) {
@@ -5174,9 +4308,7 @@ on_save_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_save_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_save_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(GTK_WIDGET(save_window));
     else if (key->keyval == GDK_KEY_Return) {
@@ -5191,17 +4323,13 @@ on_save_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Export **/
-void
-on_export_show(GtkWidget *wdg, void *unused)
-{
+void on_export_show(GtkWidget *wdg, void *unused) {
     gtk_entry_set_text(export_entry, "");
 
     gtk_widget_grab_focus(GTK_WIDGET(export_entry));
 }
 
-gboolean
-on_export_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_export_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, export_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(export_window));
     } else if (btn_pressed(w, export_ok, user_data)) {
@@ -5219,9 +4347,7 @@ on_export_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_export_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_export_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(GTK_WIDGET(export_window));
     else if (key->keyval == GDK_KEY_Return) {
@@ -5236,9 +4362,7 @@ on_export_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Tips Dialog **/
-gboolean
-on_tips_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_tips_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape || key->keyval == GDK_KEY_Return) {
         gtk_widget_hide(w);
         return true;
@@ -5248,15 +4372,11 @@ on_tips_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Info Dialog **/
-void
-on_info_show(GtkWidget *wdg, void *unused)
-{
+void on_info_show(GtkWidget *wdg, void *unused) {
     gtk_label_set_text(info_text, _pass_info_descr);
 }
 
-gboolean
-on_info_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_info_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape || key->keyval == GDK_KEY_Return) {
         gtk_widget_hide(w);
         return true;
@@ -5266,18 +4386,14 @@ on_info_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Confirm Dialog **/
-void
-on_confirm_show(GtkWidget *wdg, void *unused)
-{
+void on_confirm_show(GtkWidget *wdg, void *unused) {
     gtk_label_set_markup(confirm_text, _pass_confirm_text);
     gtk_button_set_label(confirm_button1, _pass_confirm_button1);
     gtk_button_set_label(confirm_button2, _pass_confirm_button2);
-    if (_pass_confirm_button3) {
-        tms_infof("BUTTON3 EXISTS!!!!!!!!!!!!");
+    if (_pass_confirm_button3)
         gtk_button_set_label(confirm_button3, _pass_confirm_button3);
-    } else {
+    else
         gtk_widget_hide(GTK_WIDGET(confirm_button3));
-    }
 
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(confirm_dna_sandbox_back), settings["dna_sandbox_back"]->v.b);
 
@@ -5294,9 +4410,7 @@ on_confirm_show(GtkWidget *wdg, void *unused)
     gtk_widget_set_size_request(GTK_WIDGET(confirm_dialog), -1, -1);
 }
 
-gboolean
-on_confirm_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_confirm_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     switch (key->keyval) {
         case GDK_KEY_Escape:
             gtk_dialog_response(confirm_dialog, GTK_RESPONSE_CANCEL);
@@ -5313,18 +4427,11 @@ on_confirm_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Alert Dialog **/
-void
-on_alert_show(GtkWidget *wdg, void *unused)
-{
-    // set text without markup
-    // g_object_set(alert_dialog, "text", _alert_text, NULL);
-
+void on_alert_show(GtkWidget *wdg, void *unused) {
     gtk_message_dialog_set_markup(alert_dialog, _alert_text);
 }
 
-gboolean
-on_alert_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_alert_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     switch (key->keyval) {
         case GDK_KEY_Escape:
             gtk_dialog_response(confirm_dialog, GTK_RESPONSE_CANCEL);
@@ -5339,15 +4446,11 @@ on_alert_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Error Dialog **/
-void
-on_error_show(GtkWidget *wdg, void *unused)
-{
+void on_error_show(GtkWidget *wdg, void *unused) {
     gtk_label_set_text(error_text, _pass_error_text);
 }
 
-gboolean
-on_error_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_error_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape || key->keyval == GDK_KEY_Return) {
         gtk_widget_hide(w);
         return true;
@@ -5357,9 +4460,7 @@ on_error_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Level properties **/
-static void
-on_level_flag_toggled(GtkToggleButton *btn, gpointer _flag)
-{
+static void on_level_flag_toggled(GtkToggleButton *btn, gpointer _flag) {
     bool toggled = gtk_toggle_button_get_active(btn);
     uint64_t flag = VOID_TO_UINT64(_flag);
     tms_debugf("flag: %" PRIu64, flag);
@@ -5371,9 +4472,7 @@ on_level_flag_toggled(GtkToggleButton *btn, gpointer _flag)
     }
 }
 
-gboolean
-on_properties_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_properties_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -5390,9 +4489,7 @@ on_properties_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
 
 }
 
-void
-refresh_borders()
-{
+void refresh_borders() {
     char tmp[128];
     sprintf(tmp, "%d", W->level.size_x[0]);
     gtk_entry_set_text(lvl_width_left, tmp);
@@ -5411,9 +4508,7 @@ refresh_borders()
 /**
  * Get stuff from the currently loaded level and fill in the fields
  **/
-void
-on_properties_show(GtkWidget *wdg, void *unused)
-{
+void on_properties_show(GtkWidget *wdg, void *unused) {
     char *current_descr;
     char current_name[257];
     char tmp[128];
@@ -5525,9 +4620,7 @@ on_properties_show(GtkWidget *wdg, void *unused)
     free(current_descr);
 }
 
-void
-on_frequency_show(GtkWidget *wdg, void *unused)
-{
+void on_frequency_show(GtkWidget *wdg, void *unused) {
     GtkTreeIter iter;
     std::map<uint32_t, entity*> all_entities;
     // <Frequency, <Num Receivers, Num Transmitters> >
@@ -5590,57 +4683,39 @@ on_frequency_show(GtkWidget *wdg, void *unused)
     gtk_widget_grab_focus(GTK_WIDGET(frequency_value));
 }
 
-void
-activate_open_state(GtkMenuItem *i, gpointer unused)
-{
+void activate_open_state(GtkMenuItem *i, gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(open_state_window));
 }
 
-void
-activate_open(GtkMenuItem *i, gpointer unused)
-{
+void activate_open(GtkMenuItem *i, gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(open_window));
 }
 
-void
-activate_prompt_settings(GtkMenuItem *i, gpointer unused)
-{
+void activate_prompt_settings(GtkMenuItem *i, gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(prompt_settings_dialog));
 }
 
-void
-activate_object(GtkMenuItem *i, gpointer unused)
-{
+void activate_object(GtkMenuItem *i, gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(object_window));
 }
 
-void
-activate_export(GtkMenuItem *i, gpointer unused)
-{
+void activate_export(GtkMenuItem *i, gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(export_window));
 }
 
-void
-activate_controls(GtkMenuItem *i, gpointer unused)
-{
+void activate_controls(GtkMenuItem *i, gpointer unused) {
     G->render_controls = true;
 }
 
-void
-activate_restart_level(GtkMenuItem *i, gpointer unused)
-{
+void activate_restart_level(GtkMenuItem *i, gpointer unused) {
     P.add_action(ACTION_RESTART_LEVEL, 0);
 }
 
-void
-activate_back(GtkMenuItem *i, gpointer unused)
-{
+void activate_back(GtkMenuItem *i, gpointer unused) {
     P.add_action(ACTION_BACK, 0);
 }
 
-void
-activate_save(GtkMenuItem *i, gpointer unused)
-{
+void activate_save(GtkMenuItem *i, gpointer unused) {
     bool ask_for_new_name = false;
 
     if (W->level.name_len == 0 || strcmp(W->level.name, "<no name>") == 0) {
@@ -5655,9 +4730,7 @@ activate_save(GtkMenuItem *i, gpointer unused)
     }
 }
 
-void
-activate_save_copy(GtkMenuItem *i, gpointer unused)
-{
+void activate_save_copy(GtkMenuItem *i, gpointer unused) {
     save_type = SAVE_COPY;
     gtk_widget_show_all(GTK_WIDGET(save_window));
 }
@@ -5666,9 +4739,7 @@ activate_save_copy(GtkMenuItem *i, gpointer unused)
  * That means the graphics should reload and return to the G screen
  * When activate_settings is called via open_dialog(DIALOG_SETTINGS), userdata is 1.
  * That means RELOAD_GRAPHICS should return to the main menu instead. */
-void
-activate_settings(GtkMenuItem *i, gpointer userdata)
-{
+void activate_settings(GtkMenuItem *i, gpointer userdata) {
     gint result = gtk_dialog_run(settings_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -5678,9 +4749,7 @@ activate_settings(GtkMenuItem *i, gpointer userdata)
     gtk_widget_hide(GTK_WIDGET(settings_dialog));
 }
 
-void
-activate_publish(GtkMenuItem *i, gpointer unused)
-{
+void activate_publish(GtkMenuItem *i, gpointer unused) {
     gint result = gtk_dialog_run(publish_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -5724,9 +4793,7 @@ activate_publish(GtkMenuItem *i, gpointer unused)
 }
 
 /** --Multi config **/
-static void
-on_multi_config_show(GtkWidget *wdg, void *unused)
-{
+static void on_multi_config_show(GtkWidget *wdg, void *unused) {
     gtk_range_set_value(GTK_RANGE(multi_config_joint_strength), 1.0);
 
     bool any_entity_locked = false;
@@ -5761,19 +4828,16 @@ on_multi_config_show(GtkWidget *wdg, void *unused)
     for (int x=0; x<NUM_MULTI_CONFIG_TABS; ++x) {
         GtkWidget *page = gtk_notebook_get_nth_page(multi_config_nb, x);
 
-        if (!enabled_tabs[x]) {
+        if (!enabled_tabs[x])
             gtk_widget_hide(page);
-        } else {
+        else
             gtk_widget_show(page);
-        }
     }
 
     gtk_widget_set_sensitive(GTK_WIDGET(multi_config_unlock_all), any_entity_locked);
 }
 
-static gboolean
-on_multi_config_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+static gboolean on_multi_config_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, multi_config_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(multi_config_window));
     } else if (btn_pressed(w, multi_config_apply, user_data)) {
@@ -5845,18 +4909,14 @@ on_multi_config_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-static void
-on_multi_config_tab_changed(GtkNotebook *nb, GtkWidget *page, gint tab_num, gpointer unused)
-{
+static void on_multi_config_tab_changed(GtkNotebook *nb, GtkWidget *page, gint tab_num, gpointer unused) {
     multi_config_cur_tab = tab_num;
 
     gtk_widget_set_sensitive(GTK_WIDGET(multi_config_apply), (tab_num != TAB_MISCELLANEOUS));
 }
 
 /** --Login **/
-static void
-on_login_show(GtkWidget *wdg, void *unused)
-{
+static void on_login_show(GtkWidget *wdg, void *unused) {
     gtk_widget_set_sensitive(GTK_WIDGET(login_btn_log_in), true);
 
     gtk_entry_set_text(login_username, "");
@@ -5867,17 +4927,13 @@ on_login_show(GtkWidget *wdg, void *unused)
     gtk_widget_grab_focus(GTK_WIDGET(login_username));
 }
 
-void
-on_login_hide(GtkWidget *wdg, void *unused)
-{
+void on_login_hide(GtkWidget *wdg, void *unused) {
     tms_infof("login hiding");
     P.focused = true;
     prompt_is_open = false;
 }
 
-gboolean
-on_login_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_login_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, login_btn_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(login_window));
     } else if (btn_pressed(w, login_btn_log_in, user_data)) {
@@ -5902,9 +4958,7 @@ on_login_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_login_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_login_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape)
         gtk_widget_hide(w);
     else if (key->keyval == GDK_KEY_Return) {
@@ -5918,34 +4972,25 @@ on_login_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-void
-activate_principiawiki(GtkMenuItem *i, gpointer unused)
-{
+void activate_principiawiki(GtkMenuItem *i, gpointer unused) {
     ui::open_url("https://principia-web.se/wiki/");
 }
 
-void
-activate_gettingstarted(GtkMenuItem *i, gpointer unused)
-{
+void activate_gettingstarted(GtkMenuItem *i, gpointer unused) {
     ui::open_url("https://principia-web.se/wiki/Getting_Started");
 }
 
-void
-activate_login(GtkMenuItem *i, gpointer unused)
-{
+void activate_login(GtkMenuItem *i, gpointer unused) {
     prompt_is_open = true;
     P.focused = false;
     gtk_widget_show_all(GTK_WIDGET(login_window));
 }
 
-void
-editor_menu_back_to_menu(GtkMenuItem *i, gpointer unused)
-{
+void editor_menu_back_to_menu(GtkMenuItem *i, gpointer unused) {
     P.add_action(ACTION_GOTO_MAINMENU, 0);
 }
 
-static void show_grab_focus(GtkWidget *w, gpointer user_data)
-{
+static void show_grab_focus(GtkWidget *w, gpointer user_data) {
     GdkWindow *w_window = gtk_widget_get_window(w);
     GdkDisplay* display = gdk_display_get_default();
     GdkSeat* seat = gdk_display_get_default_seat(display);
@@ -5965,9 +5010,7 @@ static void show_grab_focus(GtkWidget *w, gpointer user_data)
 
 void activate_quickadd(GtkWidget *i, gpointer unused);
 
-gboolean
-keypress_quickadd(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean keypress_quickadd(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     GValue s = {0};
     GValue e = {0};
 
@@ -5995,12 +5038,10 @@ keypress_quickadd(GtkWidget *w, GdkEventKey *key, gpointer unused)
 }
 
 /** --Quickadd **/
-static gboolean
-match_selected_quickadd(GtkEntryCompletion *widget,
+static gboolean match_selected_quickadd(GtkEntryCompletion *widget,
   GtkTreeModel       *model,
   GtkTreeIter        *iter,
-  gpointer            user_data)
-{
+  gpointer            user_data) {
     gtk_widget_hide(GTK_WIDGET(quickadd_window));
 
     guint _gid;
@@ -6030,9 +5071,7 @@ match_selected_quickadd(GtkEntryCompletion *widget,
     return false;
 }
 
-void
-refresh_quickadd()
-{
+void refresh_quickadd() {
     GtkListStore *list = GTK_LIST_STORE(gtk_entry_completion_get_model(gtk_entry_get_completion(quickadd_entry)));
     GtkTreeIter iter;
     int n = 0;
@@ -6082,9 +5121,7 @@ refresh_quickadd()
     }
 }
 
-void
-activate_quickadd(GtkWidget *i, gpointer unused)
-{
+void activate_quickadd(GtkWidget *i, gpointer unused) {
     /* there seems to be absolutely no way of retrieving the top completion entry...
      * we have to find it manually */
 
@@ -6210,9 +5247,7 @@ activate_quickadd(GtkWidget *i, gpointer unused)
     gtk_widget_hide(GTK_WIDGET(quickadd_window));
 }
 
-gboolean
-on_goto_menu_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_goto_menu_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     GtkAccelGroup *accel_group = gtk_menu_get_accel_group(editor_menu);
 
     if (key->keyval >= GDK_KEY_1 && key->keyval <= GDK_KEY_9) {
@@ -6232,27 +5267,15 @@ on_goto_menu_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-gboolean
-on_menu_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_menu_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     if (key->keyval == GDK_KEY_Escape) {
         gtk_widget_hide(w);
-    } else {
-        /* redirect the event to tms? */
-        /*
-        struct tms_event e;
-        e.type = TMS_EV_KEY_PRESS;
-
-        return true;
-        */
     }
 
     return false;
 }
 
-gboolean
-on_frequency_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
-{
+gboolean on_frequency_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
     if (btn_pressed(w, frequency_cancel, user_data)) {
         gtk_widget_hide(GTK_WIDGET(frequency_window));
     } else if (btn_pressed(w, frequency_ok, user_data)) {
@@ -6274,9 +5297,7 @@ on_frequency_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data)
     return false;
 }
 
-gboolean
-on_frequency_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
-{
+gboolean on_frequency_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
     switch (key->keyval) {
         case GDK_KEY_Escape:
             gtk_widget_hide(w);
@@ -6347,12 +5368,7 @@ void load_gtk_css() {
     #endif
 }
 
-int _gtk_loop(void *p)
-{
-#ifdef BUILD_VALGRIND
-    if (RUNNING_ON_VALGRIND) return T_OK;
-#endif
-
+int _gtk_loop(void *p) {
     gtk_init(NULL, NULL);
 
     //Load CSS themes
@@ -6457,10 +5473,6 @@ int _gtk_loop(void *p)
         editor_menu_save_copy = add_menuitem_m(editor_menu, "Save _copy", activate_save_copy);
         add_menuitem_m(editor_menu, "_Open", activate_open);
 
-#ifdef BUILD_PKGMGR
-        editor_menu_package_manager = add_menuitem(editor_menu, "Package manager", editor_menu_activate);
-#endif
-
         editor_menu_publish = add_menuitem_m(editor_menu, "P_ublish online", activate_publish);
 
         editor_menu_settings = add_menuitem_m(editor_menu, "S_ettings", activate_settings);
@@ -6471,7 +5483,6 @@ int _gtk_loop(void *p)
         add_menuitem(editor_menu, "Help: Principia Wiki", activate_principiawiki);
         add_menuitem(editor_menu, "Help: Getting Started", activate_gettingstarted);
 
-        //g_signal_connect(editor_menu, "selection-done", G_CALLBACK(on_menu_select), 0);
         g_signal_connect(editor_menu, "key-press-event", G_CALLBACK(on_menu_keypress), 0);
         g_signal_connect(editor_menu_go_to_menu, "key-press-event", G_CALLBACK(on_goto_menu_keypress), 0);
     }
@@ -6640,29 +5651,6 @@ int _gtk_loop(void *p)
         add_text_column(open_treeview, "Name", OC_NAME);
         add_text_column(open_treeview, "Version", OC_VERSION);
         add_text_column(open_treeview, "Modified", OC_DATE);
-    }
-
-    /** --Package name dialog **/
-    {
-        pkg_name_dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-                "Create new package",
-                0, (GtkDialogFlags)(0)/*GTK_DIALOG_MODAL*/,
-                NULL, NULL));
-
-        apply_dialog_defaults(pkg_name_dialog);
-
-        pkg_name_ok = GTK_BUTTON(gtk_dialog_add_button(pkg_name_dialog, "_Save", GTK_RESPONSE_ACCEPT));
-        gtk_dialog_add_button(pkg_name_dialog, "_Cancel", GTK_RESPONSE_REJECT);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(pkg_name_dialog));
-        pkg_name_entry = GTK_ENTRY(gtk_entry_new());
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Enter a name for this package</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(pkg_name_entry), false, false, 0);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        g_signal_connect(pkg_name_dialog, "show", G_CALLBACK(on_pkg_name_show), 0);
     }
 
     /** --Package level chooser **/
@@ -6840,146 +5828,6 @@ int _gtk_loop(void *p)
 
         gtk_container_add(GTK_CONTAINER(export_window), GTK_WIDGET(content));
     }
-
-#ifdef BUILD_PKGMGR
-    /** --Package manager **/
-    {
-        package_window = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
-        gtk_container_set_border_width(GTK_CONTAINER(package_window), 10);
-        gtk_window_set_default_size(GTK_WINDOW(package_window), 400, 700);
-        gtk_widget_set_size_request(GTK_WIDGET(package_window), 400, 700);
-        gtk_window_set_title(GTK_WINDOW(package_window), "Package Manager");
-        gtk_window_set_resizable(GTK_WINDOW(package_window), false);
-
-        g_signal_connect(package_window, "delete-event", G_CALLBACK(on_window_close), 0);
-        g_signal_connect(package_window, "show", G_CALLBACK(on_package_manager_show), 0);
-
-        //GtkBox *layout = GTK_BOX(gtk_dialog_get_content_area(package_dialog));
-        GtkBox *layout = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
-        gtk_box_set_spacing(GTK_BOX(layout), 5);
-        gtk_box_set_homogeneous(GTK_BOX(layout), false);
-
-        gtk_box_pack_start(GTK_BOX(layout), GTK_WIDGET(gtk_label_new("Your packages:")), 0, 0, 0);
-
-        {
-            GtkListStore *store;
-
-            store = gtk_list_store_new(2, G_TYPE_UINT, G_TYPE_STRING);
-
-            pk_pkg_treemodel = GTK_TREE_MODEL(store);
-
-            //gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(store), OC_DATE, GTK_SORT_DESCENDING);
-
-            pk_pkg_treeview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(pk_pkg_treemodel));
-            gtk_tree_view_set_search_column(pk_pkg_treeview, OC_NAME);
-
-            g_signal_connect(GTK_WIDGET(pk_pkg_treeview), "cursor-changed", G_CALLBACK(cursor_changed_pk_pkg), 0);
-
-            GtkWidget *ew = gtk_scrolled_window_new(0,0);
-            gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (ew),
-                          GTK_POLICY_AUTOMATIC,
-                          GTK_POLICY_AUTOMATIC);
-
-            gtk_container_add(GTK_CONTAINER(ew), GTK_WIDGET(pk_pkg_treeview));
-            gtk_box_pack_start(GTK_BOX(layout), GTK_WIDGET(ew), 1, 1, 0);
-
-            add_text_column(pk_pkg_treeview, "ID", 0);
-            GtkCellRenderer *renderer = add_text_column(pk_pkg_treeview, "Name", 1);
-
-            g_object_set(renderer, "editable", true, NULL);
-            g_signal_connect(renderer, "edited", G_CALLBACK(pk_name_edited), 0);
-        }
-
-        {
-            GtkBox *b = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-
-            //pk_pkg_delete = GTK_WIDGET(gtk_button_new_with_label("Delete"));
-            pk_pkg_create = GTK_WIDGET(gtk_button_new_with_label("Create"));
-            pk_pkg_play = GTK_WIDGET(gtk_button_new_with_label("Play"));
-            pk_pkg_publish = GTK_WIDGET(gtk_button_new_with_label("Publish"));
-
-            g_signal_connect(pk_pkg_play, "clicked", G_CALLBACK(press_play_pkg), 0);
-            g_signal_connect(pk_pkg_create, "clicked", G_CALLBACK(press_create_pkg), 0);
-            g_signal_connect(pk_pkg_publish, "clicked", G_CALLBACK(press_publish_pkg), 0);
-
-            //gtk_box_pack_start(GTK_BOX(b), pk_pkg_delete, false, false, 0);
-            gtk_box_pack_start(GTK_BOX(b), pk_pkg_create, false, false, 0);
-            gtk_box_pack_start(GTK_BOX(b), pk_pkg_play, false, false, 0);
-            gtk_box_pack_start(GTK_BOX(b), pk_pkg_publish, false, false, 0);
-
-            gtk_box_pack_start(GTK_BOX(layout), GTK_WIDGET(b), 0, 0, 0);
-        }
-
-        pk_pkg_first_is_menu = GTK_CHECK_BUTTON(gtk_check_button_new_with_label("First level used as level selector"));
-        pk_pkg_return_on_finish = GTK_CHECK_BUTTON(gtk_check_button_new_with_label("Return to level select on level finish"));
-
-        g_signal_connect(pk_pkg_first_is_menu, "toggled", G_CALLBACK(toggle_first_is_menu), 0);
-        g_signal_connect(pk_pkg_return_on_finish, "toggled", G_CALLBACK(toggle_return_on_finish), 0);
-        gtk_box_pack_start(GTK_BOX(layout), GTK_WIDGET(pk_pkg_return_on_finish), 0, 0, 0);
-        gtk_box_pack_start(GTK_BOX(layout), GTK_WIDGET(pk_pkg_first_is_menu), 0, 0, 0);
-
-        GtkBox *spin = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL,5));
-        pk_pkg_unlock_count = GTK_SPIN_BUTTON(gtk_spin_button_new(
-                    GTK_ADJUSTMENT(gtk_adjustment_new(1, 0, 256, 1, 1, 0)),
-                    1, 0));
-        g_signal_connect(pk_pkg_unlock_count, "value-changed", G_CALLBACK(value_changed_unlock_count), 0);
-        gtk_box_pack_start(GTK_BOX(spin), GTK_WIDGET(gtk_label_new("Unlock count:")), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(spin), GTK_WIDGET(pk_pkg_unlock_count), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(layout), GTK_WIDGET(spin), 0, 0, 0);
-
-        gtk_box_pack_start(GTK_BOX(layout), GTK_WIDGET(gtk_label_new("Levels in selected package:")), 0, 0, 0);
-
-        {
-            GtkListStore *store;
-
-            store = gtk_list_store_new(2, G_TYPE_UINT, G_TYPE_STRING);
-
-            pk_lvl_treemodel = GTK_TREE_MODEL(store);
-
-            //gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(store), OC_DATE, GTK_SORT_DESCENDING);
-
-            pk_lvl_treeview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(pk_lvl_treemodel));
-            gtk_tree_view_set_search_column(pk_lvl_treeview, OC_NAME);
-            gtk_tree_view_set_reorderable(pk_lvl_treeview, true);
-
-            GtkWidget *ew = gtk_scrolled_window_new(0,0);
-            gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (ew),
-                          GTK_POLICY_AUTOMATIC,
-                          GTK_POLICY_AUTOMATIC);
-
-            gtk_container_add(GTK_CONTAINER(ew), GTK_WIDGET(pk_lvl_treeview));
-            gtk_box_pack_start(GTK_BOX(layout), GTK_WIDGET(ew), 1, 1, 0);
-
-            add_text_column(pk_lvl_treeview, "ID", 0);
-            add_text_column(pk_lvl_treeview, "Name", 1);
-
-            g_signal_connect(pk_lvl_treemodel, "row-deleted", G_CALLBACK(pk_lvl_row_deleted), 0);
-            g_signal_connect(GTK_WIDGET(pk_lvl_treeview), "row-activated", G_CALLBACK(pk_lvl_row_activated), 0);
-            g_signal_connect(pk_lvl_treemodel, "row-inserted", G_CALLBACK(pk_lvl_row_inserted), 0);
-        }
-
-        {
-            GtkBox *b = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-
-            pk_lvl_add = GTK_WIDGET(gtk_button_new_with_label("Add current level"));
-            g_signal_connect(pk_lvl_add, "clicked", G_CALLBACK(press_add_current_level), 0);
-            gtk_box_pack_start(GTK_BOX(b), pk_lvl_add, false, false, 0);
-
-            pk_lvl_del = GTK_WIDGET(gtk_button_new_with_label("Remove selected"));
-            g_signal_connect(pk_lvl_del, "clicked", G_CALLBACK(press_del_selected), 0);
-            gtk_box_pack_start(GTK_BOX(b), pk_lvl_del, false, false, 0);
-
-            pk_lvl_play = GTK_WIDGET(gtk_button_new_with_label("Play selected"));
-            g_signal_connect(pk_lvl_play, "clicked", G_CALLBACK(press_play_selected), 0);
-            gtk_box_pack_start(GTK_BOX(b), pk_lvl_play, false, false, 0);
-
-            gtk_box_pack_start(GTK_BOX(layout), GTK_WIDGET(b), 0, 0, 0);
-        }
-
-        gtk_container_add(GTK_CONTAINER(package_window), GTK_WIDGET(layout));
-        gtk_widget_show_all(GTK_WIDGET(layout));
-    }
-#endif
 
     /** --Level properties **/
     {
@@ -7919,7 +6767,6 @@ int _gtk_loop(void *p)
         GtkWidget *l;
 
         GtkGrid *tbl = GTK_GRID(gtk_grid_new());
-        //gtk_grid_set_row_homogeneous(tbl, true);
         gtk_grid_set_row_spacing(tbl, 5);
         gtk_grid_set_column_spacing(tbl, 5);
 
@@ -8270,20 +7117,6 @@ int _gtk_loop(void *p)
         gtk_entry_completion_set_inline_completion(comp, false);
         gtk_entry_completion_set_inline_selection(comp, true);
 
-#if 0
-        /* add all objects from the menu */
-        GtkTreeIter iter;
-        for (int x=0; x<menu_objects.size(); x++) {
-            gtk_list_store_append(list, &iter);
-            gtk_list_store_set(list, &iter,
-                    0, menu_objects[x].e->g_id,
-                    1, menu_objects[x].e->get_name(),
-                    1, menu_objects[x].e->get_name(),
-                    -1
-                    );
-        }
-#endif
-
         gtk_entry_set_completion(quickadd_entry, comp);
         gtk_container_add(GTK_CONTAINER(quickadd_window), GTK_WIDGET(quickadd_entry));
 
@@ -8445,11 +7278,6 @@ int _gtk_loop(void *p)
                 );
 
         confirm_dna_sandbox_back = new_check_button("Do not show again");
-        //gtk_window_set_default_size(GTK_WINDOW(dialog), 425, 400);
-
-        //GtkBox *aa = GTK_BOX(gtk_dialog_get_action_area(dialog));
-
-        //gtk_dialog_add_action_widget(dialog, GTK_WIDGET(confirm_dna_sandbox_back), -1);
 
         GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
 
@@ -9408,69 +8236,8 @@ int _gtk_loop(void *p)
             escript_use_external_editor = GTK_CHECK_BUTTON(cb);
         }
 
-        // GtkTextTagTable *tt = gtk_text_tag_table_new();
-        // escript_buffer = gtk_source_buffer_new(tt);
-
-        //escript_buffer = GTK_SOURCE_BUFFER(gtk_source_buffer_new(NULL));
-
-
-
-        // escript_tt_function = gtk_text_buffer_create_tag(GTK_TEXT_BUFFER(escript_buffer),
-        //                                                  "function",
-        //                                                  "foreground", "#ff00ff",
-        //                                                  NULL);
-
-        //g_signal_connect(escript_buffer, "mark-set", G_CALLBACK(on_escript_mark_set), 0);
-
-        //escript_code = GTK_SOURCE_VIEW(gtk_source_view_new_with_buffer(escript_buffer));
-
-        //gtk_widget_modify_font(GTK_WIDGET(escript_code), pango_font_description_from_string("monospace"));
-
-        /*
-        GtkTextBuffer *buffer = gtk_text_view_get_buffer(escript_code);
-        gtk_text_buffer_create_tag(buffer, "font")
-        */
-
-#ifdef USE_GTK_SOURCE_VIEW
-        {
-
-            //Create GtkSourceLanguageManager and get lua GtkSourceLanguage
-            GtkSourceLanguageManager *lm = gtk_source_language_manager_get_default();
-            GtkSourceLanguage *l = gtk_source_language_manager_guess_language(lm, ".lua", NULL);
-            if (l == NULL) tms_warnf("ESCRIPT: no lang definition for lua");
-
-            //Create GtkSourceStyleSchemeManager and get Adwaita GtkSourceStyleScheme
-            GtkSourceStyleSchemeManager *sm = gtk_source_style_scheme_manager_get_default();
-            GtkSourceStyleScheme *s = gtk_source_style_scheme_manager_get_scheme(sm, "cobalt");
-            if (s == NULL) tms_warnf("ESCRIPT: source theme not found");
-
-            //Create new escript_buffer
-            escript_buffer = GTK_TEXT_BUFFER(gtk_source_buffer_new(NULL));
-            g_signal_connect(GTK_SOURCE_BUFFER(escript_buffer), "mark-set", G_CALLBACK(on_escript_mark_set), 0);
-
-            //Enable highlighting for the buffer
-            gtk_source_buffer_set_language(GTK_SOURCE_BUFFER(escript_buffer), l);
-            gtk_source_buffer_set_highlight_syntax(GTK_SOURCE_BUFFER(escript_buffer), TRUE);
-            gtk_source_buffer_set_style_scheme(GTK_SOURCE_BUFFER(escript_buffer), s);
-
-            //Create GtkSourceView
-            escript_code = gtk_source_view_new_with_buffer(GTK_SOURCE_BUFFER(escript_buffer));
-
-            //Enable fancy-ass stuf
-            gtk_source_view_set_highlight_current_line(GTK_SOURCE_VIEW(GTK_SOURCE_VIEW(escript_code)), TRUE);
-            gtk_source_view_set_auto_indent(GTK_SOURCE_VIEW(escript_code), TRUE);
-            gtk_source_view_set_indent_on_tab(GTK_SOURCE_VIEW(escript_code), TRUE);
-            gtk_source_view_set_tab_width(GTK_SOURCE_VIEW(escript_code), 4);
-            gtk_source_view_set_indent_width(GTK_SOURCE_VIEW(escript_code), -1);
-            gtk_source_view_set_insert_spaces_instead_of_tabs(GTK_SOURCE_VIEW(escript_code), TRUE);
-            gtk_source_view_set_smart_backspace(GTK_SOURCE_VIEW(escript_code), TRUE);
-            gtk_source_view_set_smart_home_end(GTK_SOURCE_VIEW(escript_code), GTK_SOURCE_SMART_HOME_END_BEFORE);
-            gtk_source_view_set_show_line_numbers(GTK_SOURCE_VIEW(escript_code), TRUE);
-        }
-#else
         escript_buffer = GTK_TEXT_BUFFER(gtk_text_buffer_new(NULL));
         escript_code = gtk_text_view_new_with_buffer(GTK_TEXT_BUFFER(escript_buffer));
-#endif
 
         //Connect mark-set
         g_signal_connect(GTK_TEXT_BUFFER(escript_buffer), "mark-set", G_CALLBACK(on_escript_mark_set), 0);
@@ -9958,9 +8725,7 @@ int _gtk_loop(void *p)
     return T_OK;
 }
 
-static gboolean
-_sig_ui_ready(gpointer unused)
-{
+static gboolean _sig_ui_ready(gpointer unused) {
     SDL_LockMutex(ui_lock);
     ui_ready = true;
     SDL_SignalCondition(ui_cond);
@@ -9969,33 +8734,14 @@ _sig_ui_ready(gpointer unused)
     return false;
 }
 
-void ui::init()
-{
-    ui_lock = SDL_CreateMutex();
-    ui_cond = SDL_CreateCondition();
-    ui_ready = false;
-
-    SDL_Thread *gtk_thread;
-
-    gtk_thread = SDL_CreateThread(_gtk_loop, "_gtk_loop", 0);
-
-    if (gtk_thread == NULL) {
-        tms_errorf("SDL_CreateThread failed: %s", SDL_GetError());
-    }
-}
-
-static gboolean
-_open_play_menu(gpointer unused)
-{
+static gboolean _open_play_menu(gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(play_menu));
     gtk_menu_popup(play_menu, 0, 0, 0, 0, 0, gtk_get_current_event_time());
 
     return false;
 }
 
-static gboolean
-_open_sandbox_menu(gpointer unused)
-{
+static gboolean _open_sandbox_menu(gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(editor_menu));
     gtk_menu_popup(editor_menu, 0, 0, 0, 0, 0, gtk_get_current_event_time());
 
@@ -10082,9 +8828,118 @@ _open_sandbox_menu(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_quickadd(gpointer unused)
-{
+static gboolean _open_level_properties(gpointer unused) {
+    gint result = gtk_dialog_run(properties_dialog);
+
+    if (result == GTK_RESPONSE_ACCEPT) {
+        const char *name = gtk_entry_get_text(lvl_title);
+        int name_len = strlen(name);
+        W->level.name_len = name_len;
+        memcpy(W->level.name, name, name_len);
+
+        GtkTextIter start, end;
+        GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(lvl_descr);
+
+        gtk_text_buffer_get_bounds(text_buffer, &start, &end);
+
+        const char *descr = gtk_text_buffer_get_text(text_buffer, &start, &end, FALSE);
+        int descr_len = strlen(descr);
+
+        if (descr_len > 0) {
+            W->level.descr_len = descr_len;
+            W->level.descr = (char*)realloc(W->level.descr, descr_len);
+
+            memcpy(W->level.descr, descr, descr_len);
+        } else
+            W->level.descr_len = 0;
+
+        uint16_t left  = (uint16_t)atoi(gtk_entry_get_text(lvl_width_left));
+        uint16_t right = (uint16_t)atoi(gtk_entry_get_text(lvl_width_right));
+        uint16_t down  = (uint16_t)atoi(gtk_entry_get_text(lvl_height_down));
+        uint16_t up    = (uint16_t)atoi(gtk_entry_get_text(lvl_height_up));
+
+        float w = (float)left + (float)right;
+        float h = (float)down + (float)up;
+
+        bool resized = false;
+
+        if (w < 5.f) {
+            resized = true;
+            left += 6-(uint16_t)w;
+        }
+        if (h < 5.f) {
+            resized = true;
+            down += 6-(uint16_t)w;
+        }
+
+        if (resized)
+            ui::message("Your level size was increased to the minimum allowed.");
+
+        W->level.size_x[0] = left;
+        W->level.size_x[1] = right;
+        W->level.size_y[0] = down;
+        W->level.size_y[1] = up;
+        W->level.gravity_x = (float)gtk_spin_button_get_value(lvl_gx);
+        W->level.gravity_y = (float)gtk_spin_button_get_value(lvl_gy);
+
+        W->level.dead_enemy_absorb_time = gtk_range_get_value(GTK_RANGE(lvl_enemy_absorb_time));
+        W->level.time_before_player_can_respawn = gtk_range_get_value(GTK_RANGE(lvl_player_respawn_time));
+
+        uint8_t vel_iter = (uint8_t)gtk_range_get_value(GTK_RANGE(lvl_vel_iter));
+        uint8_t pos_iter = (uint8_t)gtk_range_get_value(GTK_RANGE(lvl_pos_iter));
+
+        float prismatic_tolerance = gtk_range_get_value(GTK_RANGE(lvl_prismatic_tol));
+        float pivot_tolerance = gtk_range_get_value(GTK_RANGE(lvl_pivot_tol));
+
+        float angular_damping = gtk_range_get_value(GTK_RANGE(lvl_angular_damping));
+        float joint_friction = gtk_range_get_value(GTK_RANGE(lvl_joint_friction));
+        float linear_damping = gtk_range_get_value(GTK_RANGE(lvl_linear_damping));
+
+        W->level.angular_damping = angular_damping;
+        W->level.joint_friction = joint_friction;
+        W->level.linear_damping = linear_damping;
+
+        W->level.prismatic_tolerance = prismatic_tolerance;
+        W->level.pivot_tolerance = pivot_tolerance;
+
+        tms_infof("vel_iter: %d,  pos_iter: %d", vel_iter, pos_iter);
+        W->level.velocity_iterations = vel_iter;
+        W->level.position_iterations = pos_iter;
+        W->level.final_score = (uint32_t)atoi(gtk_entry_get_text(lvl_score));
+
+        if (W->level.version >= 7) {
+            W->level.show_score = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_show_score));
+            W->level.pause_on_finish = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_pause_on_win));
+        }
+
+        if (W->level.version >= 9) {
+            W->level.show_score = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_show_score));
+            W->level.flags = 0;
+            for (int x=0; x<num_gtk_level_properties; ++x) {
+                W->level.flags |= ((int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_level_properties[x].checkbutton)) * gtk_level_properties[x].flag);
+            }
+        }
+
+        W->level.bg = gtk_combo_box_get_active(GTK_COMBO_BOX(lvl_bg));
+        W->level.bg_color = new_bg_color;
+
+        if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_radio_adventure))) {
+            P.add_action(ACTION_SET_LEVEL_TYPE, (void*)LCAT_ADVENTURE);
+        } else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_radio_puzzle))) {
+            P.add_action(ACTION_SET_LEVEL_TYPE, (void*)LCAT_PUZZLE);
+        } else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lvl_radio_custom))) {
+            P.add_action(ACTION_SET_LEVEL_TYPE, (void*)LCAT_CUSTOM);
+        }
+
+        P.add_action(ACTION_RELOAD_LEVEL, 0);
+    }
+
+    gtk_widget_hide(GTK_WIDGET(properties_dialog));
+
+    return false;
+}
+
+static gboolean _open_quickadd(gpointer unused) {
     gtk_window_set_position(quickadd_window, GTK_WIN_POS_MOUSE);
     gtk_widget_show_all(GTK_WIDGET(quickadd_window));
     gtk_widget_grab_focus(GTK_WIDGET(quickadd_entry));
@@ -10094,9 +8949,7 @@ _open_quickadd(gpointer unused)
 }
 
 /** --Color Chooser (for Plastic beam & Pixel) **/
-static gboolean
-_open_beam_color(gpointer unused)
-{
+static gboolean _open_beam_color(gpointer unused) {
     /* set current chooser to beam/pixel current color */
     GtkColorSelection *sel = GTK_COLOR_SELECTION(gtk_color_selection_dialog_get_color_selection(beam_color_dialog));
 
@@ -10163,45 +9016,35 @@ _open_beam_color(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_polygon_color(gpointer unused)
-{
+static gboolean _open_polygon_color(gpointer unused) {
     return _open_beam_color(unused);
 }
 
-static gboolean
-_open_pixel_color(gpointer unused)
-{
+static gboolean _open_pixel_color(gpointer unused) {
     return _open_beam_color(unused);
 }
 
-static gboolean
-_open_save_window(gpointer unused)
-{
+static gboolean _open_save_window(gpointer unused) {
     activate_save(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_publish_dialog(gpointer unused)
-{
+static gboolean _open_save_copy_window(gpointer unused) {
+    activate_save_copy(NULL, 0);
+    return false;
+}
+
+static gboolean _open_publish_dialog(gpointer unused) {
     activate_publish(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_login_dialog(gpointer unused)
-{
+static gboolean _open_login_dialog(gpointer unused) {
     activate_login(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_prompt_dialog(gpointer unused)
-{
+static gboolean _open_prompt_dialog(gpointer unused) {
     if (W->is_adventure() && adventure::player) {
         adventure::player->stop_moving(DIR_LEFT);
         adventure::player->stop_moving(DIR_RIGHT);
@@ -10282,91 +9125,62 @@ _open_prompt_dialog(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_prompt_settings_dialog(gpointer unused)
-{
+static gboolean _open_prompt_settings_dialog(gpointer unused) {
     activate_prompt_settings(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_export(gpointer unused)
-{
+static gboolean _open_export(gpointer unused) {
     activate_export(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_open_state_dialog(gpointer unused)
-{
+static gboolean _open_open_state_dialog(gpointer unused) {
     activate_open_state(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_open_dialog(gpointer unused)
-{
+static gboolean _open_open_dialog(gpointer unused) {
     activate_open(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_multiemitter_dialog(gpointer unused)
-{
+static gboolean _open_multiemitter_dialog(gpointer unused) {
     object_window_multiemitter = true;
     activate_object(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_object_dialog(gpointer unused)
-{
+static gboolean _open_object_dialog(gpointer unused) {
     object_window_multiemitter = false;
     activate_object(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_new_level_dialog(gpointer unused)
-{
+static gboolean _open_new_level_dialog(gpointer unused) {
     activate_new_level(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_mode_dialog(gpointer unused)
-{
+static gboolean _open_mode_dialog(gpointer unused) {
     activate_mode_dialog(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_autosave(gpointer unused)
-{
+static gboolean _open_autosave(gpointer unused) {
     gtk_widget_hide(GTK_WIDGET(autosave_dialog));
     gint result = gtk_dialog_run(autosave_dialog);
     gtk_widget_hide(GTK_WIDGET(autosave_dialog));
 
-    if (result == GTK_RESPONSE_YES) {
+    if (result == GTK_RESPONSE_YES)
         P.add_action(ACTION_OPEN_AUTOSAVE, 0);
-    } else if (result == GTK_RESPONSE_NO) {
+    else if (result == GTK_RESPONSE_NO)
         P.add_action(ACTION_REMOVE_AUTOSAVE, 0);
-    }
 
     return false;
 }
 
-static gboolean
-_open_tips_dialog(gpointer unused)
-{
+static gboolean _open_tips_dialog(gpointer unused) {
     do {
          gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tips_hide), settings["hide_tips"]->v.b);
 
@@ -10390,17 +9204,13 @@ _open_tips_dialog(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_info_dialog(gpointer unused)
-{
+static gboolean _open_info_dialog(gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(info_dialog));
 
     return false;
 }
 
-static gboolean
-_open_error_dialog(gpointer unused)
-{
+static gboolean _open_error_dialog(gpointer unused) {
     gtk_widget_hide(GTK_WIDGET(error_dialog));
     gtk_dialog_run(error_dialog);
     gtk_widget_hide(GTK_WIDGET(error_dialog));
@@ -10409,9 +9219,7 @@ _open_error_dialog(gpointer unused)
 }
 
 /** --Confirm Dialog **/
-static gboolean
-_open_confirm_dialog(gpointer unused)
-{
+static gboolean _open_confirm_dialog(gpointer unused) {
     gtk_widget_hide(GTK_WIDGET(confirm_dialog));
     P.focused = false;
     int r = gtk_dialog_run(confirm_dialog);
@@ -10453,9 +9261,7 @@ _open_confirm_dialog(gpointer unused)
 }
 
 /** --Emitter **/
-static gboolean
-_open_emitter_dialog(gpointer unused)
-{
+static gboolean _open_emitter_dialog(gpointer unused) {
     int result = gtk_dialog_run(emitter_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10477,9 +9283,7 @@ _open_emitter_dialog(gpointer unused)
 }
 
 /** --Alert Dialog **/
-static gboolean
-_open_alert_dialog(gpointer unused)
-{
+static gboolean _open_alert_dialog(gpointer unused) {
     gtk_widget_hide(GTK_WIDGET(alert_dialog));
     P.focused = false;
     gtk_dialog_run(GTK_DIALOG(alert_dialog));
@@ -10490,25 +9294,18 @@ _open_alert_dialog(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_frequency_window(gpointer unused)
-{
+static gboolean _open_frequency_window(gpointer unused) {
     activate_frequency(NULL, 0);
-
     return false;
 }
 
-static gboolean
-_open_freq_range_window(gpointer unused)
-{
+static gboolean _open_freq_range_window(gpointer unused) {
     activate_freq_range(NULL, 0);
 
     return false;
 }
 
-static gboolean
-_open_pkg_lvl_chooser_window(gpointer unused)
-{
+static gboolean _open_pkg_lvl_chooser_window(gpointer unused) {
     gint result = gtk_dialog_run(pkg_lvl_chooser);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10525,18 +9322,13 @@ _open_pkg_lvl_chooser_window(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_robot_window(gpointer unused)
-{
+static gboolean _open_robot_window(gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(robot_window));
-
     return false;
 }
 
 /** --Published **/
-static gboolean
-_open_published(gpointer unused)
-{
+static gboolean _open_published(gpointer unused) {
     gint result = gtk_dialog_run(published_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10550,9 +9342,7 @@ _open_published(gpointer unused)
 }
 
 /** --Community **/
-static gboolean
-_open_community(gpointer unused)
-{
+static gboolean _open_community(gpointer unused) {
     gint result = gtk_dialog_run(community_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10565,18 +9355,14 @@ _open_community(gpointer unused)
 }
 
 /** --Sequencer **/
-static gboolean
-_open_sequencer(gpointer unused)
-{
+static gboolean _open_sequencer(gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(sequencer_window));
 
     return false;
 }
 
 /** --Jumper **/
-static gboolean
-_open_jumper(gpointer unused)
-{
+static gboolean _open_jumper(gpointer unused) {
     gint result = gtk_dialog_run(jumper_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10600,9 +9386,7 @@ _open_jumper(gpointer unused)
 }
 
 /** --cursorfield **/
-static gboolean
-_open_cursorfield(gpointer unused)
-{
+static gboolean _open_cursorfield(gpointer unused) {
     gint result = gtk_dialog_run(cursorfield_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10632,18 +9416,14 @@ _open_cursorfield(gpointer unused)
 }
 
 /** --escript **/
-static gboolean
-_open_escript(gpointer unused)
-{
+static gboolean _open_escript(gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(escript_window));
 
     return false;
 }
 
 /** --Shape extruder **/
-static gboolean
-_open_shapeextruder(gpointer unused)
-{
+static gboolean _open_shapeextruder(gpointer unused) {
     gint result = gtk_dialog_run(shapeextruder_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10662,9 +9442,7 @@ _open_shapeextruder(gpointer unused)
 }
 
 /** --Synthesizer **/
-static gboolean
-_open_synth(gpointer unused)
-{
+static gboolean _open_synth(gpointer unused) {
     gint result = gtk_dialog_run(synth_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10706,9 +9484,7 @@ _open_synth(gpointer unused)
 }
 
 /** --Rubber **/
-static gboolean
-_open_rubber(gpointer unused)
-{
+static gboolean _open_rubber(gpointer unused) {
     gint result = gtk_dialog_run(rubber_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10738,9 +9514,7 @@ _open_rubber(gpointer unused)
 }
 
 /** --Timer **/
-static gboolean
-_open_timer(gpointer unused)
-{
+static gboolean _open_timer(gpointer unused) {
     gint result = gtk_dialog_run(timer_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10769,17 +9543,13 @@ _open_timer(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_settings(gpointer unused)
-{
+static gboolean _open_settings(gpointer unused) {
     activate_settings(0, 0);
 
     return false;
 }
 
-static gboolean
-_open_multi_config(gpointer unused)
-{
+static gboolean _open_multi_config(gpointer unused) {
     g_object_set(
         G_OBJECT(multi_config_plastic_color),
         "show-editor", FALSE,
@@ -10791,17 +9561,13 @@ _open_multi_config(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_variable_window(gpointer unused)
-{
+static gboolean _open_variable_window(gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(variable_dialog));
 
     return false;
 }
 
-static gboolean
-_open_command_pad_window(gpointer unused)
-{
+static gboolean _open_command_pad_window(gpointer unused) {
     gint result = gtk_dialog_run(command_pad_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10812,37 +9578,36 @@ _open_command_pad_window(gpointer unused)
             char tmp[64];
 
             strcpy(tmp, get_cb_val(command_pad_cb));
-            if (strcmp(tmp, "Stop") == 0) {
+            if (strcmp(tmp, "Stop") == 0)
                 pad->set_command(COMMAND_STOP);
-            } else if (strcmp(tmp, "Start/Stop toggle") == 0) {
+            else if (strcmp(tmp, "Start/Stop toggle") == 0)
                 pad->set_command(COMMAND_STARTSTOP);
-            } else if (strcmp(tmp, "Left") == 0) {
+            else if (strcmp(tmp, "Left") == 0)
                 pad->set_command(COMMAND_LEFT);
-            } else if (strcmp(tmp, "Right") == 0) {
+            else if (strcmp(tmp, "Right") == 0)
                 pad->set_command(COMMAND_RIGHT);
-            } else if (strcmp(tmp, "Left/Right toggle") == 0) {
+            else if (strcmp(tmp, "Left/Right toggle") == 0)
                 pad->set_command(COMMAND_LEFTRIGHT);
-            } else if (strcmp(tmp, "Jump") == 0) {
+            else if (strcmp(tmp, "Jump") == 0)
                 pad->set_command(COMMAND_JUMP);
-            } else if (strcmp(tmp, "Aim") == 0) {
+            else if (strcmp(tmp, "Aim") == 0)
                 pad->set_command(COMMAND_AIM);
-            } else if (strcmp(tmp, "Attack") == 0) {
+            else if (strcmp(tmp, "Attack") == 0)
                 pad->set_command(COMMAND_ATTACK);
-            } else if (strcmp(tmp, "Layer up") == 0) {
+            else if (strcmp(tmp, "Layer up") == 0)
                 pad->set_command(COMMAND_LAYERUP);
-            } else if (strcmp(tmp, "Layer down") == 0) {
+            else if (strcmp(tmp, "Layer down") == 0)
                 pad->set_command(COMMAND_LAYERDOWN);
-            } else if (strcmp(tmp, "Increase speed") == 0) {
+            else if (strcmp(tmp, "Increase speed") == 0)
                 pad->set_command(COMMAND_INCRSPEED);
-            } else if (strcmp(tmp, "Decrease speed") == 0) {
+            else if (strcmp(tmp, "Decrease speed") == 0)
                 pad->set_command(COMMAND_DECRSPEED);
-            } else if (strcmp(tmp, "Set speed") == 0) {
+            else if (strcmp(tmp, "Set speed") == 0)
                 pad->set_command(COMMAND_SETSPEED);
-            } else if (strcmp(tmp, "Full health") == 0) {
+            else if (strcmp(tmp, "Full health") == 0)
                 pad->set_command(COMMAND_HEALTH);
-            } else {
+            else
                 tms_infof("unknown command: %s", tmp);
-            }
 
             ui::message("Command pad properties saved!");
             P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
@@ -10855,9 +9620,7 @@ _open_command_pad_window(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_digi_window(gpointer unused)
-{
+static gboolean _open_digi_window(gpointer unused) {
     gint result = gtk_dialog_run(digi_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10892,9 +9655,7 @@ _open_digi_window(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_sticky_window(gpointer unused)
-{
+static gboolean _open_sticky_window(gpointer unused) {
     gint result = gtk_dialog_run(sticky_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10920,9 +9681,7 @@ _open_sticky_window(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_fxemitter_window(gpointer unused)
-{
+static gboolean _open_fxemitter_window(gpointer unused) {
     gint result = gtk_dialog_run(fxemitter_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10950,9 +9709,7 @@ _open_fxemitter_window(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_sfx_window(gpointer unused)
-{
+static gboolean _open_sfx_window(gpointer unused) {
     gint result = gtk_dialog_run(sfx_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10969,9 +9726,7 @@ _open_sfx_window(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_sfx2_window(gpointer unused)
-{
+static gboolean _open_sfx2_window(gpointer unused) {
     gint result = gtk_dialog_run(sfx2_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -10998,9 +9753,7 @@ _open_sfx2_window(gpointer unused)
 }
 
 /** --Item **/
-static gboolean
-_open_item(gpointer unused)
-{
+static gboolean _open_item(gpointer unused) {
     gint result = gtk_dialog_run(item_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -11020,9 +9773,7 @@ _open_item(gpointer unused)
 }
 
 /** --Decoration **/
-static gboolean
-_open_decoration(gpointer unused)
-{
+static gboolean _open_decoration(gpointer unused) {
     GtkDialog *d = decoration_dialog;
 
     gint result = gtk_dialog_run(d);
@@ -11044,9 +9795,7 @@ _open_decoration(gpointer unused)
 }
 
 /** --Key Listener **/
-static gboolean
-_open_key_listener(gpointer unused)
-{
+static gboolean _open_key_listener(gpointer unused) {
     gint result = gtk_dialog_run(key_listener_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -11079,9 +9828,7 @@ _open_key_listener(gpointer unused)
 }
 
 /** --Faction **/
-static gboolean
-_open_faction(gpointer unused)
-{
+static gboolean _open_faction(gpointer unused) {
     GtkDialog *d = faction_dialog;
 
     gint result = gtk_dialog_run(d);
@@ -11102,9 +9849,7 @@ _open_faction(gpointer unused)
 }
 
 /** --Resource **/
-static gboolean
-_open_resource(gpointer unused)
-{
+static gboolean _open_resource(gpointer unused) {
     GtkDialog *d = resource_dialog;
 
     gint result = gtk_dialog_run(d);
@@ -11125,9 +9870,7 @@ _open_resource(gpointer unused)
 }
 
 /** --Vendor **/
-static gboolean
-_open_vendor(gpointer unused)
-{
+static gboolean _open_vendor(gpointer unused) {
     GtkDialog *d = vendor_dialog;
 
     gint result = gtk_dialog_run(d);
@@ -11149,9 +9892,7 @@ _open_vendor(gpointer unused)
 }
 
 /** --Animal **/
-static gboolean
-_open_animal(gpointer unused)
-{
+static gboolean _open_animal(gpointer unused) {
     GtkDialog *d = animal_dialog;
 
     gint result = gtk_dialog_run(d);
@@ -11173,9 +9914,7 @@ _open_animal(gpointer unused)
 }
 
 /** --Soundman **/
-static gboolean
-_open_soundman(gpointer unused)
-{
+static gboolean _open_soundman(gpointer unused) {
     GtkDialog *d = soundman_dialog;
 
     gint result = gtk_dialog_run(d);
@@ -11201,9 +9940,7 @@ _open_soundman(gpointer unused)
 }
 
 /** --Polygon **/
-static gboolean
-_open_polygon(gpointer unused)
-{
+static gboolean _open_polygon(gpointer unused) {
     GtkDialog *d = polygon_dialog;
 
     gint result = gtk_dialog_run(d);
@@ -11228,9 +9965,7 @@ _open_polygon(gpointer unused)
 }
 
 /** --Factory **/
-static gboolean
-_open_factory(gpointer unused)
-{
+static gboolean _open_factory(gpointer unused) {
     GtkDialog *d = factory_dialog;
 
     gint result = gtk_dialog_run(d);
@@ -11290,9 +10025,7 @@ _open_factory(gpointer unused)
 }
 
 /** --Treasure chest **/
-static gboolean
-_open_treasure_chest(gpointer unused)
-{
+static gboolean _open_treasure_chest(gpointer unused) {
     GtkDialog *d = tchest_dialog;
 
     gint result = gtk_dialog_run(d);
@@ -11344,9 +10077,7 @@ _open_treasure_chest(gpointer unused)
     return false;
 }
 
-static gboolean
-_open_elistener_window(gpointer unused)
-{
+static gboolean _open_elistener_window(gpointer unused) {
     gint result = gtk_dialog_run(elistener_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -11363,9 +10094,7 @@ _open_elistener_window(gpointer unused)
 }
 
 /** --Cam targeter **/
-static gboolean
-_open_camtargeter_window(gpointer unused)
-{
+static gboolean _open_camtargeter_window(gpointer unused) {
     gint result = gtk_dialog_run(camtargeter_dialog);
 
     if (result == GTK_RESPONSE_ACCEPT) {
@@ -11396,9 +10125,7 @@ _open_camtargeter_window(gpointer unused)
 }
 
 /** --Confirm Quit Dialog **/
-static gboolean
-_open_confirm_quit(gpointer unused)
-{
+static gboolean _open_confirm_quit(gpointer unused) {
     if (gtk_dialog_run(confirm_quit_dialog) == GTK_RESPONSE_ACCEPT) {
         tms_infof("Quitting!");
         _tms.state = TMS_STATE_QUITTING;
@@ -11411,9 +10138,7 @@ _open_confirm_quit(gpointer unused)
     return false;
 }
 
-static gboolean
-_close_all_dialogs(gpointer unused)
-{
+static gboolean _close_all_dialogs(gpointer unused) {
     gtk_widget_hide(GTK_WIDGET(play_menu));
     gtk_widget_hide(GTK_WIDGET(editor_menu));
     gtk_widget_hide(GTK_WIDGET(open_window));
@@ -11449,26 +10174,14 @@ _close_all_dialogs(gpointer unused)
     return false;
 }
 
-static gboolean
-_close_absolutely_all_dialogs(gpointer unused)
-{
-#ifdef BUILD_VALGRIND
-    if (RUNNING_ON_VALGRIND) return false;
-#endif
-
+static gboolean _close_absolutely_all_dialogs(gpointer unused) {
     _close_all_dialogs(0);
     gtk_widget_hide(GTK_WIDGET(info_dialog));
-    gtk_widget_hide(GTK_WIDGET(package_window));
 
     return false;
 }
 
-static void wait_ui_ready()
-{
-#ifdef BUILD_VALGRIND
-    if (RUNNING_ON_VALGRIND) return;
-#endif
-
+static void wait_ui_ready() {
     SDL_LockMutex(ui_lock);
     if (!ui_ready) {
         SDL_WaitConditionTimeout(ui_cond, ui_lock, 4000);
@@ -11477,42 +10190,65 @@ static void wait_ui_ready()
     SDL_UnlockMutex(ui_lock);
 }
 
-void
-ui::open_dialog(int num, void *data/*=0*/)
-{
-#ifdef BUILD_VALGRIND
-    if (RUNNING_ON_VALGRIND) {
-        /* Send default response to any prompt that pops up */
-        if (num == DIALOG_PROMPT) {
-            if (G->current_prompt) {
-                base_prompt *bp = G->current_prompt->get_base_prompt();
-                if (bp) {
-                    SDL_Delay(40);
-                    bp->set_response(PROMPT_RESPONSE_A);
-                }
-            }
-        }
+#ifdef UI_IMGUI_IN_GTK
+#include "imgui.hh"
+#include "ui_imgui.hh"
 
-        return;
-    }
+static ImguiDriver imgui_driver;
 #endif
 
+void ui::init() {
+    ui_lock = SDL_CreateMutex();
+    ui_cond = SDL_CreateCondition();
+    ui_ready = false;
+
+    SDL_Thread *gtk_thread;
+
+    gtk_thread = SDL_CreateThread(_gtk_loop, "_gtk_loop", 0);
+
+    if (gtk_thread == NULL)
+        tms_errorf("SDL_CreateThread failed: %s", SDL_GetError());
+
+#ifdef UI_IMGUI_IN_GTK
+    imgui_driver = ImguiDriver();
+    imgui_driver.init();
+#endif
+}
+
+void ui::open_dialog(int num, void *data/*=0*/) {
     wait_ui_ready();
 
     switch (num) {
         case DIALOG_SANDBOX_MENU:
+#ifdef UI_IMGUI_IN_GTK
+            UiSandboxMenu::open();
+#else
 			editor_menu_on_entity = 0;
 			if (data) {
 				editor_menu_on_entity = VOID_TO_UINT8(data);
 			}
 
 			gdk_threads_add_idle(_open_sandbox_menu, 0);
+#endif
             break;
 
+        case DIALOG_LEVEL_PROPERTIES:   gdk_threads_add_idle(_open_level_properties, 0); break;
         case DIALOG_OPEN_AUTOSAVE:  gdk_threads_add_idle(_open_autosave, 0); break;
         case DIALOG_EXPORT:         gdk_threads_add_idle(_open_export, 0); break;
-        case DIALOG_PLAY_MENU:      gdk_threads_add_idle(_open_play_menu, 0); break;
-        case DIALOG_QUICKADD:       gdk_threads_add_idle(_open_quickadd, 0); break;
+        case DIALOG_PLAY_MENU:
+#ifdef UI_IMGUI_IN_GTK
+            UiPlayMenu::open();
+#else
+            gdk_threads_add_idle(_open_play_menu, 0);
+#endif
+            break;
+        case DIALOG_QUICKADD:
+#ifdef UI_IMGUI_IN_GTK
+            UiQuickadd::open();
+#else
+            gdk_threads_add_idle(_open_quickadd, 0);
+#endif
+            break;
         case DIALOG_BEAM_COLOR:     gdk_threads_add_idle(_open_beam_color, 0); break;
         case DIALOG_SHAPEEXTRUDER:  gdk_threads_add_idle(_open_shapeextruder, 0); break;
         case DIALOG_CURSORFIELD:    gdk_threads_add_idle(_open_cursorfield, 0); break;
@@ -11521,6 +10257,7 @@ ui::open_dialog(int num, void *data/*=0*/)
         case DIALOG_PIXEL_COLOR:    gdk_threads_add_idle(_open_pixel_color, 0); break;
         case DIALOG_POLYGON_COLOR:  gdk_threads_add_idle(_open_polygon_color, 0); break;
         case DIALOG_SAVE:           gdk_threads_add_idle(_open_save_window, 0); break;
+        case DIALOG_SAVE_COPY:      gdk_threads_add_idle(_open_save_copy_window, 0); break;
         case DIALOG_OPEN:           gdk_threads_add_idle(_open_open_dialog, 0); break;
 
         case DIALOG_OPEN_STATE:
@@ -11537,7 +10274,13 @@ ui::open_dialog(int num, void *data/*=0*/)
         case DIALOG_MULTIEMITTER:   gdk_threads_add_idle(_open_multiemitter_dialog, 0); break;
         case DIALOG_EMITTER:        gdk_threads_add_idle(_open_emitter_dialog, 0); break;
         case DIALOG_NEW_LEVEL:      gdk_threads_add_idle(_open_new_level_dialog, 0); break; /* XXX: */
-        case DIALOG_SANDBOX_MODE:   gdk_threads_add_idle(_open_mode_dialog, 0); break; /* XXX: */
+        case DIALOG_SANDBOX_MODE:
+#ifdef UI_IMGUI_IN_GTK
+            UiSandboxMode::open();
+#else
+            gdk_threads_add_idle(_open_mode_dialog, 0);
+#endif
+            break;
         case DIALOG_SET_FREQUENCY:  gdk_threads_add_idle(_open_frequency_window, 0); break;
         case DIALOG_CONFIRM_QUIT:   gdk_threads_add_idle(_open_confirm_quit, 0); break;
         case DIALOG_SET_COMMAND:    gdk_threads_add_idle(_open_command_pad_window, 0); break;
@@ -11588,7 +10331,6 @@ ui::open_dialog(int num, void *data/*=0*/)
             if (G) {
                 G->reset_touch(false);
             }
-            //gdk_threads_add_idle(_open_prompt_dialog, 0);
             gdk_threads_add_timeout(40, _open_prompt_dialog, 0);
             break;
         case DIALOG_PROMPT_SETTINGS: gdk_threads_add_idle(_open_prompt_settings_dialog, 0); break;
@@ -11601,12 +10343,7 @@ ui::open_dialog(int num, void *data/*=0*/)
     gdk_display_flush(gdk_display_get_default());
 }
 
-void ui::open_sandbox_tips()
-{
-#ifdef BUILD_VALGRIND
-    if (RUNNING_ON_VALGRIND) return;
-#endif
-
+void ui::open_sandbox_tips() {
     wait_ui_ready();
 
     gdk_threads_add_idle(_open_tips_dialog, 0);
@@ -11614,20 +10351,12 @@ void ui::open_sandbox_tips()
     gdk_display_flush(gdk_display_get_default());
 }
 
-void
-ui::set_next_action(int action_id)
-{
+void ui::set_next_action(int action_id) {
     tms_infof("set_next_Actino: %d", action_id);
     ui::next_action = action_id;
 }
 
-void
-ui::emit_signal(int num, void *data/*=0*/)
-{
-#ifdef BUILD_VALGRIND
-    if (RUNNING_ON_VALGRIND) return;
-#endif
-
+void ui::emit_signal(int num, void *data/*=0*/) {
     wait_ui_ready();
 
     /* XXX this stuff probably needs to be added to gdk_threads_idle_add()! */
@@ -11660,16 +10389,16 @@ ui::emit_signal(int num, void *data/*=0*/)
     ui::next_action = ACTION_IGNORE;
 }
 
-void
-ui::quit()
-{
+void ui::quit() {
     /* TODO: add proper quit stuff here */
     _tms.state = TMS_STATE_QUITTING;
+
+#ifdef UI_IMGUI_IN_GTK
+    imgui_driver.quit();
+#endif
 }
 
-void
-ui::open_error_dialog(const char *error_msg)
-{
+void ui::open_error_dialog(const char *error_msg) {
     wait_ui_ready();
 
     _pass_error_text = strdup(error_msg);
@@ -11678,31 +10407,22 @@ ui::open_error_dialog(const char *error_msg)
     gdk_display_flush(gdk_display_get_default());
 }
 
-void
-ui::confirm(const char *text,
+void ui::confirm(const char *text,
         const char *button1, principia_action action1,
         const char *button2, principia_action action2,
         const char *button3/*=0*/, principia_action action3/*=ACTION_IGNORE*/,
         struct confirm_data _confirm_data/*=none*/
-        )
-{
-#ifdef BUILD_VALGRIND
-    if (RUNNING_ON_VALGRIND) {
-        P.add_action(action1.action_id, 0);
-        return;
-    }
-#endif
+        ) {
 
     wait_ui_ready();
 
     _pass_confirm_text    = strdup(text);
     _pass_confirm_button1 = strdup(button1);
     _pass_confirm_button2 = strdup(button2);
-    if (button3) {
+    if (button3)
         _pass_confirm_button3 = strdup(button3);
-    } else {
+    else
         _pass_confirm_button3 = 0;
-    }
 
     confirm_action1 = action1.action_id;
     confirm_action2 = action2.action_id;
@@ -11719,14 +10439,11 @@ ui::confirm(const char *text,
     gdk_display_flush(gdk_display_get_default());
 }
 
-void
-ui::alert(const char *text, uint8_t alert_type/*=ALERT_INFORMATION*/)
-{
+void ui::alert(const char *text, uint8_t alert_type/*=ALERT_INFORMATION*/) {
     wait_ui_ready();
 
-    if (_alert_text) {
+    if (_alert_text)
         free(_alert_text);
-    }
 
     _alert_type = alert_type;
     _alert_text = strdup(text);
@@ -11736,7 +10453,17 @@ ui::alert(const char *text, uint8_t alert_type/*=ALERT_INFORMATION*/)
     gdk_display_flush(gdk_display_get_default());
 }
 
-void ui::render() {}
+void ui::render() {
+#ifdef UI_IMGUI_IN_GTK
+    imgui_driver.pre_render();
+
+    UiSandboxMenu::layout();
+    UiSandboxMode::layout();
+    UiQuickadd::layout();
+
+    imgui_driver.post_render();
+#endif
+}
 
 #pragma GCC diagnostic pop
 

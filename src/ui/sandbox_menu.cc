@@ -1,6 +1,10 @@
 #include "adventure.hh"
 #include "faction.hh"
+#include "game.hh"
+#include "imgui.hh"
+#include "main.hh"
 #include "robot_base.hh"
+#include "ui.hh"
 #include "ui_imgui.hh"
 
 namespace UiSandboxMenu {
@@ -170,34 +174,42 @@ namespace UiSandboxMenu {
                 ImGui::Separator();
             }
 
-            if (ImGui::MenuItem("Level properties"))
-                UiLevelProperties::open();
+            if (is_sandbox && ImGui::MenuItem("Level properties"))
+                ui::open_dialog(DIALOG_LEVEL_PROPERTIES);
 
-            if (ImGui::MenuItem("New level"))
-                UiNewLevel::open();
+            if (is_sandbox && ImGui::MenuItem("New level"))
+                ui::open_dialog(DIALOG_NEW_LEVEL);
 
             //"Save": update current save
             // TODO: Fix this to work just like in the GTK backend
-            if (can_update_save && ImGui::MenuItem("Save"))
-                P.add_action(ACTION_SAVE, 0);
+            if (is_sandbox && ImGui::MenuItem("Save")) {
+                bool ask_for_new_name = (W->level.name_len == 0 || strcmp(W->level.name, "<no name>") == 0);
 
-            //"Save as...": create a new save
-            if (is_sandbox && ImGui::MenuItem("Save copy"))
-                UiSave::open();
-
-            // Open the Level Manager
-            if (ImGui::MenuItem("Open"))
-                UiLevelManager::open();
-
-            if (is_sandbox && P.user_id && ImGui::MenuItem("Publish online")) {
-                // TODO: Open publish dialog
+                if (ask_for_new_name) {
+                    save_type = SAVE_REGULAR;
+                    ui::open_dialog(DIALOG_SAVE);
+                } else
+                    P.add_action(ACTION_SAVE, 0);
             }
 
-            if ((!P.user_id && !P.username) && ImGui::MenuItem("Log in"))
-                UiLogin::open();
+            //"Save as...": create a new save
+            if (is_sandbox && ImGui::MenuItem("Save as...")) {
+                save_type = SAVE_COPY;
+                ui::open_dialog(DIALOG_SAVE_COPY);
+            }
+
+            // Open the Level Manager
+            if (is_sandbox && ImGui::MenuItem("Open"))
+                ui::open_dialog(DIALOG_OPEN);
+
+            if (is_sandbox && P.user_id && ImGui::MenuItem("Publish online"))
+                ui::open_dialog(DIALOG_PUBLISH);
+
+            if (is_sandbox && (!P.user_id && !P.username) && ImGui::MenuItem("Log in"))
+                ui::open_dialog(DIALOG_LOGIN);
 
             if (ImGui::MenuItem("Settings"))
-                UiSettings::open();
+                ui::open_dialog(DIALOG_SETTINGS);
 
             if (ImGui::MenuItem("Back to menu"))
                 P.add_action(ACTION_GOTO_MAINMENU, 0);
