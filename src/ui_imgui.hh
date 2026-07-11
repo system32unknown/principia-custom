@@ -26,7 +26,7 @@ namespace UiObjColorPicker  { void open(bool alpha = false, entity *e = G->selec
 namespace UiLevelProperties { void open(); void layout(); }
 namespace UiSave            { void open(); void layout(); }
 namespace UiNewLevel        { void open(); void layout(); }
-namespace UiFrequency       { void open(bool is_range, entity *e = G->selection.e); void layout(); }
+namespace UiFrequency       { void open(bool is_range); void layout(); }
 namespace UiConfirm         { void open(const char* text, const char* button1, principia_action action1, const char* button2, principia_action action2, const char* button3, principia_action action3, struct confirm_data  _confirm_data); void layout(); }
 namespace UiAnimal          { void open(); void layout(); }
 namespace UiRobot           { void open(); void layout(); }
@@ -36,3 +36,10 @@ namespace UiPolygon         { void open(); void layout(); }
 namespace UiRubber          { void open(); void layout(); }
 namespace UiDecoration      { void open(); void layout(); }
 namespace UiVariable        { void open(); void layout(); }
+namespace UiJumper          { void open(); void layout(); }
+namespace UiEmitter         { void open(); void layout(); }
+namespace UiCommandPad      { void open(); void layout(); }
+namespace UiPkgLvlSelector  { void open(); void layout(); }
+namespace UiEventListener   { void open(); void layout(); }
+namespace UiResource        { void open(); void layout(); }
+namespace UiItem            { void open(); void layout(); }
