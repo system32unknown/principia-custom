@@ -61,6 +61,8 @@ namespace UiSettings {
         "dna_sandbox_back",
         "menu_speed",
         "smooth_menu",
+        //MISC
+        "disable_overloader",
         NULL
     };
 
@@ -356,6 +358,17 @@ namespace UiSettings {
                         ImGuiSliderFlags_AlwaysClamp);
 
                     ImGui::Checkbox("Smooth menu scrolling", (bool*) &local_settings["smooth_menu"]->v.b);
+
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
+
+                bool misc_tab = ImGui::BeginTabItem("Misc");
+                ImGui::SetItemTooltip("Change misc settings");
+                if (misc_tab) {
+                    ImGui::Checkbox("Disable Overloader", (bool*) &local_settings["disable_overloader"]->v.b);
+                    ImGui::SetItemTooltip("Disables overloader.");
 
                     ImGui::EndTabItem();
                 }
