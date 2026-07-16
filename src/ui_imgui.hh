@@ -24,7 +24,7 @@ namespace UiQuickadd        { void open(); void layout(); }
 namespace UiSynthesizer     { void open(entity *e = G->selection.e); void layout(); }
 namespace UiObjColorPicker  { void open(bool alpha = false, entity *e = G->selection.e); void layout(); }
 namespace UiLevelProperties { void open(); void layout(); }
-namespace UiSave            { void open(); void layout(); }
+namespace UiSave            { void open(bool copy_flag); void layout(); }
 namespace UiNewLevel        { void open(); void layout(); }
 namespace UiFrequency       { void open(bool is_range); void layout(); }
 namespace UiConfirm         { void open(const char* text, const char* button1, principia_action action1, const char* button2, principia_action action2, const char* button3, principia_action action3, struct confirm_data  _confirm_data); void layout(); }
@@ -43,3 +43,19 @@ namespace UiPkgLvlSelector  { void open(); void layout(); }
 namespace UiEventListener   { void open(); void layout(); }
 namespace UiResource        { void open(); void layout(); }
 namespace UiItem            { void open(); void layout(); }
+namespace UiShapeExtruder   { void open(); void layout(); }
+namespace UiCursorField     { void open(); void layout(); }
+namespace UiSetFaction      { void open(); void layout(); }
+namespace UiKeyListener     { void open(); void layout(); }
+namespace UiPublish         { void open(); void layout(); }
+namespace UiPublished       { void open(); void layout(); }
+namespace UiTimer           { void open(); void layout(); }
+namespace UiCommunity       { void open(); void layout(); }
+namespace UiConfirmQuit     { void open(); void layout(); }
+namespace UiCamTargeter     { void open(); void layout(); }
+namespace UiVendor          { void open(); void layout(); }
+namespace UiFXEmitter       { void open(); void layout(); }
+namespace UiPrompt          { void open(); void layout(); }
+namespace UiPromptSettings  { void open(); void layout(); }
+namespace UiSoundManager    { void open(); void layout(); }
+namespace UiSequencer       { void open(); void layout(); }

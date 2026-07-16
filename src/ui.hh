@@ -95,8 +95,6 @@
 #define SAVE_REGULAR 0
 #define SAVE_COPY 1
 
-extern uint8_t save_type;
-
 #define MAX_GRAVITY 75.f
 
 enum {
@@ -143,8 +141,6 @@ class ui
     static void alert(const char *text, uint8_t alert_type=ALERT_INFORMATION);
     static void render();
 };
-
-extern bool prompt_is_open;
 
 extern const char* tips_pc[];
 extern const char* tips_mobile[];

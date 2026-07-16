@@ -1356,6 +1356,31 @@ game::reset_touch(bool hard/*=true*/)
         layer[x] = -1;
     }
 
+    // reset all RC widgets
+    static panel::widget **widgets[] = {
+        wdg_up, wdg_down, wdg_left, wdg_right, wdg_btn
+    };
+    for (int i = 0; i < sizeof(widgets)/sizeof(widgets[0]); i++) {
+        panel::widget **wdg_array = widgets[i];
+
+        int wdg_count = 0;
+        switch (i) {
+            case 0: wdg_count = wdg_up_i; break;
+            case 1: wdg_count = wdg_down_i; break;
+            case 2: wdg_count = wdg_left_i; break;
+            case 3: wdg_count = wdg_right_i; break;
+            case 4: wdg_count = wdg_btn_i; break;
+        }
+
+        for (int x = 0; x < wdg_count; x++) {
+            if (wdg_array[x]) {
+                wdg_array[x]->value[0] = 0.f;
+                wdg_array[x]->value[1] = 0.f;
+                wdg_array[x]->focused = 0;
+            }
+        }
+    }
+
     if (hard) {
         for (int x=0; x<MAX_INTERACTING; x++) {
             /* XXX: release objects properly? */
@@ -7990,32 +8015,6 @@ game::handle_input_paused(tms::event *ev, int action)
                     ui::open_dialog(DIALOG_SANDBOX_MENU);
                 }
                 break;
-        }
-    } else if (ev->type == TMS_EV_KEY_UP) {
-        switch (ev->data.key.keycode) {
-            case TMS_KEY_SPACE:
-                if (!disable_menu) {
-                    ui::open_dialog(DIALOG_QUICKADD);
-                }
-
-                disable_menu = false;
-                break;
-
-            case TMS_KEY_LEFT_SHIFT:
-            case TMS_KEY_RIGHT_SHIFT:
-                if (this->get_mode() == GAME_MODE_MULTISEL) {
-                    this->multi.additive_selection = !this->multi.additive_selection;
-                    this->wdg_additive->faded = !this->multi.additive_selection;
-                }
-                break;
-
-            case TMS_KEY_LEFT_CTRL:
-            case TMS_KEY_RIGHT_CTRL:
-                if (!disable_menu)
-                    ui::open_dialog(DIALOG_SANDBOX_MENU);
-
-                disable_menu = false;
-                break;
 
             case TMS_KEY_ESC:
                 if (this->get_mode() != GAME_MODE_DEFAULT) {
@@ -8046,6 +8045,33 @@ game::handle_input_paused(tms::event *ev, int action)
 
                 disable_menu = false;
                 break;
+        }
+    } else if (ev->type == TMS_EV_KEY_UP) {
+        switch (ev->data.key.keycode) {
+            case TMS_KEY_SPACE:
+                if (!disable_menu) {
+                    ui::open_dialog(DIALOG_QUICKADD);
+                }
+
+                disable_menu = false;
+                break;
+
+            case TMS_KEY_LEFT_SHIFT:
+            case TMS_KEY_RIGHT_SHIFT:
+                if (this->get_mode() == GAME_MODE_MULTISEL) {
+                    this->multi.additive_selection = !this->multi.additive_selection;
+                    this->wdg_additive->faded = !this->multi.additive_selection;
+                }
+                break;
+
+            case TMS_KEY_LEFT_CTRL:
+            case TMS_KEY_RIGHT_CTRL:
+                if (!disable_menu)
+                    ui::open_dialog(DIALOG_SANDBOX_MENU);
+
+                disable_menu = false;
+                break;
+
         }
     } else if (ev->type == TMS_EV_POINTER_MOVE) {
         if (this->menu_handle_event(ev) == EVENT_DONE) {
@@ -9833,8 +9859,6 @@ game::handle_input(tms::event *ev, int action)
 #ifdef DEBUG
             this->print_screen_point_info((int)ev->data.motion.x, (int)ev->data.motion.y);
 #endif
-
-            if (prompt_is_open) return T_OK;
 
             this->hov_ent = 0;
             this->hov_text->active = false;

@@ -38,10 +38,6 @@ const int num_tips_mobile = sizeof(tips_mobile)/sizeof(char*);
 int ctip = -1;
 int ui::next_action = ACTION_IGNORE;
 
-bool prompt_is_open = false;
-
-uint8_t    save_type = SAVE_REGULAR;
-
 void
 ui::message(const char *msg, bool long_duration)
 {

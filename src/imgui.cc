@@ -93,11 +93,13 @@ static struct PFont im_load_ttf(const char *path, float size_pixels) {
 struct PFont ui_font;
 struct PFont ui_font_mono;
 
+float imgui_ui_scale = 1.f;
+
 static void load_fonts() {
     //TODO free existing fonts
 
     float content_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-    float size_pixels = roundf(12.f * settings["uiscale"]->v.f * content_scale);
+    float size_pixels = roundf(14.f * settings["uiscale"]->v.f * content_scale);
 
     tms_infof("font size %fpx", size_pixels);
 
@@ -109,8 +111,7 @@ static void update_imgui_ui_scale() {
     float scale_factor = settings["uiscale"]->v.f;
     float content_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     ImGui::GetStyle().ScaleAllSizes(scale_factor * content_scale);
-
-    //ImGui::GetIO().FontGlobalScale = roundf(9. * scale_factor) / 9.;
+    imgui_ui_scale = scale_factor * content_scale;
 }
 
 static void principia_style() {
@@ -175,8 +176,6 @@ void ImguiDriver::init() {
 }
 
 void ImguiDriver::pre_render() {
-    if (settings["render_gui"]->is_false()) return;
-
     tms_assertf(GImGui != NULL, "gimgui is null. is imgui ready?");
 
     ImGuiIO& io = ImGui::GetIO();

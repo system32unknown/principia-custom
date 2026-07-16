@@ -5,37 +5,30 @@
  */
 
 #include "adventure.hh"
-#include "anchor.hh"
-#include "command.hh"
 #include "display.hh"
-#include "escript.hh"
 #include "faction.hh"
 #include "factory.hh"
-#include "fxemitter.hh"
 #include "game.hh"
 #include "item.hh"
-#include "key_listener.hh"
 #include "main.hh"
 #include "menu-play.hh"
 #include "object_factory.hh"
 #include "pkgman.hh"
-#include "prompt.hh"
-#include "resource.hh"
 #include "robot_base.hh"
-#include "sequencer.hh"
 #include "settings.hh"
 #include "sfxemitter.hh"
 #include "simplebg.hh"
 #include "soundmanager.hh"
 #include "speaker.hh"
-#include "timer.hh"
 #include "treasure_chest.hh"
 #include "ui.hh"
 #include <SDL3/SDL.h>
 #include <sstream>
 #include <tms/cpp.hh>
 
-#if !defined(SDL_PLATFORM_ANDROID) && !defined(PRINCIPIA_BACKEND_IMGUI) && !defined(NO_UI)
+#if !defined(SDL_PLATFORM_ANDROID) && !defined(NO_UI)
+
+#ifndef PRINCIPIA_BACKEND_IMGUI
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -66,8 +59,6 @@ enum {
 
     OSC_NUM_COLUMNS
 };
-
-GtkDialog *cur_prompt = 0;
 
 static guint valid_keys[9] = {
     GDK_KEY_1,
@@ -118,16 +109,6 @@ GtkRadioButton  *multi_config_render_type_hide;
 GtkButton       *multi_config_unlock_all;
 GtkButton       *multi_config_disconnect_all;
 
-/** --Open level **/
-GtkWindow    *open_window;
-GtkTreeModel *open_treemodel;
-GtkTreeView  *open_treeview;
-GtkButton    *open_btn_open;
-GtkButton    *open_btn_cancel;
-GtkMenu      *open_menu;
-GtkMenuItem  *open_menu_information;
-GtkMenuItem  *open_menu_delete;
-
 /** --Open object **/
 bool         object_window_multiemitter;
 GtkWindow    *object_window;
@@ -135,13 +116,6 @@ GtkTreeModel *object_treemodel;
 GtkTreeView  *object_treeview;
 GtkButton    *object_btn_open;
 GtkButton    *object_btn_cancel;
-
-/* --Save and Save as copy */
-GtkWindow *save_window;
-GtkEntry  *save_entry;
-GtkLabel  *save_status;
-GtkButton *save_ok;
-GtkButton *save_cancel;
 
 /* --Export */
 GtkWindow *export_window;
@@ -188,202 +162,6 @@ enum ROW_TYPES {
     ROW_CHECKBOX,
     ROW_HSCALE,
 };
-
-struct setting_row_type {
-    int type;
-
-    /* hscale */
-    double min;
-    double max;
-    double step;
-
-    static const struct setting_row_type create_checkbox() {
-        struct setting_row_type srt;
-        srt.type = ROW_CHECKBOX;
-
-        return srt;
-    }
-
-    static const struct setting_row_type create_hscale(double min, double max, double step) {
-        struct setting_row_type srt;
-        srt.type = ROW_HSCALE;
-
-        srt.min = min;
-        srt.max = max;
-        srt.step = step;
-
-        return srt;
-    }
-};
-
-struct table_setting_row {
-    const char *label;
-    const char *help;
-    const char *setting_name;
-    const struct setting_row_type row;
-    GtkWidget *wdg;
-};
-
-struct table_setting_row settings_graphic_rows[] = {
-    {
-        "Enable bloom",
-        0,
-        "enable_bloom",
-        setting_row_type::create_checkbox()
-    }, {
-        "Vertical sync",
-        0,
-        "vsync",
-        setting_row_type::create_checkbox()
-    }, {
-        "Gamma correction",
-        0,
-        "gamma_correct",
-        setting_row_type::create_checkbox()
-    },
-};
-
-struct table_setting_row settings_audio_rows[] = {
-    {
-        "Volume",
-        "Master volume",
-        "volume",
-        setting_row_type::create_hscale(0.0, 1.0, 0.05),
-    }, {
-        "Mute all sounds",
-        0,
-        "muted",
-        setting_row_type::create_checkbox()
-    },
-};
-
-struct table_setting_row settings_misc_rows[] = {
-    {
-        "Disable Overloader",
-        0,
-        "disable_overloader",
-        setting_row_type::create_checkbox()
-    }
-};
-
-struct table_setting_row settings_control_rows[] = {
-    {
-        "Enable touch controls",
-        "Enable this if you want widgets on the screen that you can control the adventure robot with.",
-        "touch_controls",
-        setting_row_type::create_checkbox()
-    }, {
-        "Enable cursor jail",
-        "Enable this if you want the cursor to be locked to the game while playing a level.",
-        "jail_cursor",
-        setting_row_type::create_checkbox()
-    }, {
-        "Smooth camera",
-        "Whether the camera movement should be smooth or direct.",
-        "smooth_cam",
-        setting_row_type::create_checkbox()
-    }, {
-        "Camera speed",
-        "How fast you can move the camera.",
-        "cam_speed_modifier",
-        setting_row_type::create_hscale(0.1, 15.0, 0.5),
-    }, {
-        "Smooth zoom",
-        "Whether the zooming should be smooth or direct.",
-        "smooth_zoom",
-        setting_row_type::create_checkbox()
-    }, {
-        "Zoom speed",
-        "How fast you can zoom in your level.",
-        "zoom_speed",
-        setting_row_type::create_hscale(0.1, 3.0, 0.5),
-    }, {
-        "Smooth menu",
-        "Whether the menu scrolling should be smooth or direct.",
-        "smooth_menu",
-        setting_row_type::create_checkbox()
-    }, {
-        "Menu scroll speed",
-        "How fast you can scroll through the menu.",
-        "menu_speed",
-        setting_row_type::create_hscale(1.0, 15.0, 0.5),
-    }, {
-        "Widget sensitivity",
-        "Controls the mouse-movement-sensitivity used to control sliders, radials and fields using the hotkey mode.",
-        "widget_control_sensitivity",
-        setting_row_type::create_hscale(0.1, 8.0, 0.25),
-    }, {
-        "Enable RC cursor lock",
-        "Lock the cursor if you active an RC widgets mouse control.",
-        "rc_lock_cursor",
-        setting_row_type::create_checkbox()
-    },
-};
-
-struct table_setting_row settings_interface_rows[] = {
-    {
-        "UI scale",
-        "A restart is required for this change to take effect",
-        "uiscale",
-        setting_row_type::create_hscale(0.5, 2.0, 0.10),
-    },{
-        "Fullscreen mode",
-        "Toggle fullscreen mode",
-        "window_fullscreen",
-        setting_row_type::create_checkbox()
-    }, {
-        "Display object ID",
-        "Display ID of object on selection (bottom-left corner).",
-        "display_object_id",
-        setting_row_type::create_checkbox()
-    }, {
-        "Display grapher value",
-        "Display the value that passes through the grapher in play-mode (sandbox only).",
-        "display_grapher_value",
-        setting_row_type::create_checkbox()
-    }, {
-        "Display wireless frequency",
-        "Display the frequency of the Receiver or the Mini transmitter when paused and zoomed in (sandbox only).",
-        "display_wireless_frequency",
-        setting_row_type::create_checkbox()
-    }, {
-        "Hide tips",
-        "Do not show when I create a new level.",
-        "hide_tips",
-        setting_row_type::create_checkbox()
-    }, {
-        "Do not confirm quitting sandbox adventure",
-        "Do not show the \"Are you sure you want to quit?\" dialog when exiting a sandbox adventure level.",
-        "dna_sandbox_back",
-        setting_row_type::create_checkbox()
-    }, {
-        "Automatically submit highscores",
-        0,
-        "score_automatically_submit",
-        setting_row_type::create_checkbox()
-    }, {
-        "Ask before submitting highscore",
-        "Always ask before submitting highscore.",
-        "score_ask_before_submitting",
-        setting_row_type::create_checkbox()
-    }, {
-        "Resizable window",
-        "Allow the window to be resized. NOTE: Principia does not support resizing while in-game. Things will break.",
-        "window_resizable",
-        setting_row_type::create_checkbox()
-    }, {
-        "Autosave screen size",
-        "Save the screen size when resizing the window.",
-        "autosave_screensize",
-        setting_row_type::create_checkbox()
-    },
-};
-
-static const int settings_num_graphic_rows = sizeof(settings_graphic_rows) / sizeof(settings_graphic_rows[0]);
-static const int settings_num_audio_rows = sizeof(settings_audio_rows) / sizeof(settings_audio_rows[0]);
-static const int settings_num_control_rows = sizeof(settings_control_rows) / sizeof(settings_control_rows[0]);
-static const int settings_num_interface_rows = sizeof(settings_interface_rows) / sizeof(settings_interface_rows[0]);
-static const int settings_num_misc_rows = sizeof(settings_misc_rows) / sizeof(settings_misc_rows[0]);
 
 struct gtk_level_property {
     uint64_t flag;
@@ -508,30 +286,6 @@ struct gtk_level_property gtk_level_properties[] = {
 
 static int num_gtk_level_properties = sizeof(gtk_level_properties) / sizeof(gtk_level_properties[0]);
 
-/** --Publish **/
-GtkDialog      *publish_dialog;
-GtkEntry       *publish_name;
-GtkTextView    *publish_descr;
-GtkCheckButton *publish_locked;
-
-/** --Key Listener **/
-GtkDialog       *key_listener_dialog;
-GtkListStore    *key_listener_ls;
-GtkComboBox     *key_listener_cb;
-
-/** --Item **/
-GtkDialog       *item_dialog;
-GtkComboBoxText *item_cb;
-
-/** --Vendor **/
-GtkDialog       *vendor_dialog;
-GtkSpinButton   *vendor_amount;
-
-/** --Soundman **/
-GtkDialog       *soundman_dialog;
-GtkComboBoxText *soundman_cb;
-GtkCheckButton  *soundman_catch_all;
-
 /** --Factory **/
 GtkDialog       *factory_dialog;
 GtkSpinButton   *factory_faction;
@@ -568,10 +322,6 @@ enum {
   TCHEST_COLUMN_COUNT,
 };
 
-/** --Faction **/
-GtkDialog       *faction_dialog;
-GtkComboBoxText *faction_cb;
-
 /** --Digital Display **/
 GtkDialog       *digi_dialog;
 GtkCheckButton  *digi_wrap;
@@ -586,13 +336,6 @@ GtkButton   *digi_insert;
 GtkButton   *digi_append;
 GtkButton   *digi_delete;
 
-/** --FX Emitter **/
-GtkDialog       *fxemitter_dialog;
-GtkComboBoxText *fxemitter_cb[4];
-GtkScale       *fxemitter_radius;
-GtkScale       *fxemitter_count;
-GtkScale       *fxemitter_interval;
-
 /** --SFX Emitter **/
 GtkDialog       *sfx_dialog;
 GtkComboBoxText *sfx_cb;
@@ -604,78 +347,6 @@ GtkComboBoxText *sfx2_cb;
 GtkComboBoxText *sfx2_sub_cb;
 GtkCheckButton  *sfx2_global;
 GtkCheckButton  *sfx2_loop;
-
-/** --Cam targeter **/
-GtkDialog       *camtargeter_dialog;
-GtkComboBoxText *camtargeter_mode;
-GtkComboBoxText *camtargeter_offset_mode;
-GtkRange        *camtargeter_x_offset;
-GtkEntry        *camtargeter_x_offset_entry;
-GtkRange        *camtargeter_y_offset;
-GtkEntry        *camtargeter_y_offset_entry;
-GtkButton       *camtargeter_save;
-GtkButton       *camtargeter_cancel;
-
-/** --Info Dialog **/
-GtkWindow       *info_dialog;
-GtkLabel        *info_text;
-char            *_pass_info_descr;
-
-/** --Error Dialog **/
-GtkDialog       *error_dialog;
-GtkLabel        *error_text;
-char            *_pass_error_text;
-
-/** --Confirm Dialog **/
-GtkDialog       *confirm_dialog;
-GtkLabel        *confirm_text;
-GtkButton       *confirm_button1;
-GtkButton       *confirm_button2;
-GtkButton       *confirm_button3;
-GtkCheckButton  *confirm_dna_sandbox_back;
-struct confirm_data confirm_data(CONFIRM_TYPE_DEFAULT);
-char            *_pass_confirm_text;
-char            *_pass_confirm_button1;
-char            *_pass_confirm_button2;
-char            *_pass_confirm_button3;
-int              confirm_action1;
-int              confirm_action2;
-int              confirm_action3;
-void            *confirm_action1_data = 0;
-void            *confirm_action2_data = 0;
-void            *confirm_action3_data = 0;
-
-/** --Alert Dialog **/
-GtkMessageDialog    *alert_dialog;
-char                *_alert_text = 0;
-uint8_t              _alert_type;
-
-/** --Tips Dialog **/
-GtkDialog       *tips_dialog;
-GtkLabel        *tips_text;
-GtkCheckButton  *tips_hide;
-
-/** --Autosave Dialog **/
-GtkDialog       *autosave_dialog;
-
-/** --Settings **/
-GtkDialog       *settings_dialog;
-
-/* Graphics */
-GtkCheckButton  *settings_enable_shadows;
-GtkSpinButton   *settings_shadow_quality;
-GtkComboBoxText *settings_shadow_res;
-//GtkSpinButton   *settings_ao_quality;
-GtkCheckButton  *settings_enable_ao;
-GtkComboBoxText *settings_ao_res;
-GtkCheckButton  *settings_enable_bloom;
-
-/* Controls */
-GtkComboBoxText *settings_control_type;
-
-/** --Confirm Quit Dialog **/
-GtkDialog       *confirm_quit_dialog;
-GtkButton       *confirm_btn_quit;
 
 /** --Level upgrade Dialog **/
 GtkDialog       *confirm_upgrade_dialog;
@@ -706,57 +377,6 @@ GtkComboBoxText *robot_back_equipment;
 GtkComboBoxText *robot_front_equipment;
 GtkComboBoxText *robot_head_equipment;
 
-/** --Timer **/
-GtkDialog       *timer_dialog;
-GtkLabel        *timer_time;
-GtkSpinButton   *timer_seconds;
-GtkSpinButton   *timer_milliseconds;
-GtkSpinButton   *timer_num_ticks;
-GtkCheckButton  *timer_use_system_time;
-
-/** --Published **/
-GtkDialog       *published_dialog;
-
-/** --Community **/
-GtkDialog       *community_dialog;
-
-/** --Sequencer **/
-GtkWindow       *sequencer_window;
-GtkLabel        *sequencer_state;
-GtkEntry        *sequencer_sequence;
-GtkSpinButton   *sequencer_seconds;
-GtkSpinButton   *sequencer_milliseconds;
-GtkCheckButton  *sequencer_wrap_around;
-GtkButton       *sequencer_save;
-GtkButton       *sequencer_cancel;
-int              sequencer_num_steps;
-
-/** --Shape extruder **/
-GtkDialog       *shapeextruder_dialog;
-GtkRange        *shapeextruder_right;
-GtkRange        *shapeextruder_up;
-GtkRange        *shapeextruder_left;
-GtkRange        *shapeextruder_down;
-
-/** --cursorfield **/
-GtkDialog       *cursorfield_dialog;
-GtkRange        *cursorfield_right;
-GtkRange        *cursorfield_up;
-GtkRange        *cursorfield_left;
-GtkRange        *cursorfield_down;
-
-/** --escript **/
-GtkWindow       *escript_window;
-GtkWidget       *escript_code;
-GtkTextBuffer   *escript_buffer;
-GtkCheckButton  *escript_use_external_editor;
-GtkBox          *escript_external_box;
-GtkLabel        *escript_external_file_path;
-GtkStatusbar    *escript_statusbar;
-GtkButton       *escript_save;
-GtkButton       *escript_cancel;
-GtkTextTag      *escript_tt_function;
-
 /** --Synthesizer **/
 GtkDialog       *synth_dialog;
 GtkSpinButton   *synth_hz_low;
@@ -773,15 +393,6 @@ GtkRange       *synth_vol_vibrato_extent;
 GtkRange       *synth_pulse_width;
 
 GtkComboBoxText *synth_waveform;
-
-/** --Prompt Settings Dialog **/
-GtkWindow       *prompt_settings_dialog;
-GtkTextView     *prompt_message;
-GtkEntry        *prompt_b1;
-GtkEntry        *prompt_b2;
-GtkEntry        *prompt_b3;
-GtkButton       *prompt_save;
-GtkButton       *prompt_cancel;
 
 gboolean on_digi_next_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data);
 gboolean on_digi_prev_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data);
@@ -941,36 +552,6 @@ static void add_setting_row(GtkGrid *tbl, int y, const char *label, GtkWidget *w
     }
 }
 
-static GtkMenuItem *add_menuitem_m(GtkMenu *menu, const char *label, void (*on_activate)(GtkMenuItem*, gpointer userdata)=0, gpointer userdata=0) {
-    GtkMenuItem *i = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic(label));
-
-    if (on_activate)
-        g_signal_connect(i, "activate", G_CALLBACK(on_activate), userdata);
-
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), GTK_WIDGET(i));
-
-    return i;
-}
-
-static GtkMenuItem *add_menuitem(GtkMenu *menu, const char *label, void (*on_activate)(GtkMenuItem*, gpointer userdata)=0, gpointer userdata=0) {
-    GtkMenuItem *i = GTK_MENU_ITEM(gtk_menu_item_new_with_label(label));
-
-    if (on_activate)
-        g_signal_connect(i, "activate", G_CALLBACK(on_activate), userdata);
-
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), GTK_WIDGET(i));
-
-    return i;
-}
-
-static GtkMenuItem *add_separator(GtkMenu *menu) {
-    GtkMenuItem *i = GTK_MENU_ITEM(gtk_separator_menu_item_new());
-
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), GTK_WIDGET(i));
-
-    return i;
-}
-
 static GtkDialog *new_dialog_defaults(const char *title, GtkCallback on_show=0, gboolean (*on_keypress)(GtkWidget*, GdkEventKey*, gpointer)=0) {
     GtkWidget *r = gtk_dialog_new_with_buttons(
             title,
@@ -1012,13 +593,6 @@ static gchar *format_joint_strength(GtkScale *scale, gdouble value) {
         return g_strdup("Indestructible");
     else
         return g_strdup_printf("%0.*f", gtk_scale_get_digits(scale), value);
-}
-
-static gchar *format_auto_absorb(GtkScale *scale, gdouble value) {
-    if (value <= 1.0)
-        return g_strdup("Don't absorb");
-    else
-        return g_strdup_printf("%0.*f seconds", gtk_scale_get_digits(scale), value);
 }
 
 gboolean foreach_model_find_str(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, struct cb_find_data** user_data) {
@@ -1079,11 +653,6 @@ bool btn_pressed(GtkWidget *ref, GtkButton *btn, gpointer user_data) {
             GPOINTER_TO_INT(user_data) == 1
         )
     );
-}
-
-/** --Confirm Quit Dialog **/
-void on_confirm_quit_show(GtkWidget *wdg, gpointer unused) {
-    gtk_widget_grab_focus(GTK_WIDGET(confirm_btn_quit));
 }
 
 /** --digital display **/
@@ -1196,202 +765,6 @@ void on_digi_show(GtkWidget *wdg, void *unused) {
     }
 }
 
-/** --Shape extruder **/
-void on_shapeextruder_show(GtkWidget *wdg, void *unused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_SHAPE_EXTRUDER) {
-        gtk_range_set_value(shapeextruder_right, e->properties[0].v.f);
-        gtk_range_set_value(shapeextruder_up, e->properties[1].v.f);
-        gtk_range_set_value(shapeextruder_left, e->properties[2].v.f);
-        gtk_range_set_value(shapeextruder_down, e->properties[3].v.f);
-    }
-}
-
-/** --cursorfield **/
-void on_cursorfield_show(GtkWidget *wdg, void *unused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_CURSOR_FIELD) {
-        gtk_range_set_value(cursorfield_right, e->properties[0].v.f);
-        gtk_range_set_value(cursorfield_up, e->properties[1].v.f);
-        gtk_range_set_value(cursorfield_left, e->properties[2].v.f);
-        gtk_range_set_value(cursorfield_down, e->properties[3].v.f);
-    }
-}
-
-/** --escript **/
-static void on_escript_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
-    if (btn_pressed(w, escript_cancel, user_data)) {
-        gtk_widget_hide(GTK_WIDGET(escript_window));
-    } else if (btn_pressed(w, escript_save, user_data)) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_ESCRIPT) {
-            bool use_external_editor = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(escript_use_external_editor));
-
-            e->properties[1].v.i = 0;
-            // Always enable string, table and on_input (backwards compat)
-            e->properties[1].v.i |= ESCRIPT_INCLUDE_STRING;
-            e->properties[1].v.i |= ESCRIPT_INCLUDE_TABLE;
-            e->properties[1].v.i |= ESCRIPT_LISTEN_ON_INPUT;
-            e->properties[1].v.i |= ((int)use_external_editor * ESCRIPT_USE_EXTERNAL_EDITOR);
-
-            GtkTextIter start, end;
-            GtkTextBuffer *text_buffer = GTK_TEXT_BUFFER(escript_buffer);
-            char *text;
-            gtk_text_buffer_get_bounds(text_buffer, &start, &end);
-            text = gtk_text_buffer_get_text(text_buffer, &start, &end, FALSE);
-
-            if (use_external_editor) {
-                char file_path[1024];
-                snprintf(file_path, 1023, "%s/%d-%d.lua",
-                        pkgman::get_cache_path(W->level_id_type),
-                        W->level.local_id, e->id);
-
-                FILE *fh = fopen(file_path, "w");
-
-                if (fh) {
-                    fwrite(text, sizeof(char), strlen(text), fh);
-                    tms_infof("Write to %s", file_path);
-                    fclose(fh);
-                }
-            }
-
-            e->set_property(0, text);
-
-            free(text);
-
-            P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-            P.add_action(ACTION_ENTITY_MODIFIED, 0);
-            P.add_action(ACTION_AUTOSAVE, 0);
-        }
-
-        gtk_widget_hide(GTK_WIDGET(escript_window));
-    }
-}
-
-static void on_escript_external_editor_toggled(GtkToggleButton *tb, gpointer userdata) {
-    bool external_editor_active = gtk_toggle_button_get_active(tb);
-
-    gtk_widget_set_sensitive(GTK_WIDGET(escript_code), !external_editor_active);
-
-    if (!external_editor_active) {
-        gtk_widget_hide(GTK_WIDGET(escript_external_box));
-    } else {
-        gtk_widget_show(GTK_WIDGET(escript_external_box));
-    }
-}
-
-static void on_escript_open_external_cache_clicked(GtkWidget *w, gpointer user_data) {
-    char url[2048];
-    snprintf(url, 2047, "file://%s", pkgman::get_cache_path(W->level_id_type));
-    ui::open_url(url);
-}
-
-void on_escript_show(GtkWidget *wdg, void *unused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_ESCRIPT) {
-        GtkTextBuffer *text_buffer = GTK_TEXT_BUFFER(escript_buffer);
-        GtkTextIter start, end;
-
-        char *code = (char*)malloc(e->properties[0].v.s.len+1);
-        memcpy(code, e->properties[0].v.s.buf, e->properties[0].v.s.len);
-        code[e->properties[0].v.s.len] = '\0';
-
-        gtk_text_buffer_get_bounds(text_buffer, &start, &end);
-        char *old_code = gtk_text_buffer_get_text(text_buffer, &start, &end, FALSE);
-
-        /* Only replace text buffer if it differs from the previous text */
-        if (strcmp(old_code, code) != 0) {
-            gtk_text_buffer_set_text(text_buffer, code, -1);
-        }
-
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(escript_use_external_editor), e->properties[1].v.i & ESCRIPT_USE_EXTERNAL_EDITOR);
-
-        bool external_editor_active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(escript_use_external_editor));
-
-        gtk_widget_set_sensitive(GTK_WIDGET(escript_code), !external_editor_active);
-
-        char file_path[ESCRIPT_EXTERNAL_PATH_LEN];
-        ((escript*)e)->generate_external_path(file_path);
-
-        char external_path[2048];
-        snprintf(external_path, 2047, "External path: <b>%s</b>",
-                file_path);
-
-        gtk_label_set_markup(escript_external_file_path, external_path);
-
-        if (!external_editor_active) {
-            gtk_widget_hide(GTK_WIDGET(escript_external_box));
-        } else {
-            gtk_widget_show(GTK_WIDGET(escript_external_box));
-
-        }
-
-        free(old_code);
-    }
-}
-
-gboolean on_escript_keypress(GtkWidget *w, GdkEventKey *event, gpointer unused) {
-    if (GDK_KEY_s && event->state & GDK_CONTROL_MASK) {
-        on_escript_btn_click(GTK_WIDGET(escript_save), NULL, GINT_TO_POINTER(1));
-        return true;
-    }
-
-    return false;
-}
-
-static void on_escript_mark_set(GtkTextBuffer *buffer, const GtkTextIter *new_location, GtkTextMark *mark, gpointer data) {
-    gchar *msg;
-    gint row, col;
-    GtkTextIter iter;
-
-    gtk_text_buffer_get_iter_at_mark(buffer,
-            &iter, gtk_text_buffer_get_insert(buffer));
-
-    row = gtk_text_iter_get_line(&iter);
-    col = gtk_text_iter_get_line_offset(&iter);
-
-    msg = g_strdup_printf("Col %d Ln %d", col+1, row+1);
-
-    gtk_statusbar_push(escript_statusbar, 0, msg);
-
-    g_free(msg);
-}
-
-/** --Key Listener **/
-void on_key_listener_show(GtkWidget *wdg, void *unused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_KEY_LISTENER) {
-        GtkTreeIter iter;
-        if (gtk_tree_model_get_iter_first(
-                    GTK_TREE_MODEL(key_listener_ls),
-                    &iter)) {
-            int x = 0;
-
-            do {
-                GValue val = {0, };
-                gtk_tree_model_get_value(GTK_TREE_MODEL(key_listener_ls),
-                                         &iter,
-                                         1,
-                                         &val);
-
-                uint32_t key = g_value_get_uint(&val);
-
-                if (key == e->properties[0].v.i) {
-                    gtk_combo_box_set_active(GTK_COMBO_BOX(key_listener_cb), x);
-                    break;
-                }
-
-                ++x;
-            } while (gtk_tree_model_iter_next(GTK_TREE_MODEL(key_listener_ls), &iter));
-        }
-    }
-}
-
 /** --Synthesizer **/
 void on_synth_show(GtkWidget *wdg, void *unused) {
     entity *e = G->selection.e;
@@ -1413,235 +786,6 @@ void on_synth_show(GtkWidget *wdg, void *unused) {
 
         gtk_widget_grab_focus(GTK_WIDGET(synth_hz_low));
     }
-}
-
-/** --Timer **/
-void on_timer_show(GtkWidget *wdg, void *unused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_TIMER) {
-        float s = floor((float)(e->properties[0].v.i) / 1000.f);
-        float ms = (float)(e->properties[0].v.i % 1000);
-        gtk_spin_button_set_value(timer_seconds, s);
-        gtk_spin_button_set_value(timer_milliseconds, ms);
-
-        gtk_spin_button_set_value(timer_num_ticks, (gdouble)e->properties[1].v.i8);
-
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(timer_use_system_time), e->properties[2].v.i);
-    }
-}
-
-void timer_time_changed(GtkSpinButton *btn, gpointer unused) {
-    char tmp[64];
-    int seconds = gtk_spin_button_get_value(timer_seconds);
-    int milliseconds = gtk_spin_button_get_value(timer_milliseconds);
-    uint32_t full_time = (seconds*1000) + milliseconds;
-
-    if (full_time < TIMER_MIN_TIME) {
-        milliseconds = TIMER_MIN_TIME;
-        gtk_spin_button_set_value(timer_milliseconds, TIMER_MIN_TIME);
-        full_time = TIMER_MIN_TIME;
-    }
-
-    snprintf(tmp, 63, "%d.%ds", seconds, milliseconds);
-    gtk_label_set_text(timer_time, tmp);
-}
-
-gboolean on_timer_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    switch (key->keyval) {
-        case GDK_KEY_Escape:
-            gtk_dialog_response(timer_dialog, GTK_RESPONSE_CANCEL);
-            break;
-
-        case GDK_KEY_Return:
-            gtk_dialog_response(timer_dialog, GTK_RESPONSE_ACCEPT);
-            break;
-    }
-
-    return false;
-}
-
-/** --Sequencer **/
-void sequencer_time_changed(GtkSpinButton *btn, gpointer unused) {
-    char tmp[128];
-    int seconds = gtk_spin_button_get_value(sequencer_seconds);
-    int milliseconds = gtk_spin_button_get_value(sequencer_milliseconds);
-    uint32_t full_time = (seconds*1000) + milliseconds;
-
-    if (full_time < SEQUENCER_MIN_TIME) {
-        milliseconds = SEQUENCER_MIN_TIME;
-        gtk_spin_button_set_value(sequencer_milliseconds, SEQUENCER_MIN_TIME);
-        full_time = SEQUENCER_MIN_TIME;
-    }
-
-    snprintf(tmp, 127, "%d.%ds. %d steps", seconds, milliseconds, sequencer_num_steps);
-    gtk_label_set_text(sequencer_state, tmp);
-}
-
-gboolean sequencer_sequence_focus_out(GtkWidget *wdg, GdkEventFocus *event, gpointer unused) {
-    const char *tmp = gtk_entry_get_text(sequencer_sequence);
-    sequencer_num_steps = 0;
-
-    if (!tmp) {
-        sequencer_num_steps = 0;
-    } else {
-        while (*tmp && sequencer_num_steps < SEQUENCER_MAX_LENGTH) {
-            if (*tmp == '1' || *tmp == '0') ++sequencer_num_steps;
-            ++tmp;
-        }
-    }
-
-    sequencer_time_changed(0, 0); /* refresh the state label */
-    return false;
-}
-
-void on_sequencer_show(GtkWidget *wdg, void *unused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_SEQUENCER) {
-        float s = floor((float)(e->properties[1].v.i) / 1000.f);
-        float ms = (float)(e->properties[1].v.i % 1000);
-        gtk_spin_button_set_value(sequencer_seconds, s);
-        gtk_spin_button_set_value(sequencer_milliseconds, ms);
-
-        gtk_entry_set_text(sequencer_sequence, e->properties[0].v.s.buf);
-
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sequencer_wrap_around), e->properties[2].v.i8 == 1);
-
-        sequencer_num_steps = ((sequencer*)e)->get_num_steps();
-
-        sequencer_sequence_focus_out(0,0,0);
-
-        gtk_widget_grab_focus(GTK_WIDGET(sequencer_sequence));
-    }
-}
-
-gboolean on_sequencer_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
-    if (btn_pressed(w, sequencer_cancel, user_data)) {
-        gtk_widget_hide(GTK_WIDGET(sequencer_window));
-    } else if (btn_pressed(w, sequencer_save, user_data)) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_SEQUENCER) {
-            const char *tmp = gtk_entry_get_text(sequencer_sequence);
-            gtk_spin_button_update(sequencer_seconds);
-            gtk_spin_button_update(sequencer_milliseconds);
-            bool wrap_around = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(sequencer_wrap_around));
-            int seconds = gtk_spin_button_get_value(sequencer_seconds);
-            int milliseconds = gtk_spin_button_get_value(sequencer_milliseconds);
-            uint32_t full_time = (seconds*1000) + milliseconds;
-            if (full_time < SEQUENCER_MIN_TIME)
-                full_time = SEQUENCER_MIN_TIME;
-
-            if (!strlen(tmp)) {
-                e->set_property(0, "010101010");
-            } else {
-                e->set_property(0, tmp);
-            }
-
-            e->properties[1].v.i = full_time;
-            e->properties[2].v.i8 = wrap_around ? 1 : 0;
-
-            ((sequencer*)e)->refresh_sequence();
-
-            P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-            P.add_action(ACTION_RESELECT, 0);
-
-            gtk_widget_hide(GTK_WIDGET(sequencer_window));
-        }
-    }
-
-    return false;
-}
-
-gboolean on_sequencer_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    switch (key->keyval) {
-        case GDK_KEY_Escape:
-            gtk_widget_hide(w);
-            return false;
-
-        case GDK_KEY_Return:
-            {
-                if (gtk_widget_has_focus(GTK_WIDGET(sequencer_cancel))) {
-                    on_sequencer_click(GTK_WIDGET(sequencer_cancel), NULL, GINT_TO_POINTER(1));
-                } else {
-                    on_sequencer_click(GTK_WIDGET(sequencer_save), NULL, GINT_TO_POINTER(1));
-                }
-                gtk_widget_hide(w);
-                return true;
-
-            }
-            break;
-    }
-
-    return false;
-}
-
-/** --Prompt Settings Dialog **/
-void on_prompt_show(GtkWidget *wdg, void *unused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_PROMPT) {
-        gtk_entry_set_text(prompt_b1, e->properties[0].v.s.buf);
-        gtk_entry_set_text(prompt_b2, e->properties[1].v.s.buf);
-        gtk_entry_set_text(prompt_b3, e->properties[2].v.s.buf);
-
-        GtkTextBuffer *tb = gtk_text_view_get_buffer(prompt_message);
-        gtk_text_buffer_set_text(tb, e->properties[3].v.s.buf, -1);
-    }
-}
-
-gboolean on_prompt_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    if (key->keyval == GDK_KEY_Escape)
-        gtk_widget_hide(w);
-    else if (key->keyval == GDK_KEY_Return) {
-    }
-
-    return false;
-}
-
-gboolean on_prompt_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
-    if (btn_pressed(w, prompt_cancel, user_data)) {
-        gtk_widget_hide(GTK_WIDGET(prompt_settings_dialog));
-    } else if (btn_pressed(w, prompt_save, user_data)) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_PROMPT) {
-            const char *b1 = gtk_entry_get_text(prompt_b1);
-            const char *b2 = gtk_entry_get_text(prompt_b2);
-            const char *b3 = gtk_entry_get_text(prompt_b3);
-
-            if (!strlen(b1) && !strlen(b2) && !strlen(b3)) {
-                ui::message("You must use at least one button.");
-                return false;
-            }
-
-            GtkTextIter start, end;
-            GtkTextBuffer *tb = gtk_text_view_get_buffer(prompt_message);
-            gtk_text_buffer_get_bounds(tb, &start, &end);
-
-            const char *message = gtk_text_buffer_get_text(tb, &start, &end, FALSE);
-
-            if (!strlen(message)) {
-                ui::message("You must enter a message.");
-                return false;
-            }
-
-            e->set_property(0, b1);
-            e->set_property(1, b2);
-            e->set_property(2, b3);
-            e->set_property(3, message);
-
-            gtk_widget_hide(GTK_WIDGET(prompt_settings_dialog));
-
-            ui::message("Prompt properties saved!");
-
-            P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-            P.add_action(ACTION_RESELECT, 0);
-        }
-    }
-
-    return false;
 }
 
 /** --SFX Emitter **/
@@ -1697,56 +841,6 @@ void on_sfx2_show(GtkWidget *wdg, void *ununused) {
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sfx2_loop), (e->properties[3].v.i8 == 1));
 
         gtk_combo_box_set_active(GTK_COMBO_BOX(sfx2_sub_cb), e->properties[2].v.i == SFX_CHUNK_RANDOM ? 0 : e->properties[2].v.i+1);
-    }
-}
-
-/** --Item **/
-void on_item_show(GtkWidget *wdg, void *ununused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_ITEM) {
-        if (e->properties[0].v.i >= NUM_ITEMS) e->properties[0].v.i = NUM_ITEMS-1;
-
-        clear_cb(item_cb);
-
-        for (int x=0; x<NUM_ITEMS; x++) {
-            item_cb_append(item_cb, x, false);
-        }
-
-        gtk_combo_box_set_active(GTK_COMBO_BOX(item_cb), e->properties[0].v.i);
-    }
-}
-
-/** --Vendor **/
-void on_vendor_show(GtkWidget *wdg, void *ununused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_VENDOR) {
-        gtk_spin_button_set_value(vendor_amount, e->properties[2].v.i);
-    }
-}
-
-/** --Soundman **/
-void on_soundman_show(GtkWidget *wdg, void *ununused) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_SOUNDMAN) {
-        if (e->properties[0].v.i >= SND__NUM) e->properties[0].v.i = SND__NUM-1;
-
-        gtk_combo_box_set_active(GTK_COMBO_BOX(soundman_cb), e->properties[0].v.i);
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(soundman_catch_all), e->properties[1].v.i8 != 0);
-    }
-}
-
-/** --Faction **/
-void on_faction_show(GtkWidget *wdg, void *ununused) {
-    entity *e = G->selection.e;
-
-    if (e && (e->g_id == O_GUARDPOINT)) {
-        if (e->properties[0].v.i8 < 0) e->properties[0].v.i8 = 0;
-        if (e->properties[0].v.i8 >= NUM_FACTIONS) e->properties[0].v.i8 = NUM_FACTIONS-1;
-
-        gtk_combo_box_set_active(GTK_COMBO_BOX(faction_cb), e->properties[0].v.i8);
     }
 }
 
@@ -2033,152 +1127,6 @@ void on_tchest_show(GtkWidget *wdg, void *ununused) {
     }
 }
 
-/** --FX Emitter **/
-void on_fxemitter_show(GtkWidget *wdg, void *ununused) {
-    entity *e = G->selection.e;
-
-    if (!e || e->g_id != O_FX_EMITTER)
-        return;
-
-    for (int x=0; x<4; x++) {
-        gint index = 0;
-        if (e->properties[3+x].v.i != FX_INVALID)
-            index = e->properties[3+x].v.i+1;
-
-        gtk_combo_box_set_active(GTK_COMBO_BOX(fxemitter_cb[x]), index);
-    }
-
-    gtk_range_set_value(GTK_RANGE(fxemitter_radius), (double)e->properties[0].v.f);
-    gtk_range_set_value(GTK_RANGE(fxemitter_count), (double)e->properties[1].v.i);
-    gtk_range_set_value(GTK_RANGE(fxemitter_interval), (double)e->properties[2].v.f);
-}
-
-/** --Cam targeter **/
-void camtargeter_insert_text(GtkEditable *editable, gchar *new_text, gint new_text_length, gpointer position, gpointer *user_data) {
-    for (int n=0; n<new_text_length; ++n) {
-        if (!isdigit(new_text[n]) && new_text[n] != '.' && new_text[n] != ',' && new_text[n] != '-') {
-            g_signal_stop_emission_by_name(editable, "insert-text");
-            break;
-        }
-    }
-}
-void camtargeter_entry_changed(GtkEditable *unused_editable, void *unused) {
-    GtkEntry *entry = 0;
-    GtkRange *range = 0;
-    GtkEditable *editable = 0;
-    if (gtk_widget_has_focus(GTK_WIDGET(camtargeter_y_offset_entry))) {
-        range = camtargeter_y_offset;
-        entry = camtargeter_y_offset_entry;
-        editable = GTK_EDITABLE(entry);
-    } else if (gtk_widget_has_focus(GTK_WIDGET(camtargeter_x_offset_entry))) {
-        range = camtargeter_x_offset;
-        entry = camtargeter_x_offset_entry;
-        editable = GTK_EDITABLE(entry);
-    }
-
-    if (entry) {
-        float v = atof(gtk_editable_get_chars(editable, 0, -1));
-        /* clamp! */
-        if (v < -150.f) {
-            v = -150.f;
-            char tmp[8];
-            snprintf(tmp, 7, "%.2f", v);
-            gtk_entry_set_text(entry, tmp);
-            gtk_editable_set_position(editable, 0);
-        } else if (v > 150.f) {
-            v = 150.f;
-            char tmp[8];
-            snprintf(tmp, 7, "%.2f", v);
-            gtk_entry_set_text(entry, tmp);
-            gtk_editable_set_position(editable, 0);
-        }
-        gtk_range_set_value(range, v);
-    }
-}
-
-void camtargeter_value_changed(GtkRange *unused_range, void *unused) {
-    GtkRange *range = 0;
-    GtkEntry *entry = 0;
-    if (gtk_widget_has_focus(GTK_WIDGET(camtargeter_x_offset))) {
-        range = camtargeter_x_offset;
-        entry = camtargeter_x_offset_entry;
-    } else if (gtk_widget_has_focus(GTK_WIDGET(camtargeter_y_offset))) {
-        range = camtargeter_y_offset;
-        entry = camtargeter_y_offset_entry;
-    }
-
-    if (range) {
-        char tmp[8];
-        snprintf(tmp, 7, "%.2f", gtk_range_get_value(range));
-        gtk_entry_set_text(entry, tmp);
-    }
-}
-
-gboolean on_camtargeter_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    switch (key->keyval) {
-        case GDK_KEY_Escape:
-            gtk_dialog_response(camtargeter_dialog, GTK_RESPONSE_CANCEL);
-            break;
-
-        case GDK_KEY_Return:
-            if (gtk_widget_has_focus(GTK_WIDGET(camtargeter_cancel))) {
-                gtk_dialog_response(camtargeter_dialog, GTK_RESPONSE_CANCEL);
-            } else {
-                gtk_dialog_response(camtargeter_dialog, GTK_RESPONSE_ACCEPT);
-            }
-            break;
-    }
-
-    return false;
-}
-
-void on_camtargeter_show(GtkWidget *wdg, void *ununused) {
-    char tmp[8];
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_CAM_TARGETER) {
-        gtk_combo_box_set_active(GTK_COMBO_BOX(camtargeter_mode), e->properties[1].v.i8);
-        gtk_combo_box_set_active(GTK_COMBO_BOX(camtargeter_offset_mode), e->properties[2].v.i8);
-
-        gtk_range_set_value(camtargeter_x_offset, e->properties[3].v.f);
-        snprintf(tmp, 7, "%.2f", e->properties[3].v.f);
-        gtk_entry_set_text(camtargeter_x_offset_entry, tmp);
-
-        gtk_range_set_value(camtargeter_y_offset, e->properties[4].v.f);
-        snprintf(tmp, 7, "%.2f", e->properties[4].v.f);
-        gtk_entry_set_text(camtargeter_y_offset_entry, tmp);
-    }
-}
-
-void on_tips_show(GtkWidget *wdg, void *unused) {
-    bool touch = settings["touch_controls"]->v.b;
-    int num_tips = touch ? num_tips_mobile : num_tips_pc;
-
-    if (ctip == -1)
-        ctip = rand()%num_tips;
-
-    gtk_label_set_markup(tips_text, touch ? tips_mobile[ctip] : tips_pc[ctip]);
-
-    ctip = (ctip+1)%num_tips;
-}
-
-void on_publish_show(GtkWidget *wdg, void *unused) {
-    char *current_descr = (char*)malloc(W->level.descr_len+1);
-    memcpy(current_descr, W->level.descr, W->level.descr_len);
-    current_descr[W->level.descr_len] = '\0';
-    GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(publish_descr);
-    gtk_text_buffer_set_text(text_buffer, current_descr, -1);
-
-    char current_name[257];
-    memcpy(current_name, W->level.name, W->level.name_len);
-    current_name[W->level.name_len] = '\0';
-    gtk_entry_set_text(publish_name, current_name);
-
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(publish_locked), W->level.visibility == LEVEL_LOCKED);
-
-    free(current_descr);
-}
-
 void on_object_show(GtkWidget *wdg, void *unused) {
     GtkTreeIter iter;
 
@@ -2314,209 +1262,6 @@ static void activate_open_state_row(GtkTreeView *view, GtkTreePath *path, GtkTre
     open_state_row(&iter);
 }
 
-/** --Open level **/
-void on_open_show(GtkWidget *wdg, void *unused) {
-    GtkTreeIter iter;
-
-    gtk_list_store_clear(GTK_LIST_STORE(open_treemodel));
-
-    lvlfile *level = pkgman::get_levels(LEVEL_LOCAL);
-
-    while (level) {
-        gtk_list_store_append(GTK_LIST_STORE(open_treemodel), &iter);
-        const char *version_string = level_version_string(level->version);
-        gtk_list_store_set(GTK_LIST_STORE(open_treemodel), &iter,
-                OC_ID, level->id,
-                OC_NAME, level->name,
-                OC_VERSION, version_string,
-                OC_DATE, level->modified_date,
-                -1
-                );
-        lvlfile *next = level->next;
-        delete level;
-        level = next;
-    }
-
-    GtkTreePath      *path;
-    GtkTreeSelection *sel;
-
-    path = gtk_tree_path_new_from_indices(0, -1);
-    sel  = gtk_tree_view_get_selection(open_treeview);
-
-    gtk_tree_model_get_iter(open_treemodel,
-                            &iter,
-                            path);
-
-    GValue val = {0, };
-
-    gtk_tree_model_get_value(open_treemodel,
-                             &iter,
-                             0,
-                             &val);
-
-    gtk_tree_selection_select_path(sel, path);
-
-    tms_infof("got id: %d", g_value_get_uint(&val));
-    gtk_tree_path_free(path);
-}
-
-static void activate_open_row(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, gpointer user_data) {
-    GtkTreeIter iter;
-    GtkTreeModel *model = gtk_tree_view_get_model(view);
-    gtk_tree_model_get_iter_from_string(model, &iter, gtk_tree_path_to_string(path));
-
-    guint _level_id;
-    gtk_tree_model_get(model, &iter,
-                       OC_ID, &_level_id,
-                       -1);
-
-    uint32_t level_id = (uint32_t)_level_id;
-
-    tms_infof("clicked level id %u", level_id);
-
-    P.add_action(ACTION_OPEN, level_id);
-
-    gtk_widget_hide(GTK_WIDGET(open_window));
-}
-
-static void open_menu_item_activated(GtkMenuItem *i, gpointer userdata) {
-    if (i == open_menu_information) {
-        static GtkMessageDialog *msg_dialog = 0;
-
-        if (msg_dialog == 0) {
-            msg_dialog = GTK_MESSAGE_DIALOG(gtk_message_dialog_new(
-                    0, (GtkDialogFlags)(0),
-                    GTK_MESSAGE_INFO,
-                    GTK_BUTTONS_CLOSE,
-                    "Level information"));
-        }
-
-        GtkTreeSelection *sel;
-        GtkTreeIter       iter;
-
-        sel = gtk_tree_view_get_selection(open_treeview);
-
-        if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-            GValue val_name = {0, };
-            GValue val_date = {0, };
-            GValue val_version = {0, };
-            char msg[2048];
-            gtk_tree_model_get_value(open_treemodel,
-                    &iter,
-                    OC_NAME,
-                    &val_name);
-            const char *name = g_value_get_string(&val_name);
-
-            gtk_tree_model_get_value(open_treemodel,
-                    &iter,
-                    OC_DATE,
-                    &val_date);
-            const char *lastmodified = g_value_get_string(&val_date);
-
-            gtk_tree_model_get_value(open_treemodel,
-                    &iter,
-                    OC_VERSION,
-                    &val_version);
-            const char *version = g_value_get_string(&val_version);
-
-            snprintf(
-                msg, 2048,
-                "Name: %s\nVersion: %s\nLast modified: %s",
-                name, version, lastmodified
-            );
-
-            g_object_set(msg_dialog, "text", msg, NULL);
-
-            int r = gtk_dialog_run(GTK_DIALOG(msg_dialog));
-            switch (r) {
-                default:
-                    gtk_widget_hide(GTK_WIDGET(msg_dialog));
-                    break;
-            }
-        }
-    } else if (i == open_menu_delete) {
-        GtkDialog* confirm = GTK_DIALOG(gtk_dialog_new_with_buttons(
-            "Delete level",
-            GTK_WINDOW(open_window),
-            (GtkDialogFlags)(0),
-            "_Confirm",
-            GTK_RESPONSE_ACCEPT,
-            "_Cancel",
-            GTK_RESPONSE_REJECT,
-            NULL
-        ));
-        gtk_container_add(
-            GTK_CONTAINER(gtk_dialog_get_content_area(confirm)),
-            gtk_label_new("Are you sure you want to delete this level")
-        );
-        int r = gtk_dialog_run(confirm);
-        switch (r) {
-            case GTK_RESPONSE_ACCEPT: {
-                tms_infof("deleting uwu");
-
-                //get level id
-                GtkTreeIter iter;
-                GtkTreeSelection *sel = gtk_tree_view_get_selection(open_treeview);
-                if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-                    GValue val_id = {0, };
-                    gtk_tree_model_get_value(
-                        open_treemodel,
-                        &iter,
-                        OC_ID,
-                        &val_id
-                    );
-                    uint32_t level_id = g_value_get_uint(&val_id);
-                    tms_infof("will DELETE local level with id of %d RIGHT NOW!", level_id);
-
-                    //XXX: Levels in the "open" should always be local
-                    //XXX: Save id is only used for state saves (LEVEL_*_STATE), not levels
-                    if (G->delete_level(LEVEL_LOCAL, level_id, -1)) {
-                        //success
-                        tms_infof("deleted successfully :3");
-
-                        //remove from the list
-                        gtk_list_store_remove(GTK_LIST_STORE(open_treemodel), &iter);
-                    } else {
-                        //error
-                        tms_errorf("unlink failed");
-
-                        //show error dialog
-                        GtkDialog* error = GTK_DIALOG(gtk_message_dialog_new(
-                            GTK_WINDOW(open_window),
-                            GTK_DIALOG_DESTROY_WITH_PARENT,
-                            GTK_MESSAGE_ERROR,
-                            GTK_BUTTONS_CLOSE,
-                            "Failed to delete the level"
-                        ));
-                        g_signal_connect_swapped(
-                            G_OBJECT(error), "response",
-                            G_CALLBACK(gtk_widget_destroy),
-                            error
-                        );
-                        gtk_dialog_run(error);
-                    }
-                }
-                break;
-            }
-            default: {
-                gtk_widget_hide(GTK_WIDGET(confirm));
-            }
-        }
-        gtk_widget_destroy(GTK_WIDGET(confirm));
-    }
-}
-
-static gboolean open_row_button_press(GtkWidget *wdg, GdkEvent *event, gpointer userdata) {
-    if (event->type == GDK_BUTTON_PRESS) {
-        GdkEventButton *bevent = (GdkEventButton*)event;
-        if (bevent->button == 3) {
-            gtk_widget_show_all(GTK_WIDGET(open_menu));
-            gtk_menu_popup_at_pointer(open_menu, event);
-        }
-    }
-    return FALSE;
-}
-
 static void confirm_import(uint32_t level_id) {
     if (object_window_multiemitter)
         P.add_action(ACTION_MULTIEMITTER_SET, level_id);
@@ -2600,40 +1345,6 @@ gboolean on_open_state_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user
             /* A row is selected */
             open_state_row(&iter);
 
-        } else {
-            tms_infof("No row selected.");
-        }
-    }
-
-    return false;
-}
-
-gboolean on_open_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
-    if (btn_pressed(w, open_btn_cancel, user_data)) {
-        gtk_widget_hide(GTK_WIDGET(open_window));
-    } else if (btn_pressed(w, open_btn_open, user_data)) {
-        /* open ! */
-        GtkTreeSelection *sel;
-        GtkTreeIter       iter;
-        GValue            val = {0, };
-
-        sel = gtk_tree_view_get_selection(open_treeview);
-        if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-            /* A row is selected */
-
-            /* Fetch the value of the first column into `val' */
-            gtk_tree_model_get_value(open_treemodel,
-                                     &iter,
-                                     0,
-                                     &val);
-
-            uint32_t level_id = g_value_get_uint(&val);
-
-            tms_infof("Opening level %d from Open window", level_id);
-
-            P.add_action(ACTION_OPEN, level_id);
-
-            gtk_widget_hide(GTK_WIDGET(open_window));
         } else {
             tms_infof("No row selected.");
         }
@@ -3093,370 +1804,6 @@ gboolean on_open_state_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused)
     return false;
 }
 
-gboolean on_open_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    if (key->keyval == GDK_KEY_Escape)
-        gtk_widget_hide(w);
-    else if (key->keyval == GDK_KEY_Return) {
-        GtkTreeSelection *sel;
-        GtkTreeIter       iter;
-        GValue            val = {0, };
-
-        sel = gtk_tree_view_get_selection(open_treeview);
-        if (gtk_tree_selection_get_selected(sel, NULL, &iter)) {
-            /* A row is selected */
-
-            /* Fetch the value of the first column into `val' */
-            gtk_tree_model_get_value(open_treemodel,
-                                     &iter,
-                                     0,
-                                     &val);
-
-            uint32_t level_id = g_value_get_uint(&val);
-
-            tms_infof("Opening level %d from Open window", level_id);
-
-            P.add_action(ACTION_OPEN, level_id);
-
-            gtk_widget_hide(w);
-            return true;
-        } else {
-            tms_infof("No row selected.");
-        }
-    }
-
-    return false;
-}
-
-gboolean on_lvl_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    if (key->keyval == GDK_KEY_Escape) {
-        gtk_widget_hide(GTK_WIDGET(save_window));
-        return true;
-    }
-
-    if (key->keyval == GDK_KEY_Return) {
-        gtk_button_clicked(save_ok);
-        return true;
-    }
-
-    return false;
-}
-
-static void save_setting_row(struct table_setting_row *r) {
-    const struct setting_row_type &row = r->row;
-
-    switch (row.type) {
-        case ROW_CHECKBOX:
-            settings[r->setting_name]->v.b = (bool)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(r->wdg));
-            break;
-
-        case ROW_HSCALE:
-            settings[r->setting_name]->v.f = (float)gtk_range_get_value(GTK_RANGE(r->wdg));
-            break;
-
-        default:
-            tms_errorf("Unknown row type: %d", row.type);
-            break;
-    }
-}
-
-static void load_setting_row(struct table_setting_row *r) {
-    const struct setting_row_type &row = r->row;
-
-    switch (row.type) {
-        case ROW_CHECKBOX:
-            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(r->wdg), settings[r->setting_name]->v.b);
-            break;
-
-        case ROW_HSCALE:
-            gtk_range_set_value(GTK_RANGE(r->wdg), (double)settings[r->setting_name]->v.f);
-            break;
-
-        default:
-            tms_errorf("Unknown row type: %d", row.type);
-            break;
-    }
-}
-
-static void create_setting_row_widget(struct table_setting_row *r) {
-    const struct setting_row_type &row = r->row;
-
-    switch (row.type) {
-        case ROW_CHECKBOX:
-            r->wdg = gtk_check_button_new();
-            break;
-
-        case ROW_HSCALE:
-            r->wdg = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, row.min, row.max, row.step);
-            break;
-
-        default:
-            tms_errorf("Unknown row type: %d", row.type);
-            break;
-    }
-}
-
-/** --Settings **/
-void save_settings() {
-    P.can_reload_graphics = false;
-    P.can_set_settings = false;
-    P.add_action(ACTION_RELOAD_GRAPHICS, 0);
-    tms_infof("Saving...");
-
-    while (!P.can_set_settings) {
-        tms_debugf("Waiting for can_set_settings...");
-        SDL_Delay(1);
-    }
-
-    char tmp[64];
-    settings["enable_shadows"]->v.b = (bool)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(settings_enable_shadows));
-    settings["enable_ao"]->v.b = (bool)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(settings_enable_ao));
-    settings["enable_bloom"]->v.b = (bool)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(settings_enable_bloom));
-    settings["postprocess"]->v.b = (bool)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(settings_enable_bloom));
-    settings["shadow_quality"]->v.u8 = (uint8_t)gtk_spin_button_get_value(settings_shadow_quality);
-
-    /* Graphics */
-    for (int x=0; x<settings_num_graphic_rows; ++x) {
-        struct table_setting_row *r = &settings_graphic_rows[x];
-        save_setting_row(r);
-    }
-
-    settings["postprocess"]->v.b = settings["enable_bloom"]->v.b;
-
-    /* Audio */
-    for (int x=0; x<settings_num_audio_rows; ++x) {
-        struct table_setting_row *r = &settings_audio_rows[x];
-        save_setting_row(r);
-    }
-
-    /* Controls */
-    for (int x=0; x<settings_num_control_rows; ++x) {
-        struct table_setting_row *r = &settings_control_rows[x];
-        save_setting_row(r);
-    }
-
-    /* Interface */
-    for (int x=0; x<settings_num_interface_rows; ++x) {
-        struct table_setting_row *r = &settings_interface_rows[x];
-        save_setting_row(r);
-    }
-
-    /* Misc */
-    for (int x=0; x<settings_num_misc_rows; ++x) {
-        struct table_setting_row *r = &settings_misc_rows[x];
-        save_setting_row(r);
-    }
-
-#if 0
-    // TODO: Dynamic update of UI scale without restart
-    P.update_uiscale(settings["uiscale"]->v.f);
-#endif
-
-    _tms.touch_controls = settings["touch_controls"]->v.b;
-
-    sm::load_settings();
-
-    strcpy(tmp, get_cb_val(settings_shadow_res));
-    char *x = strchr(tmp, 'x');
-    if (x == NULL) {
-        settings["shadow_map_resx"]->v.i = _tms.window_width;
-        settings["shadow_map_resy"]->v.i = _tms.window_height;
-    } else {
-        char *res_x = (char*)malloc(64);
-        char *res_y = (char*)malloc(64);
-        int pos = x-tmp;
-
-        strncpy(res_x, tmp, pos);
-        strcpy(res_y, tmp+pos+1);
-        res_x[pos] = '\0';
-
-        //tms_infof("Setting shadow map to '%s'x'%s'", res_x, res_y);
-        settings["shadow_map_resx"]->v.i = atoi(res_x);
-        settings["shadow_map_resy"]->v.i = atoi(res_y);
-
-        free(res_x);
-        free(res_y);
-    }
-
-    strcpy(tmp, get_cb_val(settings_ao_res));
-    x = strchr(tmp, 'x');
-    if (x != NULL) {
-        char *res = (char*)malloc(64);
-        int pos = x-tmp;
-
-        strncpy(res, tmp, pos);
-        res[pos] = '\0';
-
-        //tms_infof("Setting ao map to '%s'x'%s'", res, res);
-        settings["ao_map_res"]->v.i = atoi(res);
-
-        free(res);
-    }
-
-    settings["control_type"]->v.u8 = gtk_combo_box_get_active(GTK_COMBO_BOX(settings_control_type));
-
-    if (!settings.save()) {
-        tms_errorf("Unable to save settings.");
-    } else {
-        tms_infof("Successfully saved settings to file.");
-    }
-
-    tms_infof("done!");
-
-    P.can_reload_graphics = true;
-}
-
-/* SETTINGS LOAD */
-void on_settings_show(GtkWidget *wdg, void *unused) {
-    char tmp[64];
-
-    gtk_spin_button_set_value(settings_shadow_quality, settings["shadow_quality"]->v.u8);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(settings_enable_shadows), settings["enable_shadows"]->v.b);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(settings_enable_ao), settings["enable_ao"]->v.b);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(settings_enable_bloom), settings["enable_bloom"]->v.b);
-
-    /* Graphics */
-    for (int x=0; x<settings_num_graphic_rows; ++x) {
-        struct table_setting_row *r = &settings_graphic_rows[x];
-        load_setting_row(r);
-    }
-
-    /* Audio */
-    for (int x=0; x<settings_num_audio_rows; ++x) {
-        struct table_setting_row *r = &settings_audio_rows[x];
-        load_setting_row(r);
-    }
-
-    /* Controls */
-    for (int x=0; x<settings_num_control_rows; ++x) {
-        struct table_setting_row *r = &settings_control_rows[x];
-        load_setting_row(r);
-    }
-
-    /* Interface */
-    for (int x=0; x<settings_num_interface_rows; ++x) {
-        struct table_setting_row *r = &settings_interface_rows[x];
-        load_setting_row(r);
-    }
-
-    /* Misc */
-    for (int x=0; x<settings_num_misc_rows; ++x) {
-        struct table_setting_row *r = &settings_misc_rows[x];
-        load_setting_row(r);
-    }
-
-    snprintf(tmp, 64, "%dx%d", settings["shadow_map_resx"]->v.i, settings["shadow_map_resy"]->v.i);
-    if (settings["shadow_map_resx"]->v.i == _tms.window_width && settings["shadow_map_resy"]->v.i == _tms.window_height) {
-        gtk_combo_box_set_active(GTK_COMBO_BOX(settings_shadow_res), 0);
-    } else {
-        gint index = find_cb_val(settings_shadow_res, tmp);
-        if (index != -1) {
-            gtk_combo_box_set_active(GTK_COMBO_BOX(settings_shadow_res), index);
-        } else {
-            gtk_combo_box_text_append_text(settings_shadow_res, tmp);
-
-            index = find_cb_val(settings_shadow_res, tmp);
-            if (index != -1) {
-                gtk_combo_box_set_active(GTK_COMBO_BOX(settings_shadow_res), index);
-            } else {
-                tms_errorf("Unable to get index for a value we just appended");
-            }
-        }
-    }
-
-    snprintf(tmp, 64, "%dx%d", settings["ao_map_res"]->v.i, settings["ao_map_res"]->v.i);
-    if (settings["ao_map_res"]->v.i == _tms.window_width && settings["ao_map_res"]->v.i == _tms.window_height) {
-        gtk_combo_box_set_active(GTK_COMBO_BOX(settings_ao_res), 0);
-    } else {
-        gint index = find_cb_val(settings_ao_res, tmp);
-        if (index != -1) {
-            gtk_combo_box_set_active(GTK_COMBO_BOX(settings_ao_res), index);
-        } else {
-            gtk_combo_box_text_append_text(settings_ao_res, tmp);
-
-            index = find_cb_val(settings_ao_res, tmp);
-            if (index != -1) {
-                gtk_combo_box_set_active(GTK_COMBO_BOX(settings_ao_res), index);
-            } else {
-                tms_errorf("Unable to get index for a value we just appended");
-            }
-        }
-    }
-
-    if (settings["control_type"]->v.u8 == 0)
-        strcpy(tmp, "Keyboard");
-    else if (settings["control_type"]->v.u8 == 1)
-        strcpy(tmp, "Keyboard+Mouse");
-    else // default to keyboard-only controls
-        strcpy(tmp, "Keyboard");
-
-    gint index = find_cb_val(settings_control_type, tmp);
-    if (index != -1) {
-        gtk_combo_box_set_active(GTK_COMBO_BOX(settings_control_type), index);
-    } else {
-        gtk_combo_box_text_append_text(settings_control_type, tmp);
-
-        index = find_cb_val(settings_control_type, tmp);
-        if (index != -1) {
-            gtk_combo_box_set_active(GTK_COMBO_BOX(settings_control_type), index);
-        } else {
-            tms_errorf("Unable to get index for a value we just appended");
-        }
-    }
-}
-
-/** --Save and Save as copy **/
-void on_save_show(GtkWidget *wdg, void *unused) {
-    char tmp[257];
-    memcpy(tmp, W->level.name, W->level.name_len);
-    tmp[W->level.name_len] = '\0';
-    gtk_entry_set_text(save_entry, tmp);
-
-    gtk_widget_grab_focus(GTK_WIDGET(save_entry));
-}
-
-gboolean on_save_btn_click(GtkWidget *w, GdkEventButton *ev, gpointer user_data) {
-    if (btn_pressed(w, save_cancel, user_data)) {
-        gtk_widget_hide(GTK_WIDGET(save_window));
-    } else if (btn_pressed(w, save_ok, user_data)) {
-        if (gtk_entry_get_text_length(save_entry) > 0) {
-            const char *name = gtk_entry_get_text(save_entry);
-            int name_len = strlen(name);
-            if (name_len == 0) {
-                ui::message("Your level must have a name.");
-                return false;
-            }
-            W->level.name_len = name_len;
-            memcpy(W->level.name, name, name_len);
-
-            tms_infof("set level name to %s", name);
-
-            if (save_type == SAVE_COPY)
-                P.add_action(ACTION_SAVE_COPY, 0);
-            else
-                P.add_action(ACTION_SAVE, 0);
-            gtk_widget_hide(GTK_WIDGET(save_window));
-        } else {
-            gtk_label_set_text(save_status, "You must enter a name!");
-        }
-    }
-
-    return false;
-}
-
-gboolean on_save_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    if (key->keyval == GDK_KEY_Escape)
-        gtk_widget_hide(GTK_WIDGET(save_window));
-    else if (key->keyval == GDK_KEY_Return) {
-        if (gtk_widget_has_focus(GTK_WIDGET(save_cancel))) {
-            on_save_btn_click(GTK_WIDGET(save_cancel), NULL, GINT_TO_POINTER(1));
-        } else {
-            on_save_btn_click(GTK_WIDGET(save_ok), NULL, GINT_TO_POINTER(1));
-        }
-    }
-
-    return false;
-}
-
 /** --Export **/
 void on_export_show(GtkWidget *wdg, void *unused) {
     gtk_entry_set_text(export_entry, "");
@@ -3491,104 +1838,6 @@ gboolean on_export_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
         } else {
             on_export_btn_click(GTK_WIDGET(export_ok), NULL, GINT_TO_POINTER(1));
         }
-    }
-
-    return false;
-}
-
-/** --Tips Dialog **/
-gboolean on_tips_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    if (key->keyval == GDK_KEY_Escape || key->keyval == GDK_KEY_Return) {
-        gtk_widget_hide(w);
-        return true;
-    }
-
-    return false;
-}
-
-/** --Info Dialog **/
-void on_info_show(GtkWidget *wdg, void *unused) {
-    gtk_label_set_text(info_text, _pass_info_descr);
-}
-
-gboolean on_info_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    if (key->keyval == GDK_KEY_Escape || key->keyval == GDK_KEY_Return) {
-        gtk_widget_hide(w);
-        return true;
-    }
-
-    return false;
-}
-
-/** --Confirm Dialog **/
-void on_confirm_show(GtkWidget *wdg, void *unused) {
-    gtk_label_set_markup(confirm_text, _pass_confirm_text);
-    gtk_button_set_label(confirm_button1, _pass_confirm_button1);
-    gtk_button_set_label(confirm_button2, _pass_confirm_button2);
-    if (_pass_confirm_button3)
-        gtk_button_set_label(confirm_button3, _pass_confirm_button3);
-    else
-        gtk_widget_hide(GTK_WIDGET(confirm_button3));
-
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(confirm_dna_sandbox_back), settings["dna_sandbox_back"]->v.b);
-
-    switch (confirm_data.confirm_type) {
-        case CONFIRM_TYPE_DEFAULT:
-            gtk_widget_hide(GTK_WIDGET(confirm_dna_sandbox_back));
-            break;
-
-        case CONFIRM_TYPE_BACK_SANDBOX:
-            gtk_widget_show(GTK_WIDGET(confirm_dna_sandbox_back));
-            break;
-    }
-
-    gtk_widget_set_size_request(GTK_WIDGET(confirm_dialog), -1, -1);
-}
-
-gboolean on_confirm_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    switch (key->keyval) {
-        case GDK_KEY_Escape:
-            gtk_dialog_response(confirm_dialog, GTK_RESPONSE_CANCEL);
-            break;
-
-        case GDK_KEY_Return:
-            if (!gtk_widget_has_focus(GTK_WIDGET(confirm_button2))) {
-                gtk_dialog_response(confirm_dialog, 1);
-            }
-            break;
-    }
-
-    return false;
-}
-
-/** --Alert Dialog **/
-void on_alert_show(GtkWidget *wdg, void *unused) {
-    gtk_message_dialog_set_markup(alert_dialog, _alert_text);
-}
-
-gboolean on_alert_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    switch (key->keyval) {
-        case GDK_KEY_Escape:
-            gtk_dialog_response(confirm_dialog, GTK_RESPONSE_CANCEL);
-            break;
-
-        case GDK_KEY_Return:
-            gtk_dialog_response(confirm_dialog, GTK_RESPONSE_ACCEPT);
-            break;
-    }
-
-    return false;
-}
-
-/** --Error Dialog **/
-void on_error_show(GtkWidget *wdg, void *unused) {
-    gtk_label_set_text(error_text, _pass_error_text);
-}
-
-gboolean on_error_keypress(GtkWidget *w, GdkEventKey *key, gpointer unused) {
-    if (key->keyval == GDK_KEY_Escape || key->keyval == GDK_KEY_Return) {
-        gtk_widget_hide(w);
-        return true;
     }
 
     return false;
@@ -3661,8 +1910,6 @@ void on_properties_show(GtkWidget *wdg, void *unused) {
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(lvl_radio_adventure), (W->level.type == LCAT_ADVENTURE));
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(lvl_radio_puzzle), (W->level.type == LCAT_PUZZLE));
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(lvl_radio_custom), (W->level.type == LCAT_CUSTOM));
-
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(publish_locked), W->level.visibility == LEVEL_LOCKED);
 
     refresh_borders();
 
@@ -3759,14 +2006,6 @@ void activate_open_state(GtkMenuItem *i, gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(open_state_window));
 }
 
-void activate_open(GtkMenuItem *i, gpointer unused) {
-    gtk_widget_show_all(GTK_WIDGET(open_window));
-}
-
-void activate_prompt_settings(GtkMenuItem *i, gpointer unused) {
-    gtk_widget_show_all(GTK_WIDGET(prompt_settings_dialog));
-}
-
 void activate_object(GtkMenuItem *i, gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(object_window));
 }
@@ -3785,83 +2024,6 @@ void activate_restart_level(GtkMenuItem *i, gpointer unused) {
 
 void activate_back(GtkMenuItem *i, gpointer unused) {
     P.add_action(ACTION_BACK, 0);
-}
-
-void activate_save(GtkMenuItem *i, gpointer unused) {
-    bool ask_for_new_name = false;
-
-    if (W->level.name_len == 0 || strcmp(W->level.name, "<no name>") == 0) {
-        ask_for_new_name = true;
-    }
-
-    if (ask_for_new_name) {
-        save_type = SAVE_REGULAR;
-        gtk_widget_show_all(GTK_WIDGET(save_window));
-    } else {
-        P.add_action(ACTION_SAVE, 0);
-    }
-}
-
-void activate_save_copy(GtkMenuItem *i, gpointer unused) {
-    save_type = SAVE_COPY;
-    gtk_widget_show_all(GTK_WIDGET(save_window));
-}
-
-/* When activate_settings is called normally, userdata is an uint8_t with the value 0.
- * That means the graphics should reload and return to the G screen
- * When activate_settings is called via open_dialog(DIALOG_SETTINGS), userdata is 1.
- * That means RELOAD_GRAPHICS should return to the main menu instead. */
-void activate_settings(GtkMenuItem *i, gpointer userdata) {
-    gint result = gtk_dialog_run(settings_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        save_settings();
-    }
-
-    gtk_widget_hide(GTK_WIDGET(settings_dialog));
-}
-
-void activate_publish(GtkMenuItem *i, gpointer unused) {
-    gint result = gtk_dialog_run(publish_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        const char *name = gtk_entry_get_text(publish_name);
-        int name_len = strlen(name);
-        if (name_len == 0) {
-            ui::message("You cannot publish a level without a name.");
-            activate_publish(0,0);
-            return;
-        }
-        W->level.name_len = name_len;
-        memcpy(W->level.name, name, name_len);
-
-        GtkTextIter start, end;
-        GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(publish_descr);
-        char *descr;
-
-        gtk_text_buffer_get_bounds(text_buffer, &start, &end);
-
-        descr = gtk_text_buffer_get_text(text_buffer, &start, &end, FALSE);
-        int descr_len = strlen(descr);
-
-        if (descr_len > 0) {
-            W->level.descr_len = descr_len;
-            W->level.descr = (char*)realloc(W->level.descr, descr_len+1);
-
-            memcpy(W->level.descr, descr, descr_len);
-            descr[descr_len] = '\0';
-        } else
-            W->level.descr_len = 0;
-
-        W->level.visibility = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(publish_locked)) ? LEVEL_LOCKED : LEVEL_VISIBLE;
-
-        tms_infof("Setting level name to:  %s", name);
-        tms_infof("Setting level descr to: %s", descr);
-
-        P.add_action(ACTION_PUBLISH, 0);
-    }
-
-    gtk_widget_hide(GTK_WIDGET(publish_dialog));
 }
 
 /** --Multi config **/
@@ -4160,117 +2322,6 @@ int _gtk_loop(void *p) {
 
         add_text_column(open_state_treeview, "Name", OSC_ID);
         add_text_column(open_state_treeview, "Modified", OSC_NAME);
-    }
-
-    /** --Open level **/
-    {
-        open_window = new_window_defaults("Open level", &on_open_show, &on_open_keypress);
-        gtk_window_set_default_size(GTK_WINDOW(open_window), 600, 600);
-        gtk_widget_set_size_request(GTK_WIDGET(open_window), 600, 600);
-        gtk_window_set_resizable(GTK_WINDOW(open_window), true);
-
-        open_menu = GTK_MENU(gtk_menu_new());
-
-        open_menu_information = add_menuitem_m(open_menu, "_Information", open_menu_item_activated);
-        open_menu_delete = add_menuitem_m(open_menu, "_Delete", open_menu_item_activated);
-
-        GtkBox *content = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
-
-        GtkListStore *store;
-
-        store = gtk_list_store_new(OC_NUM_COLUMNS, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
-
-        open_treemodel = GTK_TREE_MODEL(store);
-
-        gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(store), OC_DATE, GTK_SORT_DESCENDING);
-
-        open_treeview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(open_treemodel));
-        gtk_tree_view_set_search_column(open_treeview, OC_NAME);
-        g_signal_connect(GTK_WIDGET(open_treeview), "row-activated", G_CALLBACK(activate_open_row), 0);
-        g_signal_connect(GTK_WIDGET(open_treeview), "button-press-event", G_CALLBACK(open_row_button_press), 0);
-
-        GtkWidget *ew = gtk_scrolled_window_new(0,0);
-        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (ew),
-                      GTK_POLICY_AUTOMATIC,
-                      GTK_POLICY_AUTOMATIC);
-
-        GtkButtonBox *button_box = GTK_BUTTON_BOX(gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL));
-        gtk_button_box_set_layout(GTK_BUTTON_BOX(button_box), GTK_BUTTONBOX_END);
-        gtk_box_set_spacing(GTK_BOX(button_box), 5);
-
-        /* Open button */
-        open_btn_open   = GTK_BUTTON(gtk_button_new_with_label("Open"));
-        g_signal_connect(open_btn_open, "clicked",
-                G_CALLBACK(on_open_btn_click), 0);
-
-        open_btn_cancel = GTK_BUTTON(gtk_button_new_with_label("Cancel"));
-        g_signal_connect(open_btn_cancel, "clicked",
-                G_CALLBACK(on_open_btn_click), 0);
-
-        gtk_container_add(GTK_CONTAINER(button_box), GTK_WIDGET(open_btn_open));
-        gtk_container_add(GTK_CONTAINER(button_box), GTK_WIDGET(open_btn_cancel));
-
-        gtk_box_pack_start(content, GTK_WIDGET(ew), 1, 1, 0);
-        gtk_box_pack_start(content, GTK_WIDGET(button_box), 0, 0, 0);
-
-        gtk_container_add(GTK_CONTAINER(ew), GTK_WIDGET(open_treeview));
-        gtk_container_add(GTK_CONTAINER(open_window), GTK_WIDGET(content));
-
-        add_text_column(open_treeview, "ID", OC_ID);
-        add_text_column(open_treeview, "Name", OC_NAME);
-        add_text_column(open_treeview, "Version", OC_VERSION);
-        add_text_column(open_treeview, "Modified", OC_DATE);
-    }
-
-    /** --Save and Save as copy **/
-    {
-        save_window = new_window_defaults("Save level", &on_save_show, &on_save_keypress);
-        gtk_window_set_default_size(GTK_WINDOW(save_window), 400, 100);
-        gtk_widget_set_size_request(GTK_WIDGET(save_window), 400, 100);
-
-        GtkBox *content = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
-        GtkBox *entries = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
-        GtkBox *bottom_content = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-
-        /* Name entry */
-        save_entry = GTK_ENTRY(gtk_entry_new());
-        gtk_entry_set_max_length(save_entry, 255);
-        gtk_entry_set_activates_default(save_entry, true);
-
-        /* Name label */
-        gtk_box_pack_start(GTK_BOX(entries), new_lbl("<b>Enter a name for this level</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(entries), GTK_WIDGET(save_entry), false, false, 0);
-
-        /* Buttons and button box */
-        GtkButtonBox *button_box = GTK_BUTTON_BOX(gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL));
-        gtk_button_box_set_layout(GTK_BUTTON_BOX(button_box), GTK_BUTTONBOX_END);
-        gtk_box_set_spacing(GTK_BOX(button_box), 5);
-
-        /* OK button */
-        save_ok = GTK_BUTTON(gtk_button_new_with_label("Save"));
-        g_signal_connect(save_ok, "clicked",
-                G_CALLBACK(on_save_btn_click), 0);
-
-        /* Cancel button */
-        save_cancel = GTK_BUTTON(gtk_button_new_with_label("Cancel"));
-        g_signal_connect(save_cancel, "clicked",
-                G_CALLBACK(on_save_btn_click), 0);
-
-        gtk_container_add(GTK_CONTAINER(button_box), GTK_WIDGET(save_ok));
-        gtk_container_add(GTK_CONTAINER(button_box), GTK_WIDGET(save_cancel));
-
-        /* Status label */
-        save_status = GTK_LABEL(gtk_label_new(0));
-        gtk_label_set_xalign(GTK_LABEL(save_status), 0.0f);
-        gtk_label_set_yalign(GTK_LABEL(save_status), 0.5f);
-
-        gtk_box_pack_start(bottom_content, GTK_WIDGET(save_status), 1, 1, 0);
-        gtk_box_pack_start(bottom_content, GTK_WIDGET(button_box), 0, 0, 0);
-
-        gtk_box_pack_start(content, GTK_WIDGET(entries), 1, 1, 0);
-        gtk_box_pack_start(content, GTK_WIDGET(bottom_content), 0, 0, 0);
-
-        gtk_container_add(GTK_CONTAINER(save_window), GTK_WIDGET(content));
     }
 
     /** --Export **/
@@ -4660,94 +2711,6 @@ int _gtk_loop(void *p) {
         gtk_widget_show_all(GTK_WIDGET(content));
     }
 
-    /** --Publish **/
-    {
-        publish_dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-                "Publish",
-                0, (GtkDialogFlags)(0)/*GTK_DIALOG_MODAL*/,
-                "Publish", GTK_RESPONSE_ACCEPT,
-                "_Cancel", GTK_RESPONSE_REJECT,
-                NULL));
-
-        apply_dialog_defaults(publish_dialog);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(publish_dialog));
-
-        publish_name = GTK_ENTRY(gtk_entry_new());
-        publish_descr = GTK_TEXT_VIEW(gtk_text_view_new());
-        gtk_text_view_set_wrap_mode(publish_descr, GTK_WRAP_WORD);
-
-        GtkBox *box_locked = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-        publish_locked = GTK_CHECK_BUTTON(gtk_check_button_new_with_label("Locked"));
-
-        gtk_box_pack_start(box_locked, GTK_WIDGET(publish_locked), 1, 1, 0);
-        gtk_box_pack_start(box_locked, help_widget("Disallow other players from seeing this level outside of packages."), 0, 0, 0);
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Level name:</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(publish_name), false, false, 0);
-
-        GtkWidget *ew = gtk_scrolled_window_new(NULL, NULL);
-        gtk_scrolled_window_set_policy(
-            GTK_SCROLLED_WINDOW(ew),
-            GTK_POLICY_AUTOMATIC,
-            GTK_POLICY_AUTOMATIC
-        );
-        gtk_widget_set_size_request(GTK_WIDGET(ew), 500, 200);
-        gtk_container_add(GTK_CONTAINER(ew), GTK_WIDGET(publish_descr));
-
-        GtkWidget *fr = gtk_frame_new(NULL);
-        gtk_container_add(GTK_CONTAINER(fr), GTK_WIDGET(ew));
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Level description:</b>"), false, false, 0);
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(fr), false, false, 0);
-
-        /* Locked box */
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(box_locked), false, false, 0);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        g_signal_connect(publish_dialog, "show", G_CALLBACK(on_publish_show), 0);
-
-        /* TODO: add key-press-events to everything but the cancel-button */
-    }
-
-    /** --Key Listener **/
-    {
-        dialog = new_dialog_defaults("Key Listener", &on_key_listener_show);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        key_listener_ls = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_UINT);
-
-        GtkTreeIter iter;
-        for (int x=0; x<TMS_KEY__NUM; ++x) {
-            const char *s = key_names[x];
-
-            if (s) {
-                gtk_list_store_append(key_listener_ls, &iter);
-                gtk_list_store_set(key_listener_ls, &iter,
-                        0, s,
-                        1, x,
-                        -1
-                        );
-            }
-        }
-
-        key_listener_cb = GTK_COMBO_BOX(gtk_combo_box_new_with_model(GTK_TREE_MODEL(key_listener_ls)));
-
-        GtkCellRenderer *cell = gtk_cell_renderer_text_new();
-        gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(key_listener_cb), cell, TRUE);
-        gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(key_listener_cb), cell, "text", 0, NULL);
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Key</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(key_listener_cb), false, false, 10);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        key_listener_dialog = dialog;
-    }
-
     /** --Digital display **/
     {
         digi_dialog = new_dialog_defaults("Display settings", &on_digi_show);
@@ -4854,63 +2817,6 @@ int _gtk_loop(void *p) {
         gtk_widget_show_all(GTK_WIDGET(content));
     }
 
-    /** --Item **/
-    {
-        dialog = new_dialog_defaults("Item", &on_item_show);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        item_cb = new_item_cb();
-        /* Items will be filled on show, to keep a refreshed list of unlocked items. */
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Item type</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(item_cb), false, false, 10);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        item_dialog = dialog;
-    }
-
-    /** --Vendor **/
-    {
-        dialog = new_dialog_defaults("Vendor", &on_vendor_show);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        vendor_amount = GTK_SPIN_BUTTON(gtk_spin_button_new(
-                    GTK_ADJUSTMENT(gtk_adjustment_new(1, 1, 65535u, 1, 1, 0)),
-                    1, 0));
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Num. items required</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(vendor_amount), false, false, 10);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        vendor_dialog = dialog;
-    }
-
-    /** --Soundman **/
-    {
-        dialog = new_dialog_defaults("Sound Manager", &on_soundman_show);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        soundman_cb = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-        for (int x=0; x<SND__NUM; x++) {
-            gtk_combo_box_text_append_text(soundman_cb, sm::sound_lookup[x]->name);
-        }
-
-        soundman_catch_all = GTK_CHECK_BUTTON(gtk_check_button_new_with_label("Catch all"));
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Sound type</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(soundman_cb), false, false, 10);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(soundman_catch_all), false, false, 10);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        soundman_dialog = dialog;
-    }
-
     /** --SFX Emitter 2 **/
     {
         dialog = new_dialog_defaults("SFX Emitter", &on_sfx2_show);
@@ -4939,25 +2845,6 @@ int _gtk_loop(void *p) {
         gtk_widget_show_all(GTK_WIDGET(content));
 
         sfx2_dialog = dialog;
-    }
-
-    /** --Faction **/
-    {
-        dialog = new_dialog_defaults("Set Faction", &on_faction_show);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        faction_cb = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-        for (int x=0; x<NUM_FACTIONS; x++) {
-            gtk_combo_box_text_append_text(faction_cb, factions[x].name);
-        }
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Faction</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(faction_cb), false, false, 10);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        faction_dialog = dialog;
     }
 
     /** --Factory **/
@@ -5230,331 +3117,6 @@ int _gtk_loop(void *p) {
         gtk_widget_show_all(GTK_WIDGET(content));
     }
 
-    /** --FX Emitter **/
-    {
-        fxemitter_dialog = new_dialog_defaults("FX Emitter", &on_fxemitter_show);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(fxemitter_dialog));
-
-        for (int x=0; x<4; x++) {
-            fxemitter_cb[x] = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-            gtk_combo_box_text_append_text(fxemitter_cb[x], "");
-            gtk_combo_box_text_append_text(fxemitter_cb[x], "Explosion");
-            gtk_combo_box_text_append_text(fxemitter_cb[x], "Highlight");
-            gtk_combo_box_text_append_text(fxemitter_cb[x], "Destroy connections");
-            gtk_combo_box_text_append_text(fxemitter_cb[x], "Smoke");
-            gtk_combo_box_text_append_text(fxemitter_cb[x], "Magic");
-            gtk_combo_box_text_append_text(fxemitter_cb[x], "Break");
-
-            gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Effect</b>"), false, false, 0);
-            gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(fxemitter_cb[x]), false, false, 10);
-        }
-
-        GtkBox *slider_container = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
-        gtk_box_set_homogeneous(slider_container, true);
-        fxemitter_radius = GTK_SCALE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0.125, 5, 0.125));
-        gtk_box_pack_start(GTK_BOX(slider_container), new_lbl("<b>Radius</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(slider_container), GTK_WIDGET(fxemitter_radius), true, true, 10);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(slider_container), false, false, 10);
-
-        slider_container = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
-        gtk_box_set_homogeneous(slider_container, true);
-        fxemitter_count = GTK_SCALE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 1, 20, 1));
-        gtk_box_pack_start(GTK_BOX(slider_container), new_lbl("<b>Count</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(slider_container), GTK_WIDGET(fxemitter_count), true, true, 10);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(slider_container), false, false, 10);
-
-        slider_container = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
-        gtk_box_set_homogeneous(slider_container, true);
-        fxemitter_interval = GTK_SCALE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0.05, 1, 0.05));
-        gtk_box_pack_start(GTK_BOX(slider_container), new_lbl("<b>Interval</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(slider_container), GTK_WIDGET(fxemitter_interval), true, true, 10);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(slider_container), false, false, 10);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-    }
-
-    /** --Cam targeter **/
-    {
-        dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-                "Cam targeter properties",
-                0, (GtkDialogFlags)(0)/*GTK_DIALOG_MODAL*/,
-                NULL, NULL));
-
-        apply_dialog_defaults(dialog);
-
-        camtargeter_save = GTK_BUTTON(
-                gtk_dialog_add_button(
-                    dialog,
-                    "_Save", GTK_RESPONSE_ACCEPT)
-                );
-        camtargeter_cancel = GTK_BUTTON(
-                gtk_dialog_add_button(
-                    dialog,
-                    "_Cancel", GTK_RESPONSE_CANCEL)
-                );
-
-        g_signal_connect(dialog, "show", G_CALLBACK(on_camtargeter_show), 0);
-        g_signal_connect(dialog, "key-press-event", G_CALLBACK(on_camtargeter_keypress), 0);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        camtargeter_mode = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-        gtk_combo_box_text_append_text(camtargeter_mode, "Smooth follow");
-        gtk_combo_box_text_append_text(camtargeter_mode, "Snap to object");
-        gtk_combo_box_text_append_text(camtargeter_mode, "Relative follow");
-        gtk_combo_box_text_append_text(camtargeter_mode, "Linear follow");
-
-        camtargeter_offset_mode = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-        gtk_combo_box_text_append_text(camtargeter_offset_mode, "Global");
-        gtk_combo_box_text_append_text(camtargeter_offset_mode, "Relative");
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Follow mode</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(camtargeter_mode), false, false, 10);
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Offset mode</b>"), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(camtargeter_offset_mode), false, false, 10);
-
-        float min = -150.f;
-        float max =  150.f;
-
-        {
-            GtkBox *hbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-            GtkRange *range = 0;
-            GtkEntry *entry = 0;
-            GtkWidget *l = 0;
-
-            range = GTK_RANGE(gtk_scale_new(
-                GTK_ORIENTATION_HORIZONTAL,
-                GTK_ADJUSTMENT(gtk_adjustment_new(0.0, min, max, 0.001, 1.0, 0.0))
-            ));
-
-            g_signal_connect(range, "value-changed", G_CALLBACK(camtargeter_value_changed), 0);
-
-            entry = GTK_ENTRY(gtk_entry_new());
-            gtk_entry_set_width_chars(entry, 7);
-
-            g_signal_connect(entry, "changed", G_CALLBACK(camtargeter_entry_changed), 0);
-            g_signal_connect(entry, "insert-text", G_CALLBACK(camtargeter_insert_text), 0);
-
-            gtk_scale_set_draw_value(GTK_SCALE(range), false);
-
-            camtargeter_x_offset = range;
-            camtargeter_x_offset_entry = entry;
-            l = gtk_label_new("X offset");
-
-            gtk_box_pack_start(GTK_BOX(hbox), l, false, false, 0);
-            gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(range), true, true, 0);
-            gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(entry), false, false, 0);
-
-            gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(hbox), false, false, 0);
-        }
-
-        {
-            GtkBox *hbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-            GtkRange *range = 0;
-            GtkEntry *entry = 0;
-            GtkWidget *l = 0;
-
-            range = GTK_RANGE(gtk_scale_new(
-                GTK_ORIENTATION_HORIZONTAL,
-                GTK_ADJUSTMENT(gtk_adjustment_new(0.0, min, max, 0.001, 1.0, 0.0))
-            ));
-
-            g_signal_connect(range, "value-changed", G_CALLBACK(camtargeter_value_changed), 0);
-
-            entry = GTK_ENTRY(gtk_entry_new());
-            gtk_entry_set_width_chars(entry, 7);
-
-            g_signal_connect(entry, "changed", G_CALLBACK(camtargeter_entry_changed), 0);
-            g_signal_connect(entry, "insert-text", G_CALLBACK(camtargeter_insert_text), 0);
-
-            gtk_scale_set_draw_value(GTK_SCALE(range), false);
-
-            camtargeter_y_offset = range;
-            camtargeter_y_offset_entry = entry;
-            l = gtk_label_new("Y offset");
-
-            gtk_box_pack_start(GTK_BOX(hbox), l, false, false, 0);
-            gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(range), true, true, 0);
-            gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(entry), false, false, 0);
-
-            gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(hbox), false, false, 0);
-        }
-
-        gtk_widget_set_size_request(GTK_WIDGET(dialog), 350, -1);
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        camtargeter_dialog = dialog;
-    }
-
-    /** --Autosave Dialog **/
-    {
-        dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-                "Autosave prompt",
-                0, (GtkDialogFlags)(0),/*GTK_MODAL*/
-                "Open", GTK_RESPONSE_YES,
-                "Remove", GTK_RESPONSE_NO,
-                NULL));
-
-        apply_dialog_defaults(dialog);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        GtkWidget *l = gtk_label_new("Autosave file detected. Open or remove?");
-        gtk_box_pack_start(GTK_BOX(content), l, false, false, 0);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        autosave_dialog = dialog;
-    }
-
-    /** --Tips Dialog **/
-    {
-        tips_dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-                "Tips & Tricks",
-                0, (GtkDialogFlags)(0),/*GTK_MODAL*/
-                "OK", GTK_RESPONSE_CLOSE,
-                "Next", GTK_RESPONSE_APPLY,
-                "More tips & tricks", GTK_RESPONSE_YES,
-                NULL));
-
-        apply_dialog_defaults(tips_dialog, on_tips_show, on_tips_keypress);
-
-        gtk_window_set_default_size(GTK_WINDOW(tips_dialog), 425, 400);
-
-        tips_hide = GTK_CHECK_BUTTON(gtk_check_button_new_with_label("Don't show this dialog again"));
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(tips_dialog));
-
-        tips_text = GTK_LABEL(gtk_label_new(0));
-        gtk_label_set_selectable(tips_text, 1);
-        GtkWidget *ew = gtk_scrolled_window_new(0,0);
-        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (ew),
-                      GTK_POLICY_AUTOMATIC,
-                      GTK_POLICY_AUTOMATIC);
-        gtk_container_add(GTK_CONTAINER(ew), GTK_WIDGET(tips_text));
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(ew), 1, 1, 3);
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(tips_hide), 0, 0, 3);
-
-        gtk_label_set_line_wrap(GTK_LABEL(tips_text), true);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-    }
-
-    /** --Info Dialog **/
-    {
-        info_dialog = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
-        gtk_container_set_border_width(GTK_CONTAINER(info_dialog), 10);
-        gtk_window_set_title(GTK_WINDOW(info_dialog), "Info");
-        gtk_window_set_resizable(GTK_WINDOW(info_dialog), true);
-        gtk_window_set_default_size(GTK_WINDOW(info_dialog), 425, 400);
-
-        apply_dialog_defaults(info_dialog, on_info_show, on_info_keypress);
-
-        info_text = GTK_LABEL(gtk_label_new(0));
-        gtk_label_set_selectable(info_text, 1);
-        GtkWidget *ew = gtk_scrolled_window_new(0,0);
-        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (ew),
-                      GTK_POLICY_AUTOMATIC,
-                      GTK_POLICY_AUTOMATIC);
-        gtk_container_add(GTK_CONTAINER(ew), GTK_WIDGET(info_text));
-
-        gtk_container_add(GTK_CONTAINER(info_dialog), GTK_WIDGET(ew));
-
-        gtk_label_set_line_wrap(GTK_LABEL(info_text), true);
-    }
-
-    /** --Error Dialog **/
-    {
-        error_dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-                "Errors",
-                0, (GtkDialogFlags)(0),/*GTK_MODAL*/
-                "OK", GTK_RESPONSE_ACCEPT,
-                NULL));
-
-        apply_dialog_defaults(error_dialog, on_error_show, on_error_keypress);
-
-        gtk_window_set_default_size(GTK_WINDOW(error_dialog), 425, 400);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(error_dialog));
-
-        error_text = GTK_LABEL(gtk_label_new(0));
-        gtk_label_set_selectable(error_text, 1);
-        GtkWidget *ew = gtk_scrolled_window_new(0,0);
-        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (ew),
-                      GTK_POLICY_AUTOMATIC,
-                      GTK_POLICY_AUTOMATIC);
-        gtk_container_add(GTK_CONTAINER(ew), GTK_WIDGET(error_text));
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(ew), 1, 1, 3);
-
-        gtk_label_set_line_wrap(GTK_LABEL(error_text), true);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-    }
-
-    /** --Confirm Dialog **/
-    {
-        dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-                "Confirm",
-                0, (GtkDialogFlags)(0),/*GTK_MODAL*/
-                NULL, NULL));
-
-        apply_dialog_defaults(dialog, on_confirm_show, on_confirm_keypress);
-
-        confirm_button1 = GTK_BUTTON(
-                gtk_dialog_add_button(
-                    dialog,
-                    "Button1", 1)
-                );
-        confirm_button2 = GTK_BUTTON(
-                gtk_dialog_add_button(
-                    dialog,
-                    "Button2", 2)
-                );
-
-        confirm_button3 = GTK_BUTTON(
-                gtk_dialog_add_button(
-                    dialog,
-                    "Button3", 3)
-                );
-
-        confirm_dna_sandbox_back = new_check_button("Do not show again");
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        confirm_text = GTK_LABEL(gtk_label_new(0));
-        gtk_label_set_selectable(confirm_text, 1);
-        GtkWidget *ew = gtk_scrolled_window_new(0,0);
-        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (ew),
-                      GTK_POLICY_AUTOMATIC,
-                      GTK_POLICY_AUTOMATIC);
-        gtk_container_add(GTK_CONTAINER(ew), GTK_WIDGET(confirm_text));
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(ew), 1, 1, 3);
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(confirm_dna_sandbox_back), 0, 0, 3);
-
-        gtk_label_set_line_wrap(GTK_LABEL(confirm_text), true);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        confirm_dialog = dialog;
-    }
-
-    /** --Alert Dialog **/
-    {
-        dialog = GTK_DIALOG(gtk_message_dialog_new(
-                0, (GtkDialogFlags)(0),
-                GTK_MESSAGE_INFO,
-                GTK_BUTTONS_CLOSE,
-                "Alert"));
-
-        apply_dialog_defaults(dialog, on_alert_show, on_alert_keypress);
-
-        alert_dialog = GTK_MESSAGE_DIALOG(dialog);
-    }
-
     /** --Multi config **/
     {
         multi_config_window = new_window_defaults("Multi config", &on_multi_config_show);
@@ -5670,218 +3232,6 @@ int _gtk_loop(void *p) {
         gtk_box_pack_start(content, GTK_WIDGET(button_box), 0, 0, 0);
 
         gtk_container_add(GTK_CONTAINER(multi_config_window), GTK_WIDGET(content));
-    }
-
-    /** --Settings **/
-    {
-        settings_dialog = new_dialog_defaults("Settings", &on_settings_show);
-        gtk_widget_set_size_request(GTK_WIDGET(settings_dialog), 550, -1);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(settings_dialog));
-
-        GtkNotebook *nb = GTK_NOTEBOOK(gtk_notebook_new());
-        gtk_notebook_set_tab_pos(nb, GTK_POS_TOP);
-
-        GtkGrid *tbl_graphics;
-        {
-            GtkGrid *tbl = create_settings_table();
-
-            int y = -1;
-
-            settings_enable_shadows = GTK_CHECK_BUTTON(gtk_check_button_new());
-            settings_shadow_quality = GTK_SPIN_BUTTON(gtk_spin_button_new(
-                    GTK_ADJUSTMENT(gtk_adjustment_new(1, 0, 1, 1, 1, 0)),
-                    1,0));
-            settings_shadow_res = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-            gtk_combo_box_text_append_text(settings_shadow_res, "(native)");
-            gtk_combo_box_text_append_text(settings_shadow_res, "2048x2048");
-            gtk_combo_box_text_append_text(settings_shadow_res, "2048x1024");
-            gtk_combo_box_text_append_text(settings_shadow_res, "1024x1024");
-            gtk_combo_box_text_append_text(settings_shadow_res, "1024x512");
-            gtk_combo_box_text_append_text(settings_shadow_res, "512x512");
-            gtk_combo_box_text_append_text(settings_shadow_res, "512x256");
-
-            settings_enable_ao = GTK_CHECK_BUTTON(gtk_check_button_new());
-            settings_ao_res = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-            gtk_combo_box_text_append_text(settings_ao_res, "512x512");
-            gtk_combo_box_text_append_text(settings_ao_res, "256x256");
-            gtk_combo_box_text_append_text(settings_ao_res, "128x128");
-
-            settings_enable_bloom = GTK_CHECK_BUTTON(gtk_check_button_new());
-
-            add_setting_row(
-                tbl, ++y,
-                "Enable shadows",
-                GTK_WIDGET(settings_enable_shadows)
-            );
-
-            add_setting_row(
-                tbl, ++y,
-                "Shadow quality",
-                GTK_WIDGET(settings_shadow_quality),
-                "Shadow quality 0: Sharp\nShadow quality 1: Smooth"
-            );
-
-            add_setting_row(
-                tbl, ++y,
-                "Shadow resolution",
-                GTK_WIDGET(settings_shadow_res)
-            );
-
-            add_setting_row(
-                tbl, ++y,
-                "Enable AO",
-                GTK_WIDGET(settings_enable_ao)
-            );
-
-            add_setting_row(
-                tbl, ++y,
-                "AO map resolution",
-                GTK_WIDGET(settings_ao_res)
-            );
-
-            for (int x=0; x<settings_num_graphic_rows; ++x) {
-                struct table_setting_row *r = &settings_graphic_rows[x];
-                create_setting_row_widget(r);
-                add_setting_row(
-                    tbl, ++y,
-                    r->label,
-                    r->wdg,
-                    r->help
-                );
-            }
-
-            tbl_graphics = tbl;
-        }
-
-        GtkGrid *tbl_audio;
-        {
-            GtkGrid *tbl = create_settings_table();
-            int y = -1;
-
-            for (int x=0; x<settings_num_audio_rows; ++x) {
-                struct table_setting_row *r = &settings_audio_rows[x];
-
-                create_setting_row_widget(r);
-
-                add_setting_row(
-                    tbl, ++y,
-                    r->label,
-                    r->wdg,
-                    r->help
-                );
-            }
-
-            tbl_audio = tbl;
-        }
-
-        GtkGrid *tbl_controls;
-        {
-            GtkGrid *tbl = create_settings_table();
-
-            int y = -1;
-
-            settings_control_type = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-            gtk_combo_box_text_append_text(settings_control_type, "Keyboard");
-            gtk_combo_box_text_append_text(settings_control_type, "Keyboard+Mouse");
-
-            add_setting_row(
-                tbl, y,
-                "Control type",
-                GTK_WIDGET(settings_control_type)
-            );
-
-            for (int x=0; x<settings_num_control_rows; ++x) {
-                struct table_setting_row *r = &settings_control_rows[x];
-                create_setting_row_widget(r);
-                add_setting_row(
-                    tbl, ++y,
-                    r->label,
-                    r->wdg,
-                    r->help
-                );
-            }
-
-            tbl_controls = tbl;
-        }
-
-        GtkGrid *tbl_interface;
-        {
-            GtkGrid *tbl = create_settings_table();
-
-            int y = -1;
-
-            for (int x=0; x<settings_num_interface_rows; ++x) {
-                struct table_setting_row *r = &settings_interface_rows[x];
-
-                create_setting_row_widget(r);
-
-                add_setting_row(
-                    tbl, ++y,
-                    r->label,
-                    r->wdg,
-                    r->help
-                );
-            }
-
-            tbl_interface = tbl;
-        }
-
-        GtkGrid *tbl_misc;
-        {
-            GtkGrid *tbl = create_settings_table();
-
-            int y = -1;
-
-            for (int x=0; x<settings_num_misc_rows; ++x) {
-                struct table_setting_row *r = &settings_misc_rows[x];
-
-                create_setting_row_widget(r);
-
-                add_setting_row(
-                    tbl, ++y,
-                    r->label,
-                    r->wdg,
-                    r->help
-                );
-            }
-
-            tbl_misc = tbl;
-        }
-
-        gtk_notebook_append_page(nb, GTK_WIDGET(tbl_graphics),  new_lbl("<b>Graphics</b>"));
-        gtk_notebook_append_page(nb, GTK_WIDGET(tbl_audio),     new_lbl("<b>Audio</b>"));
-        gtk_notebook_append_page(nb, GTK_WIDGET(tbl_controls),  new_lbl("<b>Controls</b>"));
-        gtk_notebook_append_page(nb, GTK_WIDGET(tbl_interface), new_lbl("<b>Interface</b>"));
-        gtk_notebook_append_page(nb, GTK_WIDGET(tbl_misc), new_lbl("<b>Miscellaneous</b>"));
-
-        gtk_widget_show_all(GTK_WIDGET(nb));
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(nb), true, true, 0);
-
-        gtk_notebook_set_current_page(nb,0);
-        gtk_widget_show_all(GTK_WIDGET(content));
-    }
-
-    /** --Confirm Quit Dialog **/
-    {
-        confirm_quit_dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-            "Confirm Quit",
-            0, (GtkDialogFlags)(0),/*GTK_MODAL*/
-            NULL, NULL
-        ));
-
-        apply_dialog_defaults(confirm_quit_dialog);
-
-        confirm_btn_quit = GTK_BUTTON(gtk_dialog_add_button(confirm_quit_dialog, "_Quit", GTK_RESPONSE_ACCEPT));
-        gtk_dialog_add_button(confirm_quit_dialog, "_Cancel", GTK_RESPONSE_REJECT);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(confirm_quit_dialog));
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("<b>Are you sure you want to quit?\nAny unsaved changes will be lost!</b>"), false, false, 0);
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        g_signal_connect(confirm_quit_dialog, "show", G_CALLBACK(on_confirm_quit_show), 0);
     }
 
     /** --Robot **/
@@ -6065,213 +3415,6 @@ int _gtk_loop(void *p) {
         gtk_container_add(GTK_CONTAINER(robot_window), GTK_WIDGET(content));
     }
 
-    /** --Published **/
-    {
-        published_dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-            "Level published!",
-            0, (GtkDialogFlags)(0),/*GTK_MODAL*/
-            "Go to level page", GTK_RESPONSE_ACCEPT,
-            "_Cancel", GTK_RESPONSE_REJECT,
-            NULL
-        ));
-
-        apply_dialog_defaults(published_dialog);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(published_dialog));
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("Your level has been successfully published on the community website."), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("To view your level, or submit it to a running contest, please click the button below."), false, false, 0);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-    }
-
-    /** --Community **/
-    {
-        dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-            "Back to main menu?",
-            0, (GtkDialogFlags)(0),/*GTK_MODAL*/
-            "Yes", GTK_RESPONSE_ACCEPT,
-            "No", GTK_RESPONSE_REJECT,
-            NULL
-        ));
-
-        apply_dialog_defaults(dialog);
-
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        gtk_box_pack_start(GTK_BOX(content), new_lbl("Do you want to return to the main menu?"), false, false, 0);
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        community_dialog = dialog;
-    }
-
-    /** --cursorfield **/
-    {
-        cursorfield_dialog = new_dialog_defaults("Cursor field", &on_cursorfield_show);
-
-        gtk_widget_set_size_request(GTK_WIDGET(cursorfield_dialog), 350, -1);
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(cursorfield_dialog));
-
-        GtkGrid *tbl_settings = GTK_GRID(gtk_grid_new());
-        {
-            int y = 0;
-
-            cursorfield_right = GTK_RANGE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, -3, 3, .1));
-            cursorfield_up = GTK_RANGE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, -3, 3, .1));
-            cursorfield_left = GTK_RANGE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, -3, 3, .1));
-            cursorfield_down = GTK_RANGE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, -3, 3, .1));
-
-            gtk_widget_set_hexpand(GTK_WIDGET(cursorfield_right), true);
-            gtk_widget_set_hexpand(GTK_WIDGET(cursorfield_up), true);
-            gtk_widget_set_hexpand(GTK_WIDGET(cursorfield_left), true);
-            gtk_widget_set_hexpand(GTK_WIDGET(cursorfield_down), true);
-
-            gtk_grid_attach(tbl_settings, new_rlbl("Lower X"), 0, y, 1, 1);
-            gtk_grid_attach(tbl_settings, GTK_WIDGET(cursorfield_left), 1, y, 1, 1);
-            y++;
-
-            gtk_grid_attach(tbl_settings, new_rlbl("Upper X"), 0, y, 1, 1);
-            gtk_grid_attach(tbl_settings, GTK_WIDGET(cursorfield_right), 1, y, 1, 1);
-            y++;
-
-            gtk_grid_attach(tbl_settings, new_rlbl("Lower Y"), 0, y, 1, 1);
-            gtk_grid_attach(tbl_settings, GTK_WIDGET(cursorfield_down), 1, y, 1, 1);
-            y++;
-
-            gtk_grid_attach(tbl_settings, new_rlbl("Upper Y"), 0, y, 1, 1);
-            gtk_grid_attach(tbl_settings, GTK_WIDGET(cursorfield_up), 1, y, 1, 1);
-        }
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(tbl_settings), false, false, 0);
-        gtk_widget_show_all(GTK_WIDGET(content));
-    }
-
-    /** --escript **/
-    {
-        escript_window = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
-        gtk_window_set_title(escript_window, "Lua Script");
-        gtk_widget_set_size_request(GTK_WIDGET(escript_window), 800, 560);
-        gtk_window_set_resizable(escript_window, true);
-
-        apply_dialog_defaults(escript_window, on_escript_show, on_escript_keypress);
-
-        escript_statusbar = GTK_STATUSBAR(gtk_statusbar_new());
-
-        GtkBox *content = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
-
-        GtkWidget *cb;
-
-        {
-            cb = gtk_check_button_new_with_label("Use external editor");
-            g_signal_connect(cb, "toggled", G_CALLBACK(on_escript_external_editor_toggled), 0);
-            gtk_widget_set_tooltip_text(cb, "Check this file if you want to edit the Lua from an external editor");
-            escript_use_external_editor = GTK_CHECK_BUTTON(cb);
-        }
-
-        escript_buffer = GTK_TEXT_BUFFER(gtk_text_buffer_new(NULL));
-        escript_code = gtk_text_view_new_with_buffer(GTK_TEXT_BUFFER(escript_buffer));
-
-        //Connect mark-set
-        g_signal_connect(GTK_TEXT_BUFFER(escript_buffer), "mark-set", G_CALLBACK(on_escript_mark_set), 0);
-
-        //Add .code-editor class
-        GtkStyleContext *context = gtk_widget_get_style_context(GTK_WIDGET(escript_code));
-        gtk_style_context_add_class(context, "code-editor");
-
-        escript_external_box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL,0));
-        escript_external_file_path = GTK_LABEL(new_clbl("Placeholder"));
-
-        gtk_box_pack_start(escript_external_box, GTK_WIDGET(escript_external_file_path), false, false, 5);
-        gtk_box_pack_start(escript_external_box, new_clbl("Open the file path above with your favourite code editor and edit the code there.\nBefore you press play in Principia, remember to save the external file!\nThe file will be created when you press the Save-button."), false, false, 5);
-
-        /* Button to open the local cache directory in the system file browser */
-        GtkWidget *escript_open_cache_btn = gtk_button_new_with_label("Open script folder");
-        g_signal_connect(escript_open_cache_btn, "clicked", G_CALLBACK(on_escript_open_external_cache_clicked), NULL);
-        gtk_box_pack_start(escript_external_box, escript_open_cache_btn, false, false, 5);
-
-        GtkBox *hbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
-        gtk_box_pack_start(GTK_BOX(hbox), new_lbl("  "), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(escript_use_external_editor), false, false, 0);
-
-        GtkWidget *ew = gtk_scrolled_window_new(0,0);
-        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (ew),
-                      GTK_POLICY_AUTOMATIC,
-                      GTK_POLICY_AUTOMATIC);
-        gtk_container_add(GTK_CONTAINER(ew), GTK_WIDGET(escript_code));
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(ew), true, true, 5);
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(escript_external_box), false, false, 0);
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(hbox), false, false, 5);
-
-        GtkButtonBox *buttonbox = GTK_BUTTON_BOX(gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL));
-        gtk_button_box_set_layout(GTK_BUTTON_BOX(buttonbox), GTK_BUTTONBOX_END);
-        gtk_box_set_spacing(GTK_BOX(buttonbox), 5);
-
-        /* Save */
-        escript_save = GTK_BUTTON(gtk_button_new_with_label("Save"));
-        g_signal_connect(escript_save, "clicked",
-                G_CALLBACK(on_escript_btn_click), 0);
-
-        /* Cancel */
-        escript_cancel = GTK_BUTTON(gtk_button_new_with_label("Cancel"));
-        g_signal_connect(escript_cancel, "clicked",
-                G_CALLBACK(on_escript_btn_click), 0);
-
-        gtk_container_add(GTK_CONTAINER(buttonbox), GTK_WIDGET(escript_save));
-        gtk_container_add(GTK_CONTAINER(buttonbox), GTK_WIDGET(escript_cancel));
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(buttonbox), false, false, 0);
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(escript_statusbar), false, false, 0);
-
-        gtk_container_add(GTK_CONTAINER(escript_window), GTK_WIDGET(content));
-
-        gtk_widget_show_all(GTK_WIDGET(content));
-    }
-
-    /** --Shape Extruder **/
-    {
-        shapeextruder_dialog = new_dialog_defaults("Shape Extruder", &on_shapeextruder_show);
-
-        gtk_widget_set_size_request(GTK_WIDGET(shapeextruder_dialog), 350, -1);
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(shapeextruder_dialog));
-
-        GtkGrid *tbl_settings = GTK_GRID(gtk_grid_new());
-        {
-            int y = 0;
-
-            shapeextruder_right = GTK_RANGE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 2, .01));
-            shapeextruder_up = GTK_RANGE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 2, .01));
-            shapeextruder_left = GTK_RANGE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 2, .01));
-            shapeextruder_down = GTK_RANGE(gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 2, .01));
-
-            gtk_widget_set_hexpand(GTK_WIDGET(shapeextruder_right), true);
-            gtk_widget_set_hexpand(GTK_WIDGET(shapeextruder_up), true);
-            gtk_widget_set_hexpand(GTK_WIDGET(shapeextruder_left), true);
-            gtk_widget_set_hexpand(GTK_WIDGET(shapeextruder_down), true);
-
-            gtk_grid_attach(tbl_settings, new_rlbl("Right"), 0, y, 1, 1);
-            gtk_grid_attach(tbl_settings, GTK_WIDGET(shapeextruder_right), 1, y, 1, 1);
-            y++;
-
-            gtk_grid_attach(tbl_settings, new_rlbl("Up"), 0, y, 1, 1);
-            gtk_grid_attach(tbl_settings, GTK_WIDGET(shapeextruder_up), 1, y, 1, 1);
-            y++;
-
-            gtk_grid_attach(tbl_settings, new_rlbl("Left"), 0, y, 1, 1);
-            gtk_grid_attach(tbl_settings, GTK_WIDGET(shapeextruder_left), 1, y, 1, 1);
-            y++;
-
-            gtk_grid_attach(tbl_settings, new_rlbl("Down"), 0, y, 1, 1);
-            gtk_grid_attach(tbl_settings, GTK_WIDGET(shapeextruder_down), 1, y, 1, 1);
-        }
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(tbl_settings), false, false, 0);
-        gtk_widget_show_all(GTK_WIDGET(content));
-    }
-
     /** --Synth **/
     {
         synth_dialog = new_dialog_defaults("Synthesizer", &on_synth_show, &on_synth_keypress);
@@ -6364,229 +3507,6 @@ int _gtk_loop(void *p) {
 
         gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(tbl_settings), false, false, 0);
         gtk_widget_show_all(GTK_WIDGET(content));
-    }
-
-    /** --Timer **/
-    {
-        dialog = new_dialog_defaults("Timer", &on_timer_show, &on_timer_keypress);
-
-        gtk_widget_set_size_request(GTK_WIDGET(dialog), 250, -1);
-        GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(dialog));
-
-        GtkGrid *tbl_settings = create_settings_table();
-        {
-            int y = -1;
-
-            timer_seconds = GTK_SPIN_BUTTON(gtk_spin_button_new(
-                        GTK_ADJUSTMENT(gtk_adjustment_new(1, 0, 360, 1, 1, 0)),
-                        50, 0));
-            g_signal_connect(timer_seconds, "value-changed", G_CALLBACK(timer_time_changed), 0);
-
-            timer_milliseconds = GTK_SPIN_BUTTON(gtk_spin_button_new(
-                        GTK_ADJUSTMENT(gtk_adjustment_new(1, 0, 999, 16, 16, 0)),
-                        50, 0));
-            g_signal_connect(timer_milliseconds, "value-changed", G_CALLBACK(timer_time_changed), 0);
-
-            timer_num_ticks = GTK_SPIN_BUTTON(gtk_spin_button_new(
-                        GTK_ADJUSTMENT(gtk_adjustment_new(1, 0, 255, 1, 1, 0)),
-                        1, 0));
-
-            timer_time = GTK_LABEL(gtk_label_new("0.0s"));
-            gtk_label_set_xalign(GTK_LABEL(timer_time), 0.0f);
-            gtk_label_set_yalign(GTK_LABEL(timer_time), 0.5f);
-
-            timer_use_system_time = GTK_CHECK_BUTTON(gtk_check_button_new());
-
-            add_setting_row(
-                tbl_settings, ++y,
-                "Time between ticks",
-                GTK_WIDGET(timer_time)
-            );
-
-            add_setting_row(
-                tbl_settings, ++y,
-                "Seconds",
-                GTK_WIDGET(timer_seconds)
-            );
-
-            add_setting_row(
-                tbl_settings, ++y,
-                "Milliseconds",
-                GTK_WIDGET(timer_milliseconds)
-            );
-
-            add_setting_row(
-                tbl_settings, ++y,
-                "Number of ticks",
-                GTK_WIDGET(timer_num_ticks),
-                "0 = Infinite ticks"
-            );
-
-            add_setting_row(
-                tbl_settings, ++y,
-                "Use system time",
-                GTK_WIDGET(timer_use_system_time),
-                "Use system time for ticks, instead of in-game time."
-            );
-        }
-
-        gtk_box_pack_start(GTK_BOX(content), GTK_WIDGET(tbl_settings), false, false, 0);
-        gtk_widget_show_all(GTK_WIDGET(content));
-
-        timer_dialog = dialog;
-    }
-
-    /** --Sequencer **/
-    {
-        sequencer_window = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
-        gtk_window_set_default_size(GTK_WINDOW(sequencer_window), 400, 400);
-        gtk_widget_set_size_request(GTK_WIDGET(sequencer_window), 400, 400);
-        gtk_window_set_title(GTK_WINDOW(sequencer_window), "Sequencer settings");
-        gtk_window_set_resizable(GTK_WINDOW(sequencer_window), false);
-        apply_dialog_defaults(sequencer_window, on_sequencer_show, on_sequencer_keypress);
-
-        GtkBox *content = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
-
-        GtkButtonBox *button_box = GTK_BUTTON_BOX(gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL));
-        gtk_button_box_set_layout(GTK_BUTTON_BOX(button_box), GTK_BUTTONBOX_END);
-        gtk_box_set_spacing(GTK_BOX(button_box), 5);
-
-        sequencer_save   = GTK_BUTTON(gtk_button_new_with_label("Save"));
-        g_signal_connect(sequencer_save, "clicked",
-                G_CALLBACK(on_sequencer_click), 0);
-
-        sequencer_cancel = GTK_BUTTON(gtk_button_new_with_label("Cancel"));
-        g_signal_connect(sequencer_cancel, "clicked",
-                G_CALLBACK(on_sequencer_click), 0);
-
-        gtk_container_add(GTK_CONTAINER(button_box), GTK_WIDGET(sequencer_save));
-        gtk_container_add(GTK_CONTAINER(button_box), GTK_WIDGET(sequencer_cancel));
-
-        GtkGrid *table = create_settings_table();
-        {
-            int y = -1;
-
-            sequencer_sequence = GTK_ENTRY(gtk_entry_new());
-            g_signal_connect(sequencer_sequence, "focus-out-event", G_CALLBACK(sequencer_sequence_focus_out), 0);
-            //hack: update in realtime:
-            g_signal_connect(sequencer_sequence, "changed", G_CALLBACK(sequencer_sequence_focus_out), 0);
-
-            sequencer_seconds = GTK_SPIN_BUTTON(gtk_spin_button_new(
-                        GTK_ADJUSTMENT(gtk_adjustment_new(1, 0, 360, 1, 1, 0)),
-                        50, 0));
-            g_signal_connect(sequencer_seconds, "value-changed", G_CALLBACK(sequencer_time_changed), 0);
-
-            sequencer_milliseconds = GTK_SPIN_BUTTON(gtk_spin_button_new(
-                        GTK_ADJUSTMENT(gtk_adjustment_new(1, 0, 950, 50, 50, 0)),
-                        50, 0));
-            g_signal_connect(sequencer_milliseconds, "value-changed", G_CALLBACK(sequencer_time_changed), 0);
-
-            sequencer_wrap_around = GTK_CHECK_BUTTON(gtk_check_button_new());
-
-            sequencer_state = GTK_LABEL(gtk_label_new("0.0s"));
-            gtk_label_set_xalign(GTK_LABEL(sequencer_state), 0.0f);
-            gtk_label_set_yalign(GTK_LABEL(sequencer_state), 0.5f);
-
-            gtk_grid_attach(table, GTK_WIDGET(sequencer_state), 0, ++y, 3, 1);
-
-            add_setting_row(
-                table, ++y,
-                "Sequence",
-                GTK_WIDGET(sequencer_sequence)
-            );
-
-            add_setting_row(
-                table, ++y,
-                "Seconds",
-                GTK_WIDGET(sequencer_seconds)
-            );
-
-            add_setting_row(
-                table, ++y,
-                "Milliseconds",
-                GTK_WIDGET(sequencer_milliseconds)
-            );
-
-            add_setting_row(
-                table, ++y,
-                "Wrap Around",
-                GTK_WIDGET(sequencer_wrap_around)
-            );
-        }
-
-        gtk_box_pack_start(content, GTK_WIDGET(table), 1, 1, 0);
-        gtk_box_pack_start(content, GTK_WIDGET(button_box), 0, 0, 0);
-
-        gtk_container_add(GTK_CONTAINER(sequencer_window), GTK_WIDGET(content));
-    }
-
-    /** --Prompt settings dialog **/
-    {
-        prompt_settings_dialog = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
-        gtk_container_set_border_width(GTK_CONTAINER(prompt_settings_dialog), 10);
-        gtk_window_set_default_size(GTK_WINDOW(prompt_settings_dialog), 400, 400);
-        gtk_widget_set_size_request(GTK_WIDGET(prompt_settings_dialog), 400, 400);
-        gtk_window_set_title(GTK_WINDOW(prompt_settings_dialog), "Prompt settings");
-        gtk_window_set_resizable(GTK_WINDOW(prompt_settings_dialog), false);
-
-        apply_dialog_defaults(prompt_settings_dialog, on_prompt_show, on_prompt_keypress);
-
-        GtkBox *content = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
-        GtkBox *inner_content = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
-
-        GtkWidget *l;
-        GtkBox *hb;
-
-        l = gtk_label_new("Message");
-        prompt_message = GTK_TEXT_VIEW(gtk_text_view_new());
-        gtk_box_pack_start(inner_content, l, false, false, 0);
-        gtk_box_pack_start(inner_content, GTK_WIDGET(prompt_message), true, true, 0);
-
-        l = gtk_label_new("Leave a button text empty if you don't want to use it.");
-        gtk_box_pack_start(inner_content, l, false, false, 0);
-
-        hb = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-        l = gtk_label_new("Button 1:");
-        prompt_b1 = GTK_ENTRY(gtk_entry_new());
-        gtk_box_pack_start(hb, l, false, false, 0);
-        gtk_box_pack_start(hb, GTK_WIDGET(prompt_b1), false, false, 0);
-        gtk_box_pack_start(inner_content, GTK_WIDGET(hb), false, false, 0);
-
-        hb = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-        l = gtk_label_new("Button 2:");
-        prompt_b2 = GTK_ENTRY(gtk_entry_new());
-        gtk_box_pack_start(hb, l, false, false, 0);
-        gtk_box_pack_start(hb, GTK_WIDGET(prompt_b2), false, false, 0);
-        gtk_box_pack_start(inner_content, GTK_WIDGET(hb), false, false, 0);
-
-        hb = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-        l = gtk_label_new("Button 3:");
-        prompt_b3 = GTK_ENTRY(gtk_entry_new());
-        gtk_box_pack_start(hb, l, false, false, 0);
-        gtk_box_pack_start(hb, GTK_WIDGET(prompt_b3), false, false, 0);
-        gtk_box_pack_start(inner_content, GTK_WIDGET(hb), false, false, 0);
-
-        GtkButtonBox *button_box = GTK_BUTTON_BOX(gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL));
-        gtk_button_box_set_layout(GTK_BUTTON_BOX(button_box), GTK_BUTTONBOX_END);
-        gtk_box_set_spacing(GTK_BOX(button_box), 5);
-
-        /* Save */
-        prompt_save = GTK_BUTTON(gtk_button_new_with_label("Save"));
-        g_signal_connect(prompt_save, "clicked",
-                G_CALLBACK(on_prompt_btn_click), 0);
-
-        /* Cancel */
-        prompt_cancel = GTK_BUTTON(gtk_button_new_with_label("Cancel"));
-        g_signal_connect(prompt_cancel, "clicked",
-                G_CALLBACK(on_prompt_btn_click), 0);
-
-        gtk_container_add(GTK_CONTAINER(button_box), GTK_WIDGET(prompt_save));
-        gtk_container_add(GTK_CONTAINER(button_box), GTK_WIDGET(prompt_cancel));
-
-        gtk_box_pack_start(content, GTK_WIDGET(inner_content), 1, 1, 0);
-        gtk_box_pack_start(content, GTK_WIDGET(button_box), 0, 0, 0);
-
-        gtk_container_add(GTK_CONTAINER(prompt_settings_dialog), GTK_WIDGET(content));
     }
 
     gdk_threads_add_idle(_sig_ui_ready, 0);
@@ -6718,107 +3638,6 @@ static gboolean _open_level_properties(gpointer unused) {
     return false;
 }
 
-static gboolean _open_save_window(gpointer unused) {
-    activate_save(NULL, 0);
-    return false;
-}
-
-static gboolean _open_save_copy_window(gpointer unused) {
-    activate_save_copy(NULL, 0);
-    return false;
-}
-
-static gboolean _open_publish_dialog(gpointer unused) {
-    activate_publish(NULL, 0);
-    return false;
-}
-
-static gboolean _open_prompt_dialog(gpointer unused) {
-    if (W->is_adventure() && adventure::player) {
-        adventure::player->stop_moving(DIR_LEFT);
-        adventure::player->stop_moving(DIR_RIGHT);
-    }
-
-    base_prompt *bp = G->current_prompt->get_base_prompt();
-    if (G->current_prompt && G->current_prompt->is_prompt_compatible() && bp) {
-
-        GtkDialog *d = GTK_DIALOG(gtk_message_dialog_new(
-                    0, (GtkDialogFlags)(0),
-                    GTK_MESSAGE_OTHER,
-                    GTK_BUTTONS_NONE,
-                    0));
-        //gtk_window_set_decorated(GTK_WINDOW(d), FALSE);
-        //gtk_window_set_has_frame(GTK_WINDOW(d), FALSE);
-
-        g_object_set(d, "text", *bp->message, NULL);
-
-        gtk_window_set_deletable(GTK_WINDOW(d), FALSE);
-        gtk_window_set_position(GTK_WINDOW(d), GTK_WIN_POS_CENTER);
-
-        if (W && W->level.version >= LEVEL_VERSION_1_2_3) {
-            for (int x=0; x<3; ++x) {
-                const struct base_prompt::prompt_button &btn = bp->buttons[x];
-                if (*btn.len && *btn.buf) {
-                    gtk_dialog_add_button(d, *btn.buf, x+1);
-                }
-            }
-        } else {
-            int n=0;
-            for (int x=0; x<3; ++x) {
-                const struct base_prompt::prompt_button &btn = bp->buttons[x];
-                if (*btn.len && *btn.buf) {
-                    gtk_dialog_add_button(d, *btn.buf, ++n);
-                }
-            }
-        }
-
-        cur_prompt = d;
-        prompt_is_open = true;
-
-        P.focused = false;
-
-        int response = PROMPT_RESPONSE_NONE;
-
-        do {
-            response = (int)gtk_dialog_run(d);
-
-            switch (response) {
-                case PROMPT_RESPONSE_A:
-                case PROMPT_RESPONSE_B:
-                case PROMPT_RESPONSE_C:
-                    if (G->current_prompt) {
-                        bp = G->current_prompt->get_base_prompt();
-
-                        if (bp) {
-                            tms_debugf("setting prompt response from here");
-                            bp->set_response(response);
-                        }
-                    }
-                    break;
-
-                default:
-                    response = PROMPT_RESPONSE_NONE;
-                    tms_warnf("no response given.");
-                    break;
-            }
-        } while (response == PROMPT_RESPONSE_NONE);
-
-        P.focused = true;
-
-        gtk_widget_hide(GTK_WIDGET(d));
-    }
-
-    cur_prompt = 0;
-    prompt_is_open = false;
-
-    return false;
-}
-
-static gboolean _open_prompt_settings_dialog(gpointer unused) {
-    activate_prompt_settings(NULL, 0);
-    return false;
-}
-
 static gboolean _open_export(gpointer unused) {
     activate_export(NULL, 0);
     return false;
@@ -6826,11 +3645,6 @@ static gboolean _open_export(gpointer unused) {
 
 static gboolean _open_open_state_dialog(gpointer unused) {
     activate_open_state(NULL, 0);
-    return false;
-}
-
-static gboolean _open_open_dialog(gpointer unused) {
-    activate_open(NULL, 0);
     return false;
 }
 
@@ -6846,203 +3660,8 @@ static gboolean _open_object_dialog(gpointer unused) {
     return false;
 }
 
-static gboolean _open_autosave(gpointer unused) {
-    gtk_widget_hide(GTK_WIDGET(autosave_dialog));
-    gint result = gtk_dialog_run(autosave_dialog);
-    gtk_widget_hide(GTK_WIDGET(autosave_dialog));
-
-    if (result == GTK_RESPONSE_YES)
-        P.add_action(ACTION_OPEN_AUTOSAVE, 0);
-    else if (result == GTK_RESPONSE_NO)
-        P.add_action(ACTION_REMOVE_AUTOSAVE, 0);
-
-    return false;
-}
-
-static gboolean _open_tips_dialog(gpointer unused) {
-    do {
-         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tips_hide), settings["hide_tips"]->v.b);
-
-        gtk_widget_hide(GTK_WIDGET(tips_dialog));
-        gint result = gtk_dialog_run(tips_dialog);
-        gtk_widget_hide(GTK_WIDGET(tips_dialog));
-
-        settings["hide_tips"]->v.b = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(tips_hide));
-
-        if (result == GTK_RESPONSE_APPLY) {
-            tms_infof("reshowing tips");
-            continue;
-        }
-
-        if (result == GTK_RESPONSE_YES)
-            ui::open_url("https://principia-web.se/wiki/");
-
-        break;
-    } while (true);
-
-    return false;
-}
-
-static gboolean _open_info_dialog(gpointer unused) {
-    gtk_widget_show_all(GTK_WIDGET(info_dialog));
-
-    return false;
-}
-
-static gboolean _open_error_dialog(gpointer unused) {
-    gtk_widget_hide(GTK_WIDGET(error_dialog));
-    gtk_dialog_run(error_dialog);
-    gtk_widget_hide(GTK_WIDGET(error_dialog));
-
-    return false;
-}
-
-/** --Confirm Dialog **/
-static gboolean _open_confirm_dialog(gpointer unused) {
-    gtk_widget_hide(GTK_WIDGET(confirm_dialog));
-    P.focused = false;
-    int r = gtk_dialog_run(confirm_dialog);
-    P.focused = true;
-
-    switch (r) {
-        case 1:
-            // button 1 pressed
-            if (confirm_action1 != ACTION_IGNORE) {
-                P.add_action(confirm_action1, confirm_action1_data);
-            }
-            break;
-
-        case 2:
-            // button 2 pressed
-            if (confirm_action2 != ACTION_IGNORE) {
-                P.add_action(confirm_action2, confirm_action2_data);
-            }
-            break;
-
-        case 3:
-            // button 2 pressed
-            if (confirm_action3 != ACTION_IGNORE) {
-                P.add_action(confirm_action3, confirm_action3_data);
-            }
-            break;
-    }
-
-    switch (confirm_data.confirm_type) {
-        case CONFIRM_TYPE_BACK_SANDBOX:
-            settings["dna_sandbox_back"]->v.b = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(confirm_dna_sandbox_back));
-            settings.save();
-            break;
-    }
-
-    gtk_widget_hide(GTK_WIDGET(confirm_dialog));
-
-    return false;
-}
-
-/** --Alert Dialog **/
-static gboolean _open_alert_dialog(gpointer unused) {
-    gtk_widget_hide(GTK_WIDGET(alert_dialog));
-    P.focused = false;
-    gtk_dialog_run(GTK_DIALOG(alert_dialog));
-    P.focused = true;
-
-    gtk_widget_hide(GTK_WIDGET(alert_dialog));
-
-    return false;
-}
-
 static gboolean _open_robot_window(gpointer unused) {
     gtk_widget_show_all(GTK_WIDGET(robot_window));
-    return false;
-}
-
-/** --Published **/
-static gboolean _open_published(gpointer unused) {
-    gint result = gtk_dialog_run(published_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        COMMUNITY_URL("level/%d", W->level.community_id);
-        ui::open_url(url);
-    }
-
-    gtk_widget_hide(GTK_WIDGET(published_dialog));
-
-    return false;
-}
-
-/** --Community **/
-static gboolean _open_community(gpointer unused) {
-    gint result = gtk_dialog_run(community_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        P.add_action(ACTION_GOTO_MAINMENU, 0);
-    }
-
-    gtk_widget_hide(GTK_WIDGET(community_dialog));
-
-    return false;
-}
-
-/** --Sequencer **/
-static gboolean _open_sequencer(gpointer unused) {
-    gtk_widget_show_all(GTK_WIDGET(sequencer_window));
-
-    return false;
-}
-
-/** --cursorfield **/
-static gboolean _open_cursorfield(gpointer unused) {
-    gint result = gtk_dialog_run(cursorfield_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_CURSOR_FIELD) {
-            e->properties[0].v.f = gtk_range_get_value(cursorfield_right);
-            e->properties[1].v.f = gtk_range_get_value(cursorfield_up);
-            e->properties[2].v.f = gtk_range_get_value(cursorfield_left);
-            e->properties[3].v.f = gtk_range_get_value(cursorfield_down);
-
-            if (e->properties[0].v.f < e->properties[2].v.f) e->properties[0].v.f = e->properties[2].v.f+.5f;
-            if (e->properties[0].v.f > 3.f) {
-                e->properties[0].v.f = 3.f;
-                e->properties[2].v.f = e->properties[0].v.f - .5f;
-            }
-            if (e->properties[1].v.f < e->properties[3].v.f) e->properties[1].v.f = e->properties[1].v.f+.5f;
-            if (e->properties[1].v.f > 3.f) {
-                e->properties[1].v.f = 3.f;
-                e->properties[3].v.f = e->properties[1].v.f - .5f;
-            }
-        }
-    }
-    gtk_widget_hide(GTK_WIDGET(cursorfield_dialog));
-
-    return false;
-}
-
-/** --escript **/
-static gboolean _open_escript(gpointer unused) {
-    gtk_widget_show_all(GTK_WIDGET(escript_window));
-
-    return false;
-}
-
-/** --Shape extruder **/
-static gboolean _open_shapeextruder(gpointer unused) {
-    gint result = gtk_dialog_run(shapeextruder_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_SHAPE_EXTRUDER) {
-            e->properties[0].v.f = gtk_range_get_value(shapeextruder_right);
-            e->properties[1].v.f = gtk_range_get_value(shapeextruder_up);
-            e->properties[2].v.f = gtk_range_get_value(shapeextruder_left);
-            e->properties[3].v.f = gtk_range_get_value(shapeextruder_down);
-        }
-    }
-    gtk_widget_hide(GTK_WIDGET(shapeextruder_dialog));
-
     return false;
 }
 
@@ -7084,42 +3703,6 @@ static gboolean _open_synth(gpointer unused) {
     }
 
     gtk_widget_hide(GTK_WIDGET(synth_dialog));
-
-    return false;
-}
-
-/** --Timer **/
-static gboolean _open_timer(gpointer unused) {
-    gint result = gtk_dialog_run(timer_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_TIMER) {
-            uint8_t num_ticks = gtk_spin_button_get_value(timer_num_ticks);
-            int seconds = gtk_spin_button_get_value(timer_seconds);
-            int milliseconds = gtk_spin_button_get_value(timer_milliseconds);
-            uint32_t full_time = (seconds*1000) + milliseconds;
-            if (full_time < TIMER_MIN_TIME)
-                full_time = TIMER_MIN_TIME;
-
-            e->properties[0].v.i = full_time;
-            e->properties[1].v.i8 = num_ticks;
-            e->properties[2].v.i = (uint32_t)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(timer_use_system_time));
-
-            ui::message("Timer properties saved!");
-            P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-            P.add_action(ACTION_RESELECT, 0);
-        }
-    }
-
-    gtk_widget_hide(GTK_WIDGET(timer_dialog));
-
-    return false;
-}
-
-static gboolean _open_settings(gpointer unused) {
-    activate_settings(0, 0);
 
     return false;
 }
@@ -7171,34 +3754,6 @@ static gboolean _open_digi_window(gpointer unused) {
     return false;
 }
 
-static gboolean _open_fxemitter_window(gpointer unused) {
-    gint result = gtk_dialog_run(fxemitter_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_FX_EMITTER) {
-            for (int x=0; x<4; x++) {
-                int index = gtk_combo_box_get_active(GTK_COMBO_BOX(fxemitter_cb[x]));
-
-                if (index == 0) {
-                    e->properties[3+x].v.i = FX_INVALID;
-                } else {
-                    e->properties[3+x].v.i = index - 1;
-                }
-            }
-
-            e->properties[0].v.f = (float)gtk_range_get_value(GTK_RANGE(fxemitter_radius));
-            e->properties[1].v.i = (uint32_t)gtk_range_get_value(GTK_RANGE(fxemitter_count));
-            e->properties[2].v.f = (float)gtk_range_get_value(GTK_RANGE(fxemitter_interval));
-        }
-    }
-
-    gtk_widget_hide(GTK_WIDGET(fxemitter_dialog));
-
-    return false;
-}
-
 static gboolean _open_sfx_window(gpointer unused) {
     gint result = gtk_dialog_run(sfx_dialog);
 
@@ -7238,128 +3793,6 @@ static gboolean _open_sfx2_window(gpointer unused) {
     }
 
     gtk_widget_hide(GTK_WIDGET(sfx2_dialog));
-
-    return false;
-}
-
-/** --Item **/
-static gboolean _open_item(gpointer unused) {
-    gint result = gtk_dialog_run(item_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_ITEM) {
-            ((item*)e)->set_item_type((uint32_t)gtk_combo_box_get_active(GTK_COMBO_BOX(item_cb)));
-            ((item*)e)->do_recreate_shape = true;
-            P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-            P.add_action(ACTION_RESELECT, 0);
-        }
-    }
-
-    gtk_widget_hide(GTK_WIDGET(item_dialog));
-
-    return false;
-}
-
-/** --Key Listener **/
-static gboolean _open_key_listener(gpointer unused) {
-    gint result = gtk_dialog_run(key_listener_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_KEY_LISTENER) {
-            GtkTreeIter iter;
-
-            if (gtk_combo_box_get_active_iter(GTK_COMBO_BOX(key_listener_cb), &iter)) {
-                GValue val = {0, };
-                gtk_tree_model_get_value(GTK_TREE_MODEL(key_listener_ls),
-                                            &iter,
-                                            1, &val
-                                            );
-
-                uint32_t key = g_value_get_uint(&val);
-
-                tms_debugf("Key: %u: %s", key, key_names[key]);
-
-                e->properties[0].v.i = key;
-                P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-                P.add_action(ACTION_RESELECT, 0);
-            }
-        }
-    }
-
-    gtk_widget_hide(GTK_WIDGET(key_listener_dialog));
-
-    return false;
-}
-
-/** --Faction **/
-static gboolean _open_faction(gpointer unused) {
-    GtkDialog *d = faction_dialog;
-
-    gint result = gtk_dialog_run(d);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && (e->g_id == O_GUARDPOINT)) {
-            ((anchor*)e)->set_faction((uint32_t)gtk_combo_box_get_active(GTK_COMBO_BOX(faction_cb)));
-            P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-            P.add_action(ACTION_RESELECT, 0);
-        }
-    }
-
-    gtk_widget_hide(GTK_WIDGET(d));
-
-    return false;
-}
-
-/** --Vendor **/
-static gboolean _open_vendor(gpointer unused) {
-    GtkDialog *d = vendor_dialog;
-
-    gint result = gtk_dialog_run(d);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_VENDOR) {
-            gtk_spin_button_update(vendor_amount);
-            e->properties[2].v.i = gtk_spin_button_get_value(vendor_amount);
-            P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-            P.add_action(ACTION_RESELECT, 0);
-        }
-    }
-
-    gtk_widget_hide(GTK_WIDGET(d));
-
-    return false;
-}
-
-/** --Soundman **/
-static gboolean _open_soundman(gpointer unused) {
-    GtkDialog *d = soundman_dialog;
-
-    gint result = gtk_dialog_run(d);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_SOUNDMAN) {
-            e->properties[0].v.i = (uint32_t)gtk_combo_box_get_active(GTK_COMBO_BOX(soundman_cb));
-
-            if (e->properties[0].v.i >= SND__NUM) e->properties[0].v.i = SND__NUM-1;
-
-            e->properties[1].v.i8 = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(soundman_catch_all)) ? 1 : 0;
-
-            P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-            P.add_action(ACTION_RESELECT, 0);
-        }
-    }
-
-    gtk_widget_hide(GTK_WIDGET(d));
 
     return false;
 }
@@ -7477,77 +3910,16 @@ static gboolean _open_treasure_chest(gpointer unused) {
     return false;
 }
 
-/** --Cam targeter **/
-static gboolean _open_camtargeter_window(gpointer unused) {
-    gint result = gtk_dialog_run(camtargeter_dialog);
-
-    if (result == GTK_RESPONSE_ACCEPT) {
-        entity *e = G->selection.e;
-
-        if (e && e->g_id == O_CAM_TARGETER) {
-            e->properties[1].v.i8 = gtk_combo_box_get_active(GTK_COMBO_BOX(camtargeter_mode));
-            e->properties[2].v.i8 = gtk_combo_box_get_active(GTK_COMBO_BOX(camtargeter_offset_mode));
-
-            float v = gtk_range_get_value(camtargeter_x_offset);
-            if (v < -150.f) v = -150.f;
-            else if (v > 150.f) v = 150.f;
-            e->properties[3].v.f = v;
-
-            v = gtk_range_get_value(camtargeter_y_offset);
-            if (v < -150.f) v = -150.f;
-            else if (v > 150.f) v = 150.f;
-            e->properties[4].v.f = v;
-
-            P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-            P.add_action(ACTION_RESELECT, 0);
-        }
-    }
-
-    gtk_widget_hide(GTK_WIDGET(camtargeter_dialog));
-
-    return false;
-}
-
-/** --Confirm Quit Dialog **/
-static gboolean _open_confirm_quit(gpointer unused) {
-    if (gtk_dialog_run(confirm_quit_dialog) == GTK_RESPONSE_ACCEPT) {
-        tms_infof("Quitting!");
-        _tms.state = TMS_STATE_QUITTING;
-    } else {
-        tms_infof("not quitting.");
-    }
-
-    gtk_widget_hide(GTK_WIDGET(confirm_quit_dialog));
-
-    return false;
-}
-
 static gboolean _close_all_dialogs(gpointer unused) {
-    gtk_widget_hide(GTK_WIDGET(open_window));
     gtk_widget_hide(GTK_WIDGET(open_state_window));
     gtk_widget_hide(GTK_WIDGET(object_window));
-    gtk_widget_hide(GTK_WIDGET(save_window));
     gtk_widget_hide(GTK_WIDGET(properties_dialog));
-    gtk_widget_hide(GTK_WIDGET(publish_dialog));
-    gtk_widget_hide(GTK_WIDGET(settings_dialog));
-    gtk_widget_hide(GTK_WIDGET(confirm_quit_dialog));
-    gtk_widget_hide(GTK_WIDGET(fxemitter_dialog));
-    gtk_widget_hide(GTK_WIDGET(timer_dialog));
-    gtk_widget_hide(GTK_WIDGET(escript_window));
     gtk_widget_hide(GTK_WIDGET(synth_dialog));
-    gtk_widget_hide(GTK_WIDGET(prompt_settings_dialog));
-    gtk_widget_hide(GTK_WIDGET(shapeextruder_dialog));
-    gtk_widget_hide(GTK_WIDGET(cursorfield_dialog));
-    gtk_widget_hide(GTK_WIDGET(autosave_dialog));
-    gtk_widget_hide(GTK_WIDGET(community_dialog));
-    gtk_widget_hide(GTK_WIDGET(published_dialog));
-    //if (cur_prompt) gtk_widget_hide(GTK_WIDGET(cur_prompt));
     return false;
 }
 
 static gboolean _close_absolutely_all_dialogs(gpointer unused) {
     _close_all_dialogs(0);
-    gtk_widget_hide(GTK_WIDGET(info_dialog));
 
     return false;
 }
@@ -7561,14 +3933,15 @@ static void wait_ui_ready() {
     SDL_UnlockMutex(ui_lock);
 }
 
-#ifdef UI_IMGUI_IN_GTK
+#endif
+
 #include "imgui.hh"
 #include "ui_imgui.hh"
 
 static ImguiDriver imgui_driver;
-#endif
 
 void ui::init() {
+#ifndef PRINCIPIA_BACKEND_IMGUI
     ui_lock = SDL_CreateMutex();
     ui_cond = SDL_CreateCondition();
     ui_ready = false;
@@ -7579,24 +3952,32 @@ void ui::init() {
 
     if (gtk_thread == NULL)
         tms_errorf("SDL_CreateThread failed: %s", SDL_GetError());
+#endif
 
-#ifdef UI_IMGUI_IN_GTK
     imgui_driver = ImguiDriver();
     imgui_driver.init();
-#endif
 }
 
 void ui::open_dialog(int num, void *data/*=0*/) {
+#ifndef PRINCIPIA_BACKEND_IMGUI
     wait_ui_ready();
+#endif
 
     switch (num) {
         case DIALOG_SANDBOX_MENU:
             UiSandboxMenu::open();
             break;
 
-        case DIALOG_LEVEL_PROPERTIES:   gdk_threads_add_idle(_open_level_properties, 0); break;
-        case DIALOG_OPEN_AUTOSAVE:  gdk_threads_add_idle(_open_autosave, 0); break;
+        case DIALOG_LEVEL_PROPERTIES:
+#ifdef PRINCIPIA_BACKEND_IMGUI
+            UiLevelProperties::open();
+#else
+            gdk_threads_add_idle(_open_level_properties, 0);
+#endif
+            break;
+#ifndef PRINCIPIA_BACKEND_IMGUI
         case DIALOG_EXPORT:         gdk_threads_add_idle(_open_export, 0); break;
+#endif
         case DIALOG_PLAY_MENU:
             UiPlayMenu::open();
             break;
@@ -7604,9 +3985,15 @@ void ui::open_dialog(int num, void *data/*=0*/) {
             UiQuickadd::open();
             break;
 
-        case DIALOG_SHAPEEXTRUDER:  gdk_threads_add_idle(_open_shapeextruder, 0); break;
-        case DIALOG_CURSORFIELD:    gdk_threads_add_idle(_open_cursorfield, 0); break;
-        case DIALOG_ESCRIPT:        gdk_threads_add_idle(_open_escript, 0); break;
+        case DIALOG_SHAPEEXTRUDER:
+            UiShapeExtruder::open();
+            break;
+        case DIALOG_CURSORFIELD:
+            UiCursorField::open();
+            break;
+        case DIALOG_ESCRIPT:
+            UiLuaEditor::open();
+            break;
         case DIALOG_JUMPER:
             UiJumper::open();
             break;
@@ -7616,10 +4003,17 @@ void ui::open_dialog(int num, void *data/*=0*/) {
             UiObjColorPicker::open();
             break;
 
-        case DIALOG_SAVE:           gdk_threads_add_idle(_open_save_window, 0); break;
-        case DIALOG_SAVE_COPY:      gdk_threads_add_idle(_open_save_copy_window, 0); break;
-        case DIALOG_OPEN:           gdk_threads_add_idle(_open_open_dialog, 0); break;
+        case DIALOG_SAVE:
+            UiSave::open(false);
+            break;
+        case DIALOG_SAVE_COPY:
+            UiSave::open(true);
+            break;
+        case DIALOG_OPEN:
+            UiLevelManager::open();
+            break;
 
+#ifndef PRINCIPIA_BACKEND_IMGUI
         case DIALOG_OPEN_STATE:
             if (data && VOID_TO_UINT8(data) == 1) {
                 open_state_no_testplaying = true;
@@ -7632,6 +4026,8 @@ void ui::open_dialog(int num, void *data/*=0*/) {
 
         case DIALOG_OPEN_OBJECT:    gdk_threads_add_idle(_open_object_dialog, 0); break;
         case DIALOG_MULTIEMITTER:   gdk_threads_add_idle(_open_multiemitter_dialog, 0); break;
+#endif
+
         case DIALOG_EMITTER:
             UiEmitter::open();
             break;
@@ -7644,32 +4040,61 @@ void ui::open_dialog(int num, void *data/*=0*/) {
         case DIALOG_SET_FREQUENCY:
             UiFrequency::open(false);
             break;
-        case DIALOG_CONFIRM_QUIT:   gdk_threads_add_idle(_open_confirm_quit, 0); break;
+        case DIALOG_CONFIRM_QUIT:
+            UiConfirmQuit::open();
+            break;
         case DIALOG_SET_COMMAND:
             UiCommandPad::open();
             break;
         case DIALOG_STICKY:
             UiSticky::open();
             break;
+#ifndef PRINCIPIA_BACKEND_IMGUI
         case DIALOG_DIGITALDISPLAY: gdk_threads_add_idle(_open_digi_window, 0); break;
-        case DIALOG_FXEMITTER:      gdk_threads_add_idle(_open_fxemitter_window, 0); break;
+#endif
+        case DIALOG_FXEMITTER:
+            UiFXEmitter::open();
+            break;
         case DIALOG_EVENTLISTENER:
             UiEventListener::open();
             break;
+#ifndef PRINCIPIA_BACKEND_IMGUI
         case DIALOG_SFXEMITTER:     gdk_threads_add_idle(_open_sfx_window, 0); break;
         case DIALOG_SFXEMITTER_2:   gdk_threads_add_idle(_open_sfx2_window, 0); break;
-        case DIALOG_CAMTARGETER:    gdk_threads_add_idle(_open_camtargeter_window, 0); break;
+#endif
+        case DIALOG_CAMTARGETER:
+            UiCamTargeter::open();
+            break;
         case DIALOG_SET_FREQ_RANGE:
             UiFrequency::open(true);
             break;
         case DIALOG_SET_PKG_LEVEL:
             UiPkgLvlSelector::open();
             break;
-        case DIALOG_ROBOT:          gdk_threads_add_idle(_open_robot_window, 0); break;
-        case DIALOG_TIMER:          gdk_threads_add_idle(_open_timer, 0); break;
-        case DIALOG_SYNTHESIZER:    gdk_threads_add_idle(_open_synth, 0); break;
-        case DIALOG_SEQUENCER:      gdk_threads_add_idle(_open_sequencer, 0); break;
-        case DIALOG_SETTINGS:       gdk_threads_add_idle(_open_settings, 0); break;
+        case DIALOG_ROBOT:
+#ifdef PRINCIPIA_BACKEND_IMGUI
+            UiRobot::open();
+#else
+            gdk_threads_add_idle(_open_robot_window, 0);
+#endif
+            break;
+        case DIALOG_TIMER:
+            UiTimer::open();
+            break;
+
+        case DIALOG_SYNTHESIZER:
+#ifdef PRINCIPIA_BACKEND_IMGUI
+            UiSynthesizer::open();
+#else
+            gdk_threads_add_idle(_open_synth, 0);
+#endif
+            break;
+        case DIALOG_SEQUENCER:
+            UiSequencer::open();
+            break;
+        case DIALOG_SETTINGS:
+            UiSettings::open();
+            break;
         case DIALOG_VARIABLE:
             UiVariable::open();
             break;
@@ -7679,64 +4104,92 @@ void ui::open_dialog(int num, void *data/*=0*/) {
         case DIALOG_DECORATION:
             UiDecoration::open();
             break;
-        case DIALOG_SET_FACTION:    gdk_threads_add_idle(_open_faction, 0); break;
+        case DIALOG_SET_FACTION:
+            UiSetFaction::open();
+            break;
         case DIALOG_RESOURCE:
             UiResource::open();
             break;
-        case DIALOG_VENDOR:         gdk_threads_add_idle(_open_vendor, 0); break;
+        case DIALOG_VENDOR:
+            UiVendor::open();
+            break;
+#ifndef PRINCIPIA_BACKEND_IMGUI
         case DIALOG_FACTORY:        gdk_threads_add_idle(_open_factory, 0); break;
-        case DIALOG_TREASURE_CHEST: gdk_threads_add_idle(_open_treasure_chest, 0); break;
+#endif
+        case DIALOG_TREASURE_CHEST:
+#ifndef PRINCIPIA_BACKEND_IMGUI
+            gdk_threads_add_idle(_open_treasure_chest, 0);
+#else
+            UiTreasureChest::open();
+#endif
+            break;
+
         case DIALOG_RUBBER:
             UiRubber::open();
             break;
-        case DIALOG_PUBLISHED:      gdk_threads_add_idle(_open_published, 0); break;
-        case DIALOG_COMMUNITY:      gdk_threads_add_idle(_open_community, 0); break;
+        case DIALOG_PUBLISHED:
+            UiPublished::open();
+            break;
+        case DIALOG_COMMUNITY:
+            UiCommunity::open();
+            break;
         case DIALOG_ANIMAL:
             UiAnimal::open();
             break;
-        case DIALOG_SOUNDMAN:       gdk_threads_add_idle(_open_soundman, 0); break;
+        case DIALOG_SOUNDMAN:
+            UiSoundManager::open();
+            break;
         case DIALOG_POLYGON:
             UiPolygon::open();
             break;
-        case DIALOG_KEY_LISTENER:   gdk_threads_add_idle(_open_key_listener, 0); break;
+        case DIALOG_KEY_LISTENER:
+            UiKeyListener::open();
+            break;
+#ifndef PRINCIPIA_BACKEND_IMGUI
         case DIALOG_MULTI_CONFIG:   gdk_threads_add_idle(_open_multi_config, 0); break;
 
         case CLOSE_ALL_DIALOGS:     gdk_threads_add_idle(_close_all_dialogs, 0); break;
         case CLOSE_ABSOLUTELY_ALL_DIALOGS: gdk_threads_add_idle(_close_absolutely_all_dialogs, 0); break;
+#else
+        case CLOSE_ABSOLUTELY_ALL_DIALOGS:
+        case CLOSE_ALL_DIALOGS:
+            tms_infof("XXX: CLOSE_ALL_DIALOGS/CLOSE_ABSOLUTELY_ALL_DIALOGS (200/201) are intentionally ignored");
+            break;
+#endif
 
-        case DIALOG_PUBLISH:        gdk_threads_add_idle(_open_publish_dialog, 0); break;
+        case DIALOG_PUBLISH:
+            UiPublish::open();
+            break;
         case DIALOG_LOGIN:
             UiLogin::open();
             break;
 
-        case DIALOG_LEVEL_INFO: {
-            _pass_info_descr = (char *)data;
-            gdk_threads_add_idle(_open_info_dialog, 0);
+        case DIALOG_LEVEL_INFO:
+            UiMessage::open((char *)data, MessageType::LevelInfo);
             break;
-        }
 
         case DIALOG_PROMPT:
-            if (G) {
+            if (G)
                 G->reset_touch(false);
-            }
-            gdk_threads_add_timeout(40, _open_prompt_dialog, 0);
+            UiPrompt::open();
             break;
-        case DIALOG_PROMPT_SETTINGS: gdk_threads_add_idle(_open_prompt_settings_dialog, 0); break;
+
+        case DIALOG_PROMPT_SETTINGS:
+            UiPromptSettings::open();
+            break;
 
         default:
             tms_warnf("Unhandled dialog ID: %d", num);
             break;
     }
 
+#ifndef PRINCIPIA_BACKEND_IMGUI
     gdk_display_flush(gdk_display_get_default());
+#endif
 }
 
 void ui::open_sandbox_tips() {
-    wait_ui_ready();
-
-    gdk_threads_add_idle(_open_tips_dialog, 0);
-
-    gdk_display_flush(gdk_display_get_default());
+    UiTips::open();
 }
 
 void ui::set_next_action(int action_id) {
@@ -7745,7 +4198,9 @@ void ui::set_next_action(int action_id) {
 }
 
 void ui::emit_signal(int num, void *data/*=0*/) {
+#ifndef PRINCIPIA_BACKEND_IMGUI
     wait_ui_ready();
+#endif
 
     /* XXX this stuff probably needs to be added to gdk_threads_idle_add()! */
 
@@ -7764,7 +4219,9 @@ void ui::emit_signal(int num, void *data/*=0*/) {
             break;
 
         case SIGNAL_REFRESH_BORDERS:
+#ifndef PRINCIPIA_BACKEND_IMGUI
             refresh_borders();
+#endif
             break;
     }
 
@@ -7775,18 +4232,11 @@ void ui::quit() {
     /* TODO: add proper quit stuff here */
     _tms.state = TMS_STATE_QUITTING;
 
-#ifdef UI_IMGUI_IN_GTK
     imgui_driver.quit();
-#endif
 }
 
 void ui::open_error_dialog(const char *error_msg) {
-    wait_ui_ready();
-
-    _pass_error_text = strdup(error_msg);
-    gdk_threads_add_idle(_open_error_dialog, 0);
-
-    gdk_display_flush(gdk_display_get_default());
+    UiMessage::open(error_msg, MessageType::Error);
 }
 
 void ui::confirm(const char *text,
@@ -7796,47 +4246,14 @@ void ui::confirm(const char *text,
         struct confirm_data _confirm_data/*=none*/
         ) {
 
-    wait_ui_ready();
-
-    _pass_confirm_text    = strdup(text);
-    _pass_confirm_button1 = strdup(button1);
-    _pass_confirm_button2 = strdup(button2);
-    if (button3)
-        _pass_confirm_button3 = strdup(button3);
-    else
-        _pass_confirm_button3 = 0;
-
-    confirm_action1 = action1.action_id;
-    confirm_action2 = action2.action_id;
-    confirm_action3 = action3.action_id;
-
-    confirm_action1_data = action1.action_data;
-    confirm_action2_data = action2.action_data;
-    confirm_action3_data = action3.action_data;
-
-    confirm_data = _confirm_data;
-
-    gdk_threads_add_idle(_open_confirm_dialog, 0);
-
-    gdk_display_flush(gdk_display_get_default());
+    UiConfirm::open(text, button1, action1, button2, action2, button3, action3, _confirm_data);
 }
 
 void ui::alert(const char *text, uint8_t alert_type/*=ALERT_INFORMATION*/) {
-    wait_ui_ready();
-
-    if (_alert_text)
-        free(_alert_text);
-
-    _alert_type = alert_type;
-    _alert_text = strdup(text);
-
-    gdk_threads_add_idle(_open_alert_dialog, 0);
-
-    gdk_display_flush(gdk_display_get_default());
+    UiMessage::open(text, MessageType::Message);
 }
 
 void ui::render() {
-#ifdef UI_IMGUI_IN_GTK
     imgui_driver.pre_render();
 
     UiSandboxMenu::layout();
@@ -7860,9 +4277,38 @@ void ui::render() {
     UiEventListener::layout();
     UiResource::layout();
     UiItem::layout();
+    UiSave::layout();
+    UiLevelManager::layout();
+    UiShapeExtruder::layout();
+    UiCursorField::layout();
+    UiSettings::layout();
+    UiSetFaction::layout();
+    UiConfirm::layout();
+    UiMessage::layout();
+    UiKeyListener::layout();
+    UiTips::layout();
+    UiPublish::layout();
+    UiPublished::layout();
+    UiTimer::layout();
+    UiCommunity::layout();
+    UiConfirmQuit::layout();
+    UiLuaEditor::layout();
+    UiCamTargeter::layout();
+    UiVendor::layout();
+    UiFXEmitter::layout();
+    UiPrompt::layout();
+    UiPromptSettings::layout();
+    UiSoundManager::layout();
+    UiSequencer::layout();
+
+#ifdef PRINCIPIA_BACKEND_IMGUI
+    UiLevelProperties::layout();
+    UiRobot::layout();
+    UiSynthesizer::layout();
+    UiTreasureChest::layout();
+#endif
 
     imgui_driver.post_render();
-#endif
 }
 
 #endif
