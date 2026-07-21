@@ -234,6 +234,12 @@ static void init_curl_defaults(void *curl) {
 
 #ifdef DEBUG
     curl_easy_setopt(P.curl, CURLOPT_VERBOSE, 1);
+
+    if (strcmp(P.community_host, "principia-web.uwu") == 0) {
+        tms_warnf("[DEBUG] Using local community host 'principia-web.uwu', disabling certificate verification.");
+        curl_easy_setopt(P.curl, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_easy_setopt(P.curl, CURLOPT_SSL_VERIFYHOST, 0);
+    }
 #endif
 
     // Note: this may put token cookie in the log output
@@ -626,7 +632,7 @@ int network::login(void *p) {
 
     unlock_curl("login");
 
-    free(data);
+    delete data;
 
     return 0;
 }

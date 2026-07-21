@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <vector>
 
-#if defined(PRINCIPIA_BACKEND_IMGUI) || defined(UI_IMGUI_IN_GTK)
+#if defined(PRINCIPIA_BACKEND_IMGUI)
 
 // imgui_impl_tms.cc
 IMGUI_IMPL_API bool ImGui_ImplSDL3_Init();
@@ -24,19 +24,6 @@ bool lax_search(const std::string& where, const std::string& what) {
 
 void ImGui_CenterNextWindow() {
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-}
-
-// unused, do we need this?
-void ImGui_BeginScaleFont(float scale) {
-    ImGui::GetFont()->Scale = scale;
-    ImGui::PushFont(ImGui::GetFont());
-}
-
-// unused, do we need this?
-void ImGui_EndScaleFont() {
-    ImGui::GetFont()->Scale = 1.;
-    ImGui::PopFont();
-    ImGui::GetFont()->Scale = 1.;
 }
 
 void handle_do_open(bool *do_open, const char* name) {
@@ -116,19 +103,19 @@ static void update_imgui_ui_scale() {
 
 static void principia_style() {
     ImGui::StyleColorsDark();
-    ImGuiStyle *style = &ImGui::GetStyle();
-    ImVec4* colors = style->Colors;
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* colors = style.Colors;
+
+    colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.05f, 0.05f, 0.05f, 0.25f);
 
     //Rounding
-    style->FramePadding = ImVec2(10, 6);
-    style->ItemSpacing  = ImVec2(10, 8);
-    style->CellPadding  = ImVec2(10, 4);
-    style->FrameRounding  = style->GrabRounding  = 2.3f;
-    style->WindowRounding = style->PopupRounding = style->ChildRounding = 3.0f;
-
-    //style->FrameBorderSize = .5;
-
-    colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.05f, 0.05f, 0.05f, 0.35f);
+    style.FramePadding = ImVec2(10, 6);
+    style.ItemSpacing  = ImVec2(10, 8);
+    style.CellPadding  = ImVec2(10, 4);
+    style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
+    style.SeparatorTextBorderSize = style.SeparatorSize = 1.0f;
+    style.FrameRounding  = style.GrabRounding  = 2.3f;
+    style.WindowRounding = style.PopupRounding = style.ChildRounding = 3.0f;
 }
 
 //On debug builds, open imgui demo window by pressing Shift+F9
@@ -185,7 +172,7 @@ void ImguiDriver::pre_render() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::PushFont(ui_font.font);
+    ImGui::PushFont(ui_font.font, 0.0f);
 
 #ifdef DEBUG
     ui_demo_layout();
