@@ -315,7 +315,75 @@ int network::publish_level(void *p) {
 
     return T_OK;
 }
-int network::submit_score(void *p) { return 0; }
+
+int network::submit_score(void *p) {
+    submit_score_data data;
+
+    if (!prepare_submit_score(&data)) {
+        _submit_score_done = true;
+        return false;
+    }
+
+    FILE *f = fopen(data.progress_path, "rb");
+    if (!f) {
+        tms_errorf("could not open progress file");
+        _submit_score_done = true;
+        return false;
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    void *data_bin = malloc(size);
+
+    if (fread(data_bin, 1, size, f) != size) {
+        fclose(f);
+        tms_errorf("could not read progress file");
+        _submit_score_done = true;
+        return false;
+    }
+    fclose(f);
+
+    std::string boundary = "PrincipiaBoundary" + std::to_string(rand());
+    std::string payload =
+        "--" + boundary + "\r\n"
+        "Content-Disposition: form-data; name=\"data.bin\"; "
+        "filename=\"data.bin\"\r\n"
+        "Content-Type: application/octet-stream\r\n"
+        "\r\n" +
+        std::string(static_cast<const char *>(data_bin), size) +
+        "\r\n"
+        "--" + boundary + "\r\n"
+        "Content-Disposition: form-data; name=\"lvl_id\"\r\n"
+        "\r\n" +
+        std::to_string(data.community_id) +
+        "\r\n"
+        "--" + boundary + "--\r\n";
+
+    static auto submit_score_fetch_callback = [](int status, const char *headers, const void *body, size_t body_size, void *userdata) {
+        tms_infof("(Emscripten) Submit score callback with status %d", status);
+
+        header_data hd = {};
+        parse_js_headers(status, headers, &hd);
+
+        handle_submit_score(hd, status);
+        _submit_score_done = true;
+    };
+
+    COMMUNITY_URL("internal/submit_score");
+
+    emscripten_fetch_request(
+        "POST",
+        url,
+        std::string("Content-Type: multipart/form-data; boundary=" + boundary).c_str(),
+        payload.data(),
+        payload.size(),
+        submit_score_fetch_callback,
+        nullptr);
+
+    return T_OK;
+}
 
 int network::login(void *p) {
     login_data *data = static_cast<login_data*>(p);
@@ -422,49 +490,53 @@ int network::download_level(void *p) {
 
     tms_infof("_play_id = %d -----------------------", _play_id);
 
-    // callbacks
-    static auto success_cb = [](emscripten_fetch_t *fetch) {
-        const char *path = (const char*)fetch->userData;
+    P.add_action(ACTION_REFRESH_HEADER_DATA, 0);
+
+    static auto download_level_callback = [](int status, const char *headers, const void *body, size_t body_size, void *userdata) {
+        if (status != 200 || !body) {
+            tms_errorf("Failed to download level (status %d) -> %s", status, (const char*)userdata ? (const char*)userdata : "(null)");
+            free((void*)((const char*)userdata));
+            if (status == 404)
+                _play_downloading_error = DOWNLOAD_GENERIC_ERROR;
+            else
+                _play_downloading_error = DOWNLOAD_CHECK_INTERNET_CONNECTION;
+
+            _play_downloading = false;
+            return;
+        }
+
+        header_data hd = {};
+        parse_js_headers(status, headers, &hd);
+
+        P.add_action(ACTION_REFRESH_HEADER_DATA, 0);
+
+        const char *path = (const char*)userdata;
         FILE *f = fopen(path, "wb");
         if (f) {
-            fwrite(fetch->data, 1, fetch->numBytes, f);
+            fwrite(body, 1, body_size, f);
             fclose(f);
             tms_infof("Saved level to %s", path);
         } else {
             tms_errorf("Could not open %s for writing", path);
             _play_downloading_error = DOWNLOAD_WRITE_ERROR;
         }
-        emscripten_fetch_close(fetch);
         free((void*)path);
-        _play_downloading = false;
-    };
 
-    static auto error_cb = [](emscripten_fetch_t *fetch) {
-        const char *path = (const char*)fetch->userData;
-        tms_errorf("Failed to download level (status %d) -> %s", fetch->status, path ? path : "(null)");
-        emscripten_fetch_close(fetch);
-        free((void*)path);
-        if (fetch->status == 404) {
-            _play_downloading_error = DOWNLOAD_GENERIC_ERROR;
-        } else {
-            _play_downloading_error = DOWNLOAD_CHECK_INTERNET_CONNECTION;
-        }
         _play_downloading = false;
     };
 
     // allocate and pass save path as userData
     char *user = strdup(save_path);
 
-    emscripten_fetch_attr_t attr;
-    emscripten_fetch_attr_init(&attr);
-    strcpy(attr.requestMethod, "GET");
-    attr.onsuccess = +[](emscripten_fetch_t *fetch){ success_cb(fetch); };
-    attr.onerror = +[](emscripten_fetch_t *fetch){ error_cb(fetch); };
-    attr.userData = user;
-    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+    emscripten_fetch_request(
+        "GET",
+        url,
+        nullptr,
+        nullptr,
+        0,
+        download_level_callback,
+        user);
 
-    _play_downloading = true;
-    emscripten_fetch(&attr, url);
     return T_OK;
 }
 
