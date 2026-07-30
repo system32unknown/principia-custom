@@ -1,4 +1,5 @@
 #include "floorgate.hh"
+#include "settings.hh"
 
 edevice*
 integergate::solve_electronics()
@@ -8,7 +9,7 @@ integergate::solve_electronics()
 
     float v = (float)((int)this->s_in[0].get_value());
 
-    this->s_out[0].write(tclampf(v, 0.f, 1.f));
+    this->s_out[0].write((settings["disable_overloader"]->v.b ? tclampf(v, 0.f, 1.f) : v));
 
     return 0;
 }

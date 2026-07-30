@@ -12,4 +12,3 @@ i0o1gate::i0o1gate()
     this->s_out[0].lpos = b2Vec2(0.f, .0625f);
     this->set_as_rect(.15f, .2f);
 }
-

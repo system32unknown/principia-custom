@@ -50,21 +50,3 @@ i1o1gate_fifo::i1o1gate_fifo()
 
     this->set_as_rect(.25f, .5f);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

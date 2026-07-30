@@ -1,5 +1,6 @@
 #include "snapgate.hh"
 #include "game.hh"
+#include "settings.hh"
 
 snapgate::snapgate()
 {
@@ -23,7 +24,7 @@ snapgate::solve_electronics()
     v = roundf(v);
     v *= snap;
 
-    this->s_out[0].write(tclampf(v, 0.f, 1.f));
+    this->s_out[0].write((settings["disable_overloader"]->v.b ? tclampf(v, 0.f, 1.f) : v));
 
     return 0;
 }

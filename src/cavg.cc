@@ -1,4 +1,5 @@
 #include "cavg.hh"
+#include "settings.hh"
 
 edevice*
 cavg::solve_electronics()
@@ -16,7 +17,10 @@ cavg::solve_electronics()
         this->value = f * this->value + (1.f - f)*v;
     }
 
-    this->s_out[0].write(tclampf(this->value, 0.f, 1.f));
+    float clamped_value = 0.f;
+    if (settings["disable_overloader"]->v.b) tclampf(this->value, 0.f, 1.f)
+    else clamped_value = this->value;
+    this->s_out[0].write(clamped_value);
 
     return 0;
 }

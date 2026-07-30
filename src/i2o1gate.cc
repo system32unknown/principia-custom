@@ -2,6 +2,7 @@
 #include "game.hh"
 #include "material.hh"
 #include "robot_base.hh"
+#include "settings.hh"
 
 i2o1gate::i2o1gate()
 {
@@ -226,7 +227,11 @@ emin::solve_electronics()
     float a = this->s_in[0].get_value();
     float b = this->s_in[1].get_value();
 
-    this->s_out[0].write(tclampf(!(b < a) ? a : b, 0.f, 1.f));
+    float clamped_value = 0.f;
+    if (settings["disable_overloader"]->v.b)
+        clamped_value = tclampf(!(b < a) ? a : b, 0.f, 1.f);
+    else clamped_value = !(b < a) ? a : b;
+    this->s_out[0].write(clamped_value);
 
     return 0;
 }
@@ -242,7 +247,12 @@ emax::solve_electronics()
     float a = this->s_in[0].get_value();
     float b = this->s_in[1].get_value();
 
-    this->s_out[0].write(tclampf((a < b) ? b : a, 0.f, 1.f));
+
+    float clamped_value = 0.f;
+    if (settings["disable_overloader"]->v.b)
+        clamped_value = tclampf((a < b) ? b : a, 0.f, 1.f);
+    else clamped_value = (a < b) ? b : a;
+    this->s_out[0].write(clamped_value);
 
     return 0;
 }
