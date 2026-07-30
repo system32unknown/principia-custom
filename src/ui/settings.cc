@@ -426,6 +426,12 @@ namespace UiSettings {
             }
             ImGui::EndDisabled();
 
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", UI(70., 0.))) {
+                if_done = IfDone::Exit;
+                ImGui::CloseCurrentPopup();
+            }
+
             ImGui::EndPopup();
         }
     }

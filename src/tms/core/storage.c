@@ -61,7 +61,7 @@ const char *tms_storage_path(void)
 {
 #ifdef __ANDROID__
     return SDL_GetAndroidExternalStoragePath();
-#elif defined(__EMSCRIPTEN__)
+#elif defined(__EMSCRIPTEN__) || defined(SDL_PLATFORM_SWITCH)
     return SDL_GetPrefPath("Bithack", "Principia");
 #elif defined(SCREENSHOT_BUILD)
     return "storage";
@@ -99,7 +99,7 @@ const char *tms_storage_cache_path(void)
 {
 #ifdef __ANDROID__
     return SDL_GetAndroidCachePath();
-#elif defined(__EMSCRIPTEN__)
+#elif defined(__EMSCRIPTEN__) || defined(SDL_PLATFORM_SWITCH)
     return SDL_GetPrefPath("Bithack", "Principia");
 #elif defined(SCREENSHOT_BUILD)
     return "/tmp/principia_cache";
@@ -198,6 +198,7 @@ static void move_matching_files(const char *srcdir, const char *dstdir, const ch
 
     FindClose(hFind);
 #else
+#ifndef SDL_PLATFORM_HAIKU
     DIR *dir = opendir(srcdir);
     if (!dir) return;
 
@@ -216,6 +217,7 @@ static void move_matching_files(const char *srcdir, const char *dstdir, const ch
         rename(src, dst);
     }
     closedir(dir);
+#endif
 #endif
 }
 

@@ -1555,6 +1555,11 @@ game::unset_caveview_zoom_limits()
 }
 
 void game::step_tooltip() {
+    if (ui::is_blocking()) {
+        this->hov_text->active = false;
+        return;
+    }
+
     uint64_t diff = _tms.last_time - move_time;
     if (((this->hov_text->active && diff > HOVER_TIME_ACTIVE) || (this->hov_text->active == false && diff > HOVER_TIME)) && !move_queried) {
         move_queried = true;
@@ -7647,6 +7652,11 @@ game::handle_input_paused(tms::event *ev, int action)
                     /* if there are more than one socket available, choose the "first" option */
                     this->select_socksel(0);
                     disable_menu = true;
+                } else if (this->state.sandbox) {
+                    if (!disable_menu)
+                        ui::open_dialog(DIALOG_QUICKADD);
+
+                    disable_menu = false;
                 }
                 break;
 
@@ -8045,16 +8055,17 @@ game::handle_input_paused(tms::event *ev, int action)
 
                 disable_menu = false;
                 break;
-        }
-    } else if (ev->type == TMS_EV_KEY_UP) {
-        switch (ev->data.key.keycode) {
-            case TMS_KEY_SPACE:
-                if (!disable_menu) {
-                    ui::open_dialog(DIALOG_QUICKADD);
-                }
+
+            case TMS_KEY_LEFT_ALT:
+                if (!disable_menu)
+                    ui::open_dialog(DIALOG_SANDBOX_MENU);
 
                 disable_menu = false;
                 break;
+        }
+    } else if (ev->type == TMS_EV_KEY_UP) {
+        switch (ev->data.key.keycode) {
+
 
             case TMS_KEY_LEFT_SHIFT:
             case TMS_KEY_RIGHT_SHIFT:
@@ -8063,15 +8074,6 @@ game::handle_input_paused(tms::event *ev, int action)
                     this->wdg_additive->faded = !this->multi.additive_selection;
                 }
                 break;
-
-            case TMS_KEY_LEFT_CTRL:
-            case TMS_KEY_RIGHT_CTRL:
-                if (!disable_menu)
-                    ui::open_dialog(DIALOG_SANDBOX_MENU);
-
-                disable_menu = false;
-                break;
-
         }
     } else if (ev->type == TMS_EV_POINTER_MOVE) {
         if (this->menu_handle_event(ev) == EVENT_DONE) {
