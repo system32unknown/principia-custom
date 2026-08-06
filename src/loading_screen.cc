@@ -4,6 +4,10 @@
 #include "text.hh"
 #include <tms/cpp.hh>
 
+#ifdef SCREENSHOT_BUILD
+#include "menu_ss.hh"
+#endif
+
 loading_screen::loading_screen()
 {
     float projection[16];
@@ -45,7 +49,7 @@ loading_screen::render()
 #ifdef SDL_PLATFORM_IOS
     glBindFramebuffer(GL_FRAMEBUFFER, viewFramebuffer);
 #endif
-    glClearColor(0.f, 0.f, 0.f, 1.f);
+    glClearColor(0.02f, 0.02f, 0.02f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);
 
@@ -84,7 +88,11 @@ loading_screen::step_loading()
 tms::screen *loading_screen::get_next_screen()
 {
     if (next == 0) {
+#ifdef SCREENSHOT_BUILD
+        return P.s_menu_ss;
+#else
         return P.s_menu_main;
+#endif
     } else {
         return next;
     }
