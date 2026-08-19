@@ -7,6 +7,7 @@ on:
       - 'lib/**'
       - 'data/**'
       - 'packaging/**'
+      - 'cmake/**'
       - 'CMakeLists.txt'
       - '.github/workflows/web.yml'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'lib/**'
       - 'data/**'
       - 'packaging/**'
+      - 'cmake/**'
       - 'CMakeLists.txt'
       - '.github/workflows/web.yml'
 
@@ -35,7 +37,8 @@ jobs:
       - name: Build
         run: |
           mkdir build; cd build
-          emcmake cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX= -DUSE_VENDORED_SDL3=ON
+          emcmake cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX= \
+            -DUSE_VENDORED_SDL3=ON -DUNITY_BUILD=ON
           ninja
           DESTDIR=../web ninja install
 

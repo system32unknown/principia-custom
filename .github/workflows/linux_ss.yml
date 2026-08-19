@@ -6,6 +6,7 @@ on:
       - 'src/**'
       - 'lib/**'
       - 'data/**'
+      - 'cmake/**'
       - 'CMakeLists.txt'
       - '.github/workflows/linux_ss.yml'
   pull_request:
@@ -13,6 +14,7 @@ on:
       - 'src/**'
       - 'lib/**'
       - 'data/**'
+      - 'cmake/**'
       - 'CMakeLists.txt'
       - '.github/workflows/linux_ss.yml'
 
@@ -32,7 +34,7 @@ jobs:
       - name: Build
         run: |
           mkdir build; cd build
-          cmake .. -DSCREENSHOT_BUILD=ON -G Ninja -DUSE_VENDORED_SDL3=ON
+          cmake .. -DSCREENSHOT_BUILD=ON -DUSE_VENDORED_SDL3=ON -DUNITY_BUILD=ON -G Ninja
           ninja -j4
 
       - name: Upload output as artifact
