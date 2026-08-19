@@ -4,24 +4,34 @@ ManifestDPIAware true
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
+!include "WinVer.nsh"
+!include "x64.nsh"
 
 !define MUI_ICON "..\packaging\icon.ico"
-!define VER_MAJOR 2026
-!define VER_MINOR 8
-!define VER_BUILD 16
 
-!define VERSION "2026.08.16"
+!ifndef VERSION
+    !error "VERSION is not defined."
+!endif
 
 !define LOGO_FILE "install_logo.bmp"
 !define LOGO_PATH "..\packaging\${LOGO_FILE}"
 
 Name "Principia"
-OutFile "principia-setup.exe"
 
-InstallDir "$PROGRAMFILES\Principia"
+!if "${ARCH_NAME}" == "win64"
+    InstallDir "$PROGRAMFILES64\Principia"
+    !define REG_VIEW 64
+!else if "${ARCH_NAME}" == "win32"
+    InstallDir "$PROGRAMFILES32\Principia"
+    !define REG_VIEW 32
+!else if "${ARCH_NAME}" == "winarm64"
+    InstallDir "$PROGRAMFILES64\Principia"
+    !define REG_VIEW 64
+!else
+    !error "Unknown architecture, please specify one when calling the compiler."
+!endif
 
-;get install dir from registry if available
-InstallDirRegKey HKCU "Software\Bithack\Principia" ""
+OutFile "principia_${ARCH_NAME}.exe"
 
 !define REG_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Principia"
 
@@ -40,19 +50,41 @@ Function .onInit
     ; the main administrator, even if a regular user escalating to admin installs it.
     SetShellVarContext All
 
+    SetRegView ${REG_VIEW}
+
+    ${If} "${ARCH_NAME}" == "win64"
+        ; A 64-bit application cannot run on a 32-bit Windows installation.
+        ${IfNot} ${RunningX64}
+            MessageBox MB_ICONSTOP "This version of Principia requires 64-bit Windows."
+            Abort
+        ${EndIf}
+    ${ElseIf} "${ARCH_NAME}" == "win32"
+        ${If} ${RunningX64}
+            # note that this is a 32-bit app while they're on 64-bit windows
+            MessageBox MB_ICONEXCLAMATION "This version of Principia is 32-bit, but your Windows installation appears to be 64-bit. You may want to install the 64-bit version of Principia instead."
+        ${EndIf}
+    ${EndIf}
+
+    ReadRegStr $0 HKCU "Software\Bithack\Principia" ""
+    ${If} $0 != ""
+        StrCpy $INSTDIR $0
+    ${EndIf}
+
     InitPluginsDir
     File "/oname=$PLUGINSDIR\${LOGO_FILE}" "${LOGO_PATH}"
 FunctionEnd
 
 Function un.onInit
     SetShellVarContext All
+
+    SetRegView ${REG_VIEW}
 FunctionEnd
 
 Function DrawLogo
     ; Windows 10, version 1607+
-    System::Call 'user32::GetDpiForWindow(p $HWNDPARENT)i .r0'
-
-    ${If} $0 == 0
+    ${If} ${AtLeastWaaS} 1607
+        System::Call 'user32::GetDpiForWindow(p $HWNDPARENT)i .r0'
+    ${Else}
         ; Fallback for older Windows versions
         System::Call 'user32::GetDC(p 0)p .r1'
         System::Call 'gdi32::GetDeviceCaps(p r1, i 88)i .r0'
@@ -186,10 +218,10 @@ Section "" SecCore
 
     SetOutPath "$INSTDIR"
 
-    File "release\principia.exe"
-    File /x "opengl32.dll" "release\*.dll"
+    File "principia.exe"
 
-    File /r /x android "..\data"
+    SetOutPath "$INSTDIR\data"
+    File /r "..\data\*"
 
     WriteRegStr HKCR "principia" "" "URL:Principia"
     WriteRegStr HKCR "principia" "URL Protocol" ""
