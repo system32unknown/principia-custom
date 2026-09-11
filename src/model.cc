@@ -313,6 +313,7 @@ struct model_load_data mesh_factory::models[NUM_MODELS] = {
     {PATH("plant3")},
     {PATH("plant4")},
     {PATH("war_axe")},
+    {PATH("banner")},
     {PATH("pixel_sword")},
     {PATH("hard_hat")},
     {PATH("serpent_sword")},

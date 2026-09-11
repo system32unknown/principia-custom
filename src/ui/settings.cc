@@ -327,6 +327,11 @@ namespace UiSettings {
         ImGui::Checkbox("Smooth menu scrolling", (bool*) &local_settings["smooth_menu"]->v.b);
     }
 
+    void misc_tab() {
+        ImGui::Checkbox("Disable Overloader", (bool*) &local_settings["disable_overloader"]->v.b);
+        ImGui::SetItemTooltip("Disables overloader.");
+    }
+
     void layout() {
         handle_do_open(&do_open, "Settings");
         ImGui_CenterNextWindow();
@@ -395,15 +400,9 @@ namespace UiSettings {
                     end_scrolling_tab();
                 }
 
-                ImGui::EndTabBar();
-
-                bool misc_tab = ImGui::BeginTabItem("Misc");
-                ImGui::SetItemTooltip("Change misc settings");
-                if (misc_tab) {
-                    ImGui::Checkbox("Disable Overloader", (bool*) &local_settings["disable_overloader"]->v.b);
-                    ImGui::SetItemTooltip("Disables overloader.");
-
-                    ImGui::EndTabItem();
+                if (begin_scrolling_tab("Miscellaneous", "###misc-tab", "Miscellaneous Settings")) {
+                    misc_tab();
+                    end_scrolling_tab();
                 }
 
                 ImGui::EndTabBar();
