@@ -4,6 +4,7 @@
 #include "angulardamper.hh"
 #include "angularvelmeter.hh"
 #include "animal.hh"
+#include "artificial_gravity.hh"
 #include "backpack.hh"
 #include "ball.hh"
 #include "battery.hh"
@@ -22,6 +23,7 @@
 #include "clip.hh"
 #include "command.hh"
 #include "companion.hh"
+#include "condenser.hh"
 #include "conveyor.hh"
 #include "corner.hh"
 #include "crane.hh"
@@ -40,7 +42,6 @@
 #include "emitter.hh"
 #include "epsilon.hh"
 #include "erandom.hh"
-#include "luascript.hh"
 #include "esub.hh"
 #include "eventlistener.hh"
 #include "explosive.hh"
@@ -59,6 +60,7 @@
 #include "gravityman.hh"
 #include "group.hh"
 #include "gyroscope.hh"
+#include "hp_control.hh"
 #include "i2o1gate.hh"
 #include "impact_sensor.hh"
 #include "invertergate.hh"
@@ -71,6 +73,7 @@
 #include "linear_decay.hh"
 #include "lmotor.hh"
 #include "lobber.hh"
+#include "luascript.hh"
 #include "magconn.hh"
 #include "magnet.hh"
 #include "mavg.hh"
@@ -175,7 +178,7 @@ static entity* new_trampoline() { return new trampoline(); }
 static entity* new_debugger() { return new tester(); }
 static entity* new_button() { return new button(0); }
 static entity* new_rope() { return new rope(); }
-static entity* new_sticky(void)
+static entity* new_sticky()
 {
     sticky *s = new sticky();
     if (s->get_slot() == -1) {
@@ -367,7 +370,7 @@ static entity* new_oilrig() { return new oilrig(); }
 static entity* new_factory() { return new factory(FACTORY_GENERIC); }
 static entity* new_crane() { return new crane(); }
 static entity* new_fluid() { return new fluid(); }
-static entity* new_localgravity() { return new localgravity(); }
+static entity* new_localgravity() { return new artificialgravity(); }
 static entity* new_autoprotector() { return new autoprotector(); }
 static entity* new_active_display() { return new active_display(); }
 static entity* new_boundary() { return new boundary(); }
@@ -399,7 +402,7 @@ static entity* new_ladder_step() { return new ladder_step(); }
 
 uint32_t of::_id = 1;
 
-static entity* (*c_creator[])(void) = {
+static entity* (*c_creator[])() = {
     &new_thinplank, /* 0 */
     &new_plank,
     &new_ball_wood,

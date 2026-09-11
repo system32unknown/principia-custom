@@ -1,8 +1,7 @@
 #include "i0o1gate.hh"
 #include "model.hh"
 
-i0o1gate::i0o1gate()
-{
+i0o1gate::i0o1gate() {
     this->set_mesh(mesh_factory::get_mesh(MODEL_I0O1));
     this->set_material(&m_iomisc);
 

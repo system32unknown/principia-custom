@@ -3,13 +3,14 @@
 #include "edevice.hh"
 #include "i1o1gate.hh"
 
-class squaregate : public i1o1gate
-{
+/**
+ * Class representing the Square object.
+ *
+ * Player Wiki ref: https://principia-web.se/wiki/Square
+ */
+class squaregate : public i1o1gate {
   public:
-    squaregate()
-    {
-        this->set_mesh(mesh_factory::get_mesh(MODEL_I1O1_SQUARE));
-    }
+    squaregate();
     edevice* solve_electronics();
     const char* get_name(){return "Square";}
 };

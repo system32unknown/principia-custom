@@ -1,5 +1,6 @@
 #include "ceilgate.hh"
 #include "settings.hh"
+#include "model.hh"
 
 ceilgate::ceilgate() {
     this->set_mesh(mesh_factory::get_mesh(MODEL_I1O1_INTEGER));
