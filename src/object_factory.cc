@@ -708,7 +708,7 @@ static int c1_ids[] = {
     O_WEIGHT,
     O_BOMB,
     O_LAND_MINE,
-    //O_GEARBOX,
+    O_GEARBOX,
     O_ANGULAR_DAMPER,
     O_GEAR,
     O_MAGNET,
