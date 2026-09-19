@@ -110,9 +110,6 @@ public class PrincipiaBackend
     public static native String getFxEmitterEffects();
     public static native void setFxEmitterEffects(int effect_1, int effect_2, int effect_3, int effect_4);
 
-    public static native int getEventListenerEventType();
-    public static native void setEventListenerEventType(int event_type);
-
     public static native int getPkgItemLevelId();
     public static native void setPkgItemLevelId(int pkg_level_id);
 
@@ -138,7 +135,6 @@ public class PrincipiaBackend
     public static native void setLevelName(String name);
     public static native void setLevelDescription(String descr);
     public static native void triggerSave(boolean save_copy);
-    public static native void triggerCreateLevel(int level_type);
     public static native boolean isPaused();
     public static native void setPaused(boolean b);
 
@@ -170,7 +166,6 @@ public class PrincipiaBackend
     public static native String getConsumables();
     public static native void setConsumableType(int consumable_type);
     public static native String getCurrentCommunityUrl();
-    public static native void setGameMode(int i);
 
     public static native void updateRubberEntity(float restitution, float friction);
     public static native void updateShapeExtruder(float v_right, float v_up, float v_left, float v_down);
@@ -197,8 +192,9 @@ public class PrincipiaBackend
     public static native void fixed();
 
     public static native String getDecorations();
-    public static native String getAnimals();
     public static native String getSounds();
 
     public static native void openState(int level_type, int level_id, int save_id, boolean from_menu);
+
+    public static native void openDialog(int dialog_id);
 }

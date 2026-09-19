@@ -157,6 +157,22 @@ void ui::open_dialog(int num, void *data/*=0*/) {
             UiKeyListener::open();
             break;
 
+        case DIALOG_ANIMAL:
+            UiAnimal::open();
+            break;
+
+        case DIALOG_SANDBOX_MODE:
+            UiSandboxMode::open();
+            break;
+
+        case DIALOG_EVENTLISTENER:
+            UiEventListener::open();
+            break;
+
+        case DIALOG_NEW_LEVEL:
+            UiNewLevel::open();
+            break;
+
         case DIALOG_LEVEL_INFO: {
             jmethodID mid = env->GetStaticMethodID(cls, "showInfoDialog", "(Ljava/lang/String;)V");
 
@@ -199,6 +215,10 @@ void ui::render() {
 
     UiSetFaction::layout();
     UiKeyListener::layout();
+    UiAnimal::layout();
+    UiSandboxMode::layout();
+    UiEventListener::layout();
+    UiNewLevel::layout();
 
     imgui_driver.post_render();
 }
@@ -849,10 +869,6 @@ JNI_FUNC(jstring, getCurrentCommunityUrl)(JNIEnv *env, jclass _jcls) {
     return env->NewStringUTF(url);
 }
 
-JNI_FUNC(void, setGameMode)(JNIEnv *env, jclass _jcls, jint mode) {
-    G->set_mode(mode);
-}
-
 /** ++Command pad **/
 JNI_FUNC(jint, getCommandPadCommand)(JNIEnv *env, jclass _jcls) {
     if (G->selection.e && G->selection.e->g_id == 64)
@@ -916,24 +932,6 @@ JNI_FUNC(void, setFxEmitterEffects)(JNIEnv *env, jclass _jcls, jint effect_1, ji
             e->properties[3+3].v.i = effect_4 - 1;
 
         ui::message("FX Emitter properties saved!");
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
-/** ++Event Listener **/
-JNI_FUNC(jint, getEventListenerEventType)(JNIEnv *env, jclass _jcls) {
-    if (G->selection.e && G->selection.e->g_id == 156)
-        return (jint)G->selection.e->properties[0].v.i;
-
-    return 0;
-}
-
-JNI_FUNC(void, setEventListenerEventType)(JNIEnv *env, jclass _jcls, jint event_type) {
-    if (G->selection.e && G->selection.e->g_id == 156) {
-        G->selection.e->properties[0].v.i = event_type;
-
-        ui::message("Event listener properties saved!");
         P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
         P.add_action(ACTION_RESELECT, 0);
     }
@@ -1156,16 +1154,6 @@ JNI_FUNC(jstring, getDecorations)(JNIEnv *env, jclass _jcls) {
 
     for (int x=0; x<NUM_DECORATIONS; ++x)
         ss << decorations[x].name << ",.,";
-
-    return env->NewStringUTF(ss.str().c_str());
-}
-
-JNI_FUNC(jstring, getAnimals)(JNIEnv *env, jclass _jcls) {
-    std::stringstream ss;
-
-    for (int x=0; x<NUM_ANIMAL_TYPES; ++x) {
-        ss << animal_data[x].name << ",.,";
-    }
 
     return env->NewStringUTF(ss.str().c_str());
 }
@@ -1897,8 +1885,8 @@ JNI_FUNC(void, triggerSave)(JNIEnv *env, jclass _jcls, jboolean save_copy) {
         P.add_action(ACTION_SAVE, 0);
 }
 
-JNI_FUNC(void, triggerCreateLevel)(JNIEnv *env, jclass _jcls, jint level_type) {
-    P.add_action(ACTION_NEW_LEVEL, level_type);
+JNI_FUNC(void, openDialog)(JNIEnv *env, jclass _jcls, jint dialog_id) {
+    ui::open_dialog((int)dialog_id);
 }
 
 }
