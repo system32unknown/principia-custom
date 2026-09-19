@@ -36,18 +36,14 @@
 #include <jni.h>
 #include <sstream>
 
-#ifdef EXPERIMENTAL_IMGUI_ON_ANDROID
 #include "imgui.hh"
 #include "ui_imgui.hh"
 
 static ImguiDriver imgui_driver;
-#endif
 
 void ui::init() {
-#ifdef EXPERIMENTAL_IMGUI_ON_ANDROID
     imgui_driver = ImguiDriver();
     imgui_driver.init();
-#endif
 }
 
 void ui::set_next_action(int action_id) {
@@ -153,23 +149,14 @@ void ui::open_dialog(int num, void *data/*=0*/) {
     jclass cls = env->GetObjectClass(activity);
 
     switch (num) {
-#ifdef EXPERIMENTAL_IMGUI_ON_ANDROID
-        case DIALOG_SANDBOX_MODE:
-            UiSandboxMode::open();
-            break;
-
-        case DIALOG_ANIMAL:
-            UiAnimal::open();
+        case DIALOG_SET_FACTION:
+            UiSetFaction::open();
             break;
 
         case DIALOG_KEY_LISTENER:
             UiKeyListener::open();
             break;
 
-        case DIALOG_SET_FACTION:
-            UiSetFaction::open();
-            break;
-#endif
         case DIALOG_LEVEL_INFO: {
             jmethodID mid = env->GetStaticMethodID(cls, "showInfoDialog", "(Ljava/lang/String;)V");
 
@@ -208,16 +195,12 @@ void ui::open_sandbox_tips() {
 }
 
 void ui::render() {
-#ifdef EXPERIMENTAL_IMGUI_ON_ANDROID
     imgui_driver.pre_render();
 
-    UiSandboxMode::layout();
-    UiAnimal::layout();
-    UiKeyListener::layout();
     UiSetFaction::layout();
+    UiKeyListener::layout();
 
     imgui_driver.post_render();
-#endif
 }
 bool ui::is_blocking() { return false; }
 
@@ -225,7 +208,7 @@ bool ui::is_blocking() { return false; }
 
 extern "C" {
 
-#define JNI_FUNC(type, name) type Java_com_bithack_principia_PrincipiaBackend_##name
+#define JNI_FUNC(type, name) __attribute__((visibility("default"), used, retain)) type Java_com_bithack_principia_PrincipiaBackend_##name
 
 JNI_FUNC(jstring, getLevelPage)(JNIEnv *env, jclass jcls) {
     COMMUNITY_URL("level/%d", W->level.community_id);
@@ -1166,21 +1149,6 @@ JNI_FUNC(void, fixed)(JNIEnv *env, jclass _jcls) {
         P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
         P.add_action(ACTION_RESELECT, 0);
     }
-}
-
-JNI_FUNC(jstring, getKeys)(JNIEnv *env, jclass _jcls) {
-    std::stringstream ss;
-
-    for (int x=0; x<TMS_KEY__NUM; ++x) {
-        const char *s = key_names[x];
-
-        if (s) {
-            // ;-)
-            ss << x << "=_=" << s << ",.,";
-        }
-    }
-
-    return env->NewStringUTF(ss.str().c_str());
 }
 
 JNI_FUNC(jstring, getDecorations)(JNIEnv *env, jclass _jcls) {

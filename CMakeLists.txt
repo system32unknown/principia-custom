@@ -63,14 +63,11 @@ endif()
 # Determine platform and backend
 # ------------------------------
 
-if(ANDROID OR SCREENSHOT_BUILD)
+if(SCREENSHOT_BUILD)
 	set(BACKEND_IMGUI FALSE)
 else()
 	set(BACKEND_IMGUI TRUE)
 endif()
-
-# Enable experimental usage of certain Imgui dialogs on Android
-#set(EXPERIMENTAL_IMGUI_ON_ANDROID TRUE)
 
 if(LINUX)
 	option(USE_GLES "Use OpenGL ES on Linux (Experimental)" FALSE)
@@ -129,7 +126,7 @@ else()
 	list(APPEND SRCS ${MAIN_SRCS})
 endif()
 
-if(BACKEND_IMGUI OR EXPERIMENTAL_IMGUI_ON_ANDROID)
+if(BACKEND_IMGUI)
 	if(UNITY_BUILD)
 		list(APPEND SRCS lib/imgui/_unity_chunk.cc)
 	else()
@@ -231,10 +228,6 @@ if(BACKEND_IMGUI)
 	add_definitions(-DPRINCIPIA_BACKEND_IMGUI)
 endif()
 
-if(EXPERIMENTAL_IMGUI_ON_ANDROID)
-	add_definitions(-DEXPERIMENTAL_IMGUI_ON_ANDROID)
-endif()
-
 # Use a safe subset of fast math flags
 set(COMMON_FLAGS "-fno-math-errno -fno-trapping-math -fno-signed-zeros")
 
@@ -267,6 +260,13 @@ endif()
 # macOS Clang's linker doesn't like these flags
 if(NOT APPLE)
 	string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE "-Wl,-s ")
+endif()
+
+if(ANDROID)
+	# Try to trim the size of the Android binary (TODO: do this for other platforms too)
+	target_compile_options(${PROJECT_NAME} PRIVATE -ffunction-sections -fdata-sections -fvisibility=hidden)
+
+	target_link_options(${PROJECT_NAME} PRIVATE -Wl,--gc-sections)
 endif()
 
 # Register protocol handler util on Windows
