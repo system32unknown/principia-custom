@@ -126,8 +126,14 @@ static void ImGui_ImplSDL3_UpdateIme()
         SDL_SetTextInputArea(window, &r, 0);
         bd->ImeWindow = window;
     }
-    if (!SDL_TextInputActive(window) && (data->WantVisible || data->WantTextInput))
-        SDL_StartTextInput(window);
+    if (!SDL_TextInputActive(window) && (data->WantVisible || data->WantTextInput)) {
+        SDL_PropertiesID props = SDL_CreateProperties();
+        SDL_SetNumberProperty(props, SDL_PROP_TEXTINPUT_CAPITALIZATION_NUMBER, SDL_CAPITALIZE_NONE);
+        SDL_SetBooleanProperty(props, SDL_PROP_TEXTINPUT_AUTOCORRECT_BOOLEAN, false);
+        SDL_SetNumberProperty(props, SDL_PROP_TEXTINPUT_TYPE_NUMBER, data->NumericInputRequested ? SDL_TEXTINPUT_TYPE_NUMBER : SDL_TEXTINPUT_TYPE_TEXT);
+        SDL_StartTextInputWithProperties(window, props);
+        SDL_DestroyProperties(props);
+    }
 }
 
 static int tms_mouse_button_to_imgui(int btn) {

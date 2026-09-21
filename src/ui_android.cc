@@ -173,6 +173,90 @@ void ui::open_dialog(int num, void *data/*=0*/) {
             UiNewLevel::open();
             break;
 
+        case DIALOG_SHAPEEXTRUDER:
+            UiShapeExtruder::open();
+            break;
+
+        case DIALOG_CAMTARGETER:
+            UiCamTargeter::open();
+            break;
+
+        case DIALOG_EMITTER:
+            UiEmitter::open();
+            break;
+
+        case DIALOG_POLYGON:
+            UiPolygon::open();
+            break;
+
+        case DIALOG_RUBBER:
+            UiRubber::open();
+            break;
+
+        case DIALOG_VENDOR:
+            UiVendor::open();
+            break;
+
+        case DIALOG_SET_COMMAND:
+            UiCommandPad::open();
+            break;
+
+        case DIALOG_RESOURCE:
+            UiResource::open();
+            break;
+
+        case DIALOG_SET_PKG_LEVEL:
+            UiPkgLvlSelector::open();
+            break;
+
+        case DIALOG_DECORATION:
+            UiDecoration::open();
+            break;
+
+        case DIALOG_FXEMITTER:
+            UiFXEmitter::open();
+            break;
+
+        case DIALOG_VARIABLE:
+            UiVariable::open();
+            break;
+
+        case DIALOG_CURSORFIELD:
+            UiCursorField::open();
+            break;
+
+        case DIALOG_SYNTHESIZER:
+            UiSynthesizer::open();
+            break;
+
+        case DIALOG_DIGITALDISPLAY:
+            UiDigitalDisplay::open();
+            break;
+
+        case DIALOG_SOUNDMAN:
+            UiSoundManager::open();
+            break;
+
+        case DIALOG_SFXEMITTER:
+            UiSfxEmitterLegacy::open();
+            break;
+
+        case DIALOG_SFXEMITTER_2:
+            UiSfxEmitter::open();
+            break;
+
+        case DIALOG_TIMER:
+            UiTimer::open();
+            break;
+
+        case DIALOG_SEQUENCER:
+            UiSequencer::open();
+            break;
+
+        case DIALOG_ITEM:
+            UiItem::open();
+            break;
+
         case DIALOG_LEVEL_INFO: {
             jmethodID mid = env->GetStaticMethodID(cls, "showInfoDialog", "(Ljava/lang/String;)V");
 
@@ -219,6 +303,27 @@ void ui::render() {
     UiSandboxMode::layout();
     UiEventListener::layout();
     UiNewLevel::layout();
+    UiShapeExtruder::layout();
+    UiCamTargeter::layout();
+    UiEmitter::layout();
+    UiPolygon::layout();
+    UiRubber::layout();
+    UiVendor::layout();
+    UiCommandPad::layout();
+    UiResource::layout();
+    UiPkgLvlSelector::layout();
+    UiDecoration::layout();
+    UiFXEmitter::layout();
+    UiVariable::layout();
+    UiCursorField::layout();
+    UiSynthesizer::layout();
+    UiDigitalDisplay::layout();
+    UiSoundManager::layout();
+    UiSfxEmitter::layout();
+    UiSfxEmitterLegacy::layout();
+    UiTimer::layout();
+    UiSequencer::layout();
+    UiItem::layout();
 
     imgui_driver.post_render();
 }
@@ -447,37 +552,6 @@ JNI_FUNC(jstring, getSandboxTip)(JNIEnv *env, jclass _jcls) {
     ctip = (ctip+1)%num_tips_mobile;
 
     return str;
-}
-
-JNI_FUNC(void, updateRubberEntity)(JNIEnv *env, jclass _jcls, jfloat restitution, jfloat friction) {
-    entity *e = G->selection.e;
-
-    if (e && (e->g_id == O_WHEEL || e->g_id == O_RUBBER_BEAM)) {
-        e->properties[1].v.f = restitution;
-        e->properties[2].v.f = friction;
-
-        if (e->g_id == O_RUBBER_BEAM)
-            ((beam*)e)->do_update_fixture = true;
-        else
-            ((wheel*)e)->do_update_fixture = true;
-
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
-JNI_FUNC(void, updateShapeExtruder)(JNIEnv *env, jclass _jcls, jfloat right, jfloat up, jfloat left, jfloat down) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_SHAPE_EXTRUDER) {
-        e->properties[0].v.f = (float)right;
-        e->properties[1].v.f = (float)up;
-        e->properties[2].v.f = (float)left;
-        e->properties[3].v.f = (float)down;
-
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
 }
 
 JNI_FUNC(void, updateJumper)(JNIEnv *env, jclass _jcls, jfloat value) {
@@ -815,167 +889,10 @@ JNI_FUNC(jstring, getStickyText)(JNIEnv *env, jclass _jcls) {
     return env->NewStringUTF(nm);
 }
 
-/** ++Cam targeter **/
-JNI_FUNC(jint, getCamTargeterFollowMode)(JNIEnv *env, jclass _jcls) {
-    if (G->selection.e && G->selection.e->g_id == 133)
-        return (jint)G->selection.e->properties[1].v.i;
-
-    return 0;
-}
-
-JNI_FUNC(void, setCamTargeterFollowMode)(JNIEnv *env, jclass _jcls, jint follow_mode) {
-    if (G->selection.e && G->selection.e->g_id == 133) {
-        G->selection.e->properties[1].v.i = follow_mode;
-
-        ui::message("Cam targeter properties saved!");
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
-JNI_FUNC(jstring, getConsumables)(JNIEnv *env, jclass _jcls) {
-    std::stringstream b("", std::ios_base::app | std::ios_base::out);
-
-    for (int x=0; x<NUM_ITEMS; x++) {
-        if (x != 0) b << ',';
-        b << item_options[x].name;
-    }
-
-    jstring str;
-    str = env->NewStringUTF(b.str().c_str());
-    return str;
-}
-
-JNI_FUNC(jint, getConsumableType)(JNIEnv *env, jclass _jcls) {
-    if (G->selection.e && G->selection.e->g_id == O_ITEM)
-        return (jint)(((item*)G->selection.e)->get_item_type());
-
-    return 0;
-}
-
-JNI_FUNC(void, setConsumableType)(JNIEnv *env, jclass _jcls, jint t) {
-    if (G->selection.e && G->selection.e->g_id == O_ITEM) {
-        tms_debugf("New item type: %d", t);
-        ((item*)G->selection.e)->set_item_type(t);
-        ((item*)G->selection.e)->do_recreate_shape = true;
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
 JNI_FUNC(jstring, getCurrentCommunityUrl)(JNIEnv *env, jclass _jcls) {
     COMMUNITY_URL("level/%d", W->level.community_id);
 
     return env->NewStringUTF(url);
-}
-
-/** ++Command pad **/
-JNI_FUNC(jint, getCommandPadCommand)(JNIEnv *env, jclass _jcls) {
-    if (G->selection.e && G->selection.e->g_id == 64)
-        return (jint)((command*)G->selection.e)->get_command();
-
-    return 0;
-}
-
-JNI_FUNC(void, setCommandPadCommand)(JNIEnv *env, jclass _jcls, jint cmd) {
-    if (G->selection.e && G->selection.e->g_id == 64) {
-        ((command*)G->selection.e)->set_command(cmd);
-
-        ui::message("Command pad properties saved!");
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
-/** ++FX Emitter **/
-JNI_FUNC(jstring, getFxEmitterEffects)(JNIEnv *env, jclass _jcls) {
-    if (G->selection.e && G->selection.e->g_id == 135) {
-        entity *e = G->selection.e;
-        char effects[128];
-
-        sprintf(effects, "%u,%u,%u,%u",
-                e->properties[3+0].v.i, e->properties[3+1].v.i,
-                e->properties[3+2].v.i, e->properties[3+3].v.i);
-
-        jstring str;
-        str = env->NewStringUTF(effects);
-
-        return str;
-    }
-
-    /* XXX: Will this break? */
-    return 0;
-}
-
-JNI_FUNC(void, setFxEmitterEffects)(JNIEnv *env, jclass _jcls, jint effect_1, jint effect_2, jint effect_3, jint effect_4) {
-    if (G->selection.e && G->selection.e->g_id == 135) {
-        entity *e = G->selection.e;
-
-        if (effect_1 == 0)
-            e->properties[3+0].v.i = FX_INVALID;
-        else
-            e->properties[3+0].v.i = effect_1 - 1;
-
-        if (effect_2 == 0)
-            e->properties[3+1].v.i = FX_INVALID;
-        else
-            e->properties[3+1].v.i = effect_2 - 1;
-
-        if (effect_3 == 0)
-            e->properties[3+2].v.i = FX_INVALID;
-        else
-            e->properties[3+2].v.i = effect_3 - 1;
-
-        if (effect_4 == 0)
-            e->properties[3+3].v.i = FX_INVALID;
-        else
-            e->properties[3+3].v.i = effect_4 - 1;
-
-        ui::message("FX Emitter properties saved!");
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
-/** ++Package level chooser **/
-JNI_FUNC(jint, getPkgItemLevelId)(JNIEnv *env, jclass _jcls) {
-    if (G->selection.e && (G->selection.e->g_id == 131 || G->selection.e->g_id == 132))
-        return (jint)G->selection.e->properties[0].v.i8;
-
-    return 0;
-}
-
-JNI_FUNC(void, setPkgItemLevelId)(JNIEnv *env, jclass _jcls, jint level_id) {
-    if (G->selection.e && (G->selection.e->g_id == 131 || G->selection.e->g_id == 132)) {
-        G->selection.e->properties[0].v.i8 = level_id;
-
-        ui::message("Package object properties saved!");
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
-JNI_FUNC(void, resetVariable)(JNIEnv *env, jclass _jcls, jstring variable_name) {
-    const char *vn = env->GetStringUTFChars(variable_name, 0);
-
-    std::map<std::string, float>::size_type num_deleted = W->level_variables.erase(vn);
-    if (num_deleted != 0) {
-        if (W->save_cache(W->level_id_type, W->level.local_id))
-            ui::message("Successfully deleted data for this variable");
-        else
-            ui::message("Unable to delete variable data for this level.");
-    } else
-        ui::message("No data found for this variable");
-
-    env->ReleaseStringUTFChars(variable_name, vn);
-}
-
-JNI_FUNC(void, resetAllVariables)(JNIEnv *env, jclass _jcls) {
-    W->level_variables.clear();
-    if (W->save_cache(W->level_id_type, W->level.local_id))
-        ui::message("All level-specific variables cleared.");
-    else
-        ui::message("Unable to delete variable data for this level.");
 }
 
 JNI_FUNC(jint, getLevelIdType)(JNIEnv *env, jclass _jcls) {
@@ -1149,35 +1066,6 @@ JNI_FUNC(void, fixed)(JNIEnv *env, jclass _jcls) {
     }
 }
 
-JNI_FUNC(jstring, getDecorations)(JNIEnv *env, jclass _jcls) {
-    std::stringstream ss;
-
-    for (int x=0; x<NUM_DECORATIONS; ++x)
-        ss << decorations[x].name << ",.,";
-
-    return env->NewStringUTF(ss.str().c_str());
-}
-
-JNI_FUNC(jstring, getSounds)(JNIEnv *env, jclass _jcls) {
-    std::stringstream ss;
-
-    for (int x=0; x<SND__NUM; x++) {
-        ss << sm::sound_lookup[x]->name << ",.,";
-    }
-
-    return env->NewStringUTF(ss.str().c_str());
-}
-
-JNI_FUNC(void, setResourceType)(JNIEnv *env, jclass _jcls, jlong value) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_RESOURCE) {
-        ((resource*)e)->set_resource_type((uint32_t)value);
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
 JNI_FUNC(jstring, getRobotData)(JNIEnv *env, jclass _jcls) {
     std::stringstream ss;
 
@@ -1274,28 +1162,6 @@ JNI_FUNC(void, setEntityAlpha)(JNIEnv *env, jclass _jcls, jfloat alpha) {
         G->selection.e->properties[4].v.i8 = (uint8_t)(alpha * 255);
 }
 
-/** ++Digital Display **/
-JNI_FUNC(void, setDigitalDisplayStuff)(JNIEnv *env, jclass _jcls, jboolean wrap_around, jint initial_position, jstring new_symbols) {
-    entity *e = G->selection.e;
-
-    if (e && (e->g_id == O_PASSIVE_DISPLAY || e->g_id == O_ACTIVE_DISPLAY)) {
-        display *d = static_cast<display*>(e);
-        const char *symbols = env->GetStringUTFChars(new_symbols, 0);
-
-        d->properties[0].v.i8 = (wrap_around?1:0);
-        d->properties[1].v.i8 = initial_position;
-        d->set_property(2, symbols);
-
-        d->set_active_symbol(initial_position);
-        d->load_symbols();
-
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-
-        env->ReleaseStringUTFChars(new_symbols, symbols);
-    }
-}
-
 /** ++Frequency Dialog **/
 JNI_FUNC(void, setFrequency)(JNIEnv *env, jclass _jcls, jlong frequency) {
     if (G->selection.e && G->selection.e->is_wireless()) {
@@ -1340,60 +1206,6 @@ JNI_FUNC(void, saveObject)(JNIEnv *env, jclass _jcls, jstring name) {
     ui::message("Saved object!");
 
     env->ReleaseStringUTFChars(name, tmp);
-}
-
-/** ++Sequencer **/
-JNI_FUNC(void, setSequencerData)(JNIEnv *env, jclass _jcls,
-        jstring _sequence, jint _seconds, jint _milliseconds, jboolean _wrap_around) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_SEQUENCER) {
-        const char *sequence = env->GetStringUTFChars(_sequence, 0);
-        uint32_t seconds = (uint32_t)_seconds;
-        uint32_t milliseconds = (uint32_t)_milliseconds;
-        uint32_t full_time = (seconds * 1000) + milliseconds;
-        uint8_t wrap_around = _wrap_around ? 1 : 0;
-
-        if (full_time < TIMER_MIN_TIME)
-            full_time = TIMER_MIN_TIME;
-
-        e->set_property(0, sequence);
-        e->properties[1].v.i = full_time;
-        e->properties[2].v.i8 = wrap_around;
-
-        ((sequencer*)e)->refresh_sequence();
-
-        ui::message("Sequencer properties saved!");
-
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
-/** ++Timer **/
-JNI_FUNC(void, setTimerData)(JNIEnv *env, jclass _jcls,
-        jint _seconds, jint _milliseconds, jint _num_ticks, jboolean use_system_time) {
-    entity *e = G->selection.e;
-
-    if (e && e->g_id == O_TIMER) {
-        uint32_t seconds = (uint32_t)_seconds;
-        uint32_t milliseconds = (uint32_t)_milliseconds;
-        uint32_t full_time = (seconds * 1000) + milliseconds;
-        uint8_t num_ticks = (uint8_t)_num_ticks;
-
-        if (full_time < TIMER_MIN_TIME) {
-            full_time = TIMER_MIN_TIME;
-        }
-
-        e->properties[0].v.i = full_time;
-        e->properties[1].v.i8 = num_ticks;
-        e->properties[2].v.i = use_system_time ? 1 : 0;
-
-        ui::message("Timer properties saved!");
-
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
 }
 
 /** ++Robot **/
@@ -1511,27 +1323,6 @@ JNI_FUNC(jstring, getLevels)(JNIEnv *env, jclass _jcls, jint level_type) {
     return str;
 }
 
-JNI_FUNC(jint, getSelectionGid)(JNIEnv *env, jclass _jcls) {
-    if (G->selection.e) {
-        return (jint)G->selection.e->g_id;
-    }
-
-    return 0;
-}
-
-JNI_FUNC(jstring, getSfxSounds)(JNIEnv *env, jclass _jcls) {
-    std::stringstream b("", std::ios_base::app | std::ios_base::out);
-
-    for (int x=0; x<NUM_SFXEMITTER_OPTIONS; x++) {
-        if (x != 0) b << ',';
-        b << sfxemitter_options[x].name;
-    }
-
-    jstring str;
-    str = env->NewStringUTF(b.str().c_str());
-    return str;
-}
-
 JNI_FUNC(jboolean, isAdventure)(JNIEnv *env, jclass _jcls) {
     return (jboolean)W->is_adventure();
 }
@@ -1545,19 +1336,6 @@ JNI_FUNC(void, setLevelType)(JNIEnv *env, jclass _jcls, jint type) {
     if (type >= LCAT_PUZZLE && type <= LCAT_CUSTOM) {
         P.add_action(ACTION_SET_LEVEL_TYPE, (void*)type);
     }
-}
-
-JNI_FUNC(jstring, getSynthWaveforms)(JNIEnv *env, jclass _jcls) {
-    std::stringstream b("", std::ios_base::app | std::ios_base::out);
-
-    for (int x=0; x<NUM_WAVEFORMS; x++) {
-        if (x != 0) b << ',';
-        b << speaker_options[x];
-    }
-
-    jstring str;
-    str = env->NewStringUTF(b.str().c_str());
-    return str;
 }
 
 JNI_FUNC(jstring, getAvailableBgs)(JNIEnv *env, jclass _jcls) {

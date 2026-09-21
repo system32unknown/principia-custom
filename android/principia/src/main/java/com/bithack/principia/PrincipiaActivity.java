@@ -1,18 +1,13 @@
 package com.bithack.principia;
 
-import com.bithack.principia.shared.CamTargeterDialog;
 import com.bithack.principia.shared.ColorChooserDialog;
-import com.bithack.principia.shared.CommandPadDialog;
 import com.bithack.principia.shared.CommunityDialog;
 import com.bithack.principia.shared.ConfirmDialog;
 import com.bithack.principia.shared.ConfirmDialog.OnOptionSelectedListener;
-import com.bithack.principia.shared.ConsumableDialog;
-import com.bithack.principia.shared.DigitalDisplayDialog;
 import com.bithack.principia.shared.ExportDialog;
 import com.bithack.principia.shared.FactoryDialog;
 import com.bithack.principia.shared.FrequencyDialog;
 import com.bithack.principia.shared.FrequencyRangeDialog;
-import com.bithack.principia.shared.FxEmitterDialog;
 import com.bithack.principia.shared.InfoDialog;
 import com.bithack.principia.shared.ImportDialog;
 import com.bithack.principia.shared.JumperDialog;
@@ -20,7 +15,6 @@ import com.bithack.principia.shared.Level;
 import com.bithack.principia.shared.LevelDialog;
 import com.bithack.principia.shared.LoginDialog;
 import com.bithack.principia.shared.OpenDialog;
-import com.bithack.principia.shared.PkgLevelDialog;
 import com.bithack.principia.shared.PlayDialog;
 import com.bithack.principia.shared.PromptDialog;
 import com.bithack.principia.shared.PromptSettingsDialog;
@@ -28,28 +22,13 @@ import com.bithack.principia.shared.PublishDialog;
 import com.bithack.principia.shared.PublishedDialog;
 import com.bithack.principia.shared.QuickaddDialog;
 import com.bithack.principia.shared.RegisterDialog;
-import com.bithack.principia.shared.ResourceDialog;
 import com.bithack.principia.shared.RobotDialog;
-import com.bithack.principia.shared.RubberDialog;
 import com.bithack.principia.shared.SandboxTipsDialog;
 import com.bithack.principia.shared.SaveAsDialog;
 import com.bithack.principia.shared.ScriptDialog;
-import com.bithack.principia.shared.SequencerDialog;
 import com.bithack.principia.shared.SettingsDialog;
-import com.bithack.principia.shared.Sfx2Dialog;
-import com.bithack.principia.shared.SfxDialog;
-import com.bithack.principia.shared.ShapeExtruderDialog;
-import com.bithack.principia.shared.PolygonDialog;
-import com.bithack.principia.shared.EmitterDialog;
-import com.bithack.principia.shared.DecorationDialog;
 import com.bithack.principia.shared.StickyDialog;
-import com.bithack.principia.shared.SynthesizerDialog;
-import com.bithack.principia.shared.TimerDialog;
-import com.bithack.principia.shared.TouchFieldDialog;
-import com.bithack.principia.shared.VariableDialog;
-import com.bithack.principia.shared.SoundManDialog;
 import com.bithack.principia.shared.MultiSelectDialog;
-import com.bithack.principia.shared.VendorDialog;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -90,7 +69,6 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
-import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.net.Uri;
@@ -104,7 +82,7 @@ import org.libsdl.app.SDLActivity;
 
 import java.util.List;
 
-public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVisibilityChangeListener, DialogInterface.OnDismissListener, DialogInterface.OnShowListener, OnSeekBarChangeListener {
+public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVisibilityChangeListener, DialogInterface.OnDismissListener, DialogInterface.OnShowListener {
     private static final String TAG = "PrincipiaActivity";
 
     public static Dialog wv_dialog;
@@ -604,45 +582,23 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
         case DIALOG_LEVEL_INFO:         d = (new InfoDialog()).get_dialog(); break;
         case DIALOG_STICKY:             d = StickyDialog.get_dialog(); break;
         case DIALOG_ROBOT:              d = RobotDialog.get_dialog(); break;
-        case DIALOG_CAMTARGETER:        d = CamTargeterDialog.get_dialog(); break;
-        case DIALOG_SET_COMMAND:        d = CommandPadDialog.get_dialog(); break;
-        case DIALOG_FXEMITTER:          d = FxEmitterDialog.get_dialog(); break;
-        case DIALOG_SET_PKG_LEVEL:      d = PkgLevelDialog.get_dialog(); break;
         case DIALOG_PIXEL_COLOR:        d = ColorChooserDialog.get_dialog(); break;
         case DIALOG_BEAM_COLOR:         d = ColorChooserDialog.get_dialog(); break;
         case DIALOG_POLYGON_COLOR:      d = ColorChooserDialog.get_dialog(); break;
-        case DIALOG_DIGITAL_DISPLAY:    d = DigitalDisplayDialog.get_dialog(); break;
         case DIALOG_SET_FREQUENCY:      d = FrequencyDialog.get_dialog(); break;
         case DIALOG_SET_FREQ_RANGE:     d = FrequencyRangeDialog.get_dialog(); break;
         case DIALOG_EXPORT:             d = ExportDialog.get_dialog(); break;
         case DIALOG_MULTIEMITTER:       d = (new ImportDialog(true)).get_dialog(); break;
         case DIALOG_OPEN_OBJECT:        d = (new ImportDialog(false)).get_dialog(); break;
-        case DIALOG_TIMER:              d = TimerDialog.get_dialog(); break;
         case DIALOG_PLAY_MENU:          d = (PlayDialog.create_dialog()); break;
         case DIALOG_COMMUNITY:          d = (new CommunityDialog()).get_dialog(); break;
         case DIALOG_PROMPT_SETTINGS:    d = PromptSettingsDialog.get_dialog(); break;
         case DIALOG_PROMPT:             d = (new PromptDialog()).get_dialog(); break;
-        case DIALOG_SFX_EMITTER:        d = SfxDialog.get_dialog(); break;
-        case DIALOG_SFX_EMITTER_2:      d = Sfx2Dialog.get_dialog(); break;
-        case DIALOG_VARIABLE:           d = VariableDialog.get_dialog(); break;
-        case DIALOG_SYNTHESIZER:        d = SynthesizerDialog.get_dialog(); break;
-        case DIALOG_SEQUENCER:          d = SequencerDialog.get_dialog(); break;
         case DIALOG_JUMPER:             d = JumperDialog.get_dialog(); break;
-        case DIALOG_TOUCHFIELD:         d = TouchFieldDialog.get_dialog(); break;
         case DIALOG_LUASCRIPT:          d = ScriptDialog.get_dialog(); break;
-        case DIALOG_ITEM:               d = ConsumableDialog.get_dialog(); break;
-        case DIALOG_RUBBER:             d = RubberDialog.get_dialog(); break;
-        case DIALOG_SHAPEEXTRUDER:      d = ShapeExtruderDialog.get_dialog(); break;
-        case DIALOG_POLYGON:            d = PolygonDialog.get_dialog(); break;
-        case DIALOG_EMITTER:            d = EmitterDialog.get_dialog(); break;
-        case DIALOG_DECORATION:         d = DecorationDialog.get_dialog(); break;
-        case DIALOG_SOUNDMAN:           d = SoundManDialog.get_dialog(); break;
         case DIALOG_MULTI_CONFIG:       d = MultiSelectDialog.get_dialog(); break;
-        case DIALOG_VENDOR:             d = VendorDialog.get_dialog(); break;
 
         case DIALOG_FACTORY:            d = FactoryDialog.get_dialog(); break;
-
-        case DIALOG_RESOURCE:           d = ResourceDialog.get_dialog(); break;
         case DIALOG_OPEN_STATE:         d = (new OpenDialog(true)).get_dialog(); break;
 
         case DIALOG_PUBLISH:            d = PublishDialog.get_dialog(); break;
@@ -778,42 +734,19 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
             case DIALOG_SAVE:               SaveAsDialog.prepare(dialog); break;
             case DIALOG_SAVE_COPY:          SaveAsDialog.prepare(dialog); break;
             case DIALOG_ROBOT:              RobotDialog.prepare(dialog); break;
-            case DIALOG_CAMTARGETER:        CamTargeterDialog.prepare(dialog); break;
-            case DIALOG_SET_COMMAND:        CommandPadDialog.prepare(dialog); break;
-            case DIALOG_FXEMITTER:          FxEmitterDialog.prepare(dialog); break;
-            case DIALOG_SET_PKG_LEVEL:      PkgLevelDialog.prepare(dialog); break;
             case DIALOG_PIXEL_COLOR:        ColorChooserDialog.prepare(dialog, true); break;
             case DIALOG_BEAM_COLOR:         ColorChooserDialog.prepare(dialog, false); break;
             case DIALOG_POLYGON_COLOR:      ColorChooserDialog.prepare(dialog, false); break;
-            case DIALOG_DIGITAL_DISPLAY:    DigitalDisplayDialog.prepare(dialog); break;
             case DIALOG_SET_FREQUENCY:      FrequencyDialog.prepare(dialog); break;
             case DIALOG_SET_FREQ_RANGE:     FrequencyRangeDialog.prepare(dialog); break;
             case DIALOG_EXPORT:             ExportDialog.prepare(dialog); break;
             case DIALOG_STICKY:             StickyDialog.prepare(dialog); break;
-            case DIALOG_TIMER:              TimerDialog.prepare(dialog); break;
             case DIALOG_PROMPT_SETTINGS:    PromptSettingsDialog.prepare(dialog); break;
-            case DIALOG_SFX_EMITTER:        SfxDialog.prepare(dialog); break;
-            case DIALOG_SFX_EMITTER_2:      Sfx2Dialog.prepare(dialog); break;
-            case DIALOG_VARIABLE:           VariableDialog.prepare(dialog); break;
-            case DIALOG_SYNTHESIZER:        SynthesizerDialog.prepare(dialog); break;
-            case DIALOG_SEQUENCER:          SequencerDialog.prepare(dialog); break;
             case DIALOG_JUMPER:             JumperDialog.prepare(dialog); break;
-            case DIALOG_TOUCHFIELD:         TouchFieldDialog.prepare(dialog); break;
             case DIALOG_LUASCRIPT:          ScriptDialog.prepare(dialog); break;
-            case DIALOG_ITEM:               ConsumableDialog.prepare(dialog); break;
-            case DIALOG_RUBBER:             RubberDialog.prepare(dialog); break;
-            case DIALOG_SHAPEEXTRUDER:      ShapeExtruderDialog.prepare(dialog); break;
-            case DIALOG_POLYGON:            PolygonDialog.prepare(dialog); break;
-            case DIALOG_EMITTER:            EmitterDialog.prepare(dialog); break;
-            case DIALOG_DECORATION:         DecorationDialog.prepare(dialog); break;
-            case DIALOG_SOUNDMAN:           SoundManDialog.prepare(dialog); break;
             case DIALOG_MULTI_CONFIG:       MultiSelectDialog.prepare(dialog); break;
-            case DIALOG_VENDOR:             VendorDialog.prepare(dialog); break;
 
             case DIALOG_FACTORY:            FactoryDialog.prepare(dialog); break;
-
-            case DIALOG_RESOURCE:           ResourceDialog.prepare(dialog); break;
-
             case DIALOG_PUBLISH:            PublishDialog.prepare(dialog); break;
             case DIALOG_LOGIN:              LoginDialog.prepare(dialog); break;
         }
@@ -869,37 +802,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
         if (num_dialogs == 1) {
             PrincipiaBackend.focusGL(false);
         }
-    }
-
-    @Override
-    public void onProgressChanged(SeekBar sb, int progress,
-            boolean fromUser) {
-        Log.v("Principia", "Progress changed");
-        if (sb == SynthesizerDialog.synth_pulse_width) {
-            SynthesizerDialog.synth_pulse_width_tv.setText(String.format(Locale.US, "%.3f", ((float)progress) / 100.f));
-        } else if (sb == SynthesizerDialog.synth_bitcrushing) {
-            SynthesizerDialog.synth_bitcrushing_tv.setText(Integer.toString(progress));
-        } else if (sb == SynthesizerDialog.synth_volume_vibrato_hz) {
-            SynthesizerDialog.synth_volume_vibrato_hz_tv.setText(Integer.toString(progress));
-        } else if (sb == SynthesizerDialog.synth_volume_vibrato_extent) {
-            SynthesizerDialog.synth_volume_vibrato_extent_tv.setText(String.format(Locale.US, "%.3f", ((float)progress) / 100.f));
-        } else if (sb == SynthesizerDialog.synth_freq_vibrato_hz) {
-            SynthesizerDialog.synth_freq_vibrato_hz_tv.setText(Integer.toString(progress));
-        } else if (sb == SynthesizerDialog.synth_freq_vibrato_extent) {
-            SynthesizerDialog.synth_freq_vibrato_extent_tv.setText(String.format(Locale.US, "%.3f", ((float)progress) / 100.f));
-        }
-    }
-
-    @Override
-    public void onStartTrackingTouch(SeekBar seekBar) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void onStopTrackingTouch(SeekBar seekBar) {
-        // TODO Auto-generated method stub
-
     }
 
     private void handle_intent(Intent i)
