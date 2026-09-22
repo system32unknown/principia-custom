@@ -74,21 +74,6 @@ void ui::emit_signal(int signal_id, void *data/*=0*/) {
         case SIGNAL_REFRESH_BORDERS:
             /* XXX */
             break;
-
-        default:
-            {
-                /* By default, passthrough the signal to the Java part */
-                JNIEnv *env = (JNIEnv *) SDL_GetAndroidJNIEnv();
-                jobject activity = (jobject) SDL_GetAndroidActivity();
-                jclass cls = env->GetObjectClass(activity);
-
-                jmethodID mid = env->GetStaticMethodID(cls, "emit_signal", "(I)V");
-
-                if (mid) {
-                    env->CallStaticVoidMethod(cls, mid, (jvalue*)(jint)signal_id);
-                }
-            }
-            break;
     }
 
     ui::next_action = ACTION_IGNORE;
@@ -257,6 +242,26 @@ void ui::open_dialog(int num, void *data/*=0*/) {
             UiItem::open();
             break;
 
+        case DIALOG_MULTI_CONFIG:
+            UiMultiConfig::open();
+            break;
+
+        case DIALOG_SET_FREQUENCY:
+            UiFrequency::open(false);
+            break;
+
+        case DIALOG_SET_FREQ_RANGE:
+            UiFrequency::open(true);
+            break;
+
+        case DIALOG_SANDBOX_TIPS:
+            UiTips::open();
+            break;
+
+        case DIALOG_QUICKADD:
+            UiQuickadd::open();
+            break;
+
         case DIALOG_LEVEL_INFO: {
             jmethodID mid = env->GetStaticMethodID(cls, "showInfoDialog", "(Ljava/lang/String;)V");
 
@@ -279,19 +284,6 @@ void ui::open_dialog(int num, void *data/*=0*/) {
 
 void ui::quit() {
     _tms.state = TMS_STATE_QUITTING;
-}
-
-void ui::open_sandbox_tips() {
-    JNIEnv *env = (JNIEnv *) SDL_GetAndroidJNIEnv();
-    jobject activity = (jobject) SDL_GetAndroidActivity();
-    jclass cls = env->GetObjectClass(activity);
-
-    jmethodID mid = env->GetStaticMethodID(cls, "showSandboxTips", "()V");
-
-    if (mid) {
-        env->CallStaticVoidMethod(cls, mid, 0);
-    } else
-        tms_errorf("could not run showSandboxTips");
 }
 
 void ui::render() {
@@ -324,6 +316,10 @@ void ui::render() {
     UiTimer::layout();
     UiSequencer::layout();
     UiItem::layout();
+    UiMultiConfig::layout();
+    UiFrequency::layout();
+    UiTips::layout();
+    UiQuickadd::layout();
 
     imgui_driver.post_render();
 }
@@ -497,61 +493,6 @@ JNI_FUNC(void, setPropertyFloat)(JNIEnv *env, jclass _jcls, jint property_index,
         e->properties[property_index].v.f = (float)value;
     else
         tms_errorf("Invalid set_property float");
-}
-
-JNI_FUNC(void, createObject)(JNIEnv *env, jclass _jcls, jstring _name) {
-    const char *name = env->GetStringUTFChars(_name, 0);
-    /* there seems to be absolutely no way of retrieving the top completion entry...
-     * we have to find it manually */
-
-    int len = strlen(name);
-    uint32_t gid = 0;
-    entity *found = 0;
-
-    for (int x=0; x<menu_objects.size(); x++) {
-        if (strncasecmp(name, menu_objects[x].e->get_name(), len) == 0) {
-            found = menu_objects[x].e;
-            break;
-        }
-    }
-
-    if (found) {
-        uint32_t g_id = found->g_id;
-        P.add_action(ACTION_CONSTRUCT_ENTITY, g_id);
-    } else
-        tms_infof("'%s' matched no entity name", name);
-
-    env->ReleaseStringUTFChars(_name, name);
-}
-
-JNI_FUNC(jstring, getObjects)(JNIEnv *env, jclass _jcls) {
-    std::stringstream b("", std::ios_base::app | std::ios_base::out);
-
-    tms_infof("menu_objects size: %d", (int)menu_objects.size());
-    for (int x=0; x<menu_objects.size(); x++) {
-        const char *n = menu_objects[x].e->get_name();
-        if (x != 0) b << ',';
-        b << n;
-    }
-
-    tms_infof("got objects: '%s'", b.str().c_str());
-
-    jstring str;
-    str = env->NewStringUTF(b.str().c_str());
-    return str;
-}
-
-JNI_FUNC(jstring, getSandboxTip)(JNIEnv *env, jclass _jcls) {
-    jstring str;
-    char *nm = 0;
-
-    if (ctip == -1) ctip = rand()%num_tips_mobile;
-
-    str = env->NewStringUTF(tips_mobile[ctip]);
-
-    ctip = (ctip+1)%num_tips_mobile;
-
-    return str;
 }
 
 JNI_FUNC(void, updateJumper)(JNIEnv *env, jclass _jcls, jfloat value) {
@@ -1160,41 +1101,6 @@ JNI_FUNC(jfloat, getEntityAlpha)(JNIEnv *env, jclass _jcls, jfloat alpha) {
 JNI_FUNC(void, setEntityAlpha)(JNIEnv *env, jclass _jcls, jfloat alpha) {
     if (G->selection.e && G->selection.e->g_id == O_PIXEL)
         G->selection.e->properties[4].v.i8 = (uint8_t)(alpha * 255);
-}
-
-/** ++Frequency Dialog **/
-JNI_FUNC(void, setFrequency)(JNIEnv *env, jclass _jcls, jlong frequency) {
-    if (G->selection.e && G->selection.e->is_wireless()) {
-        int64_t f = (int64_t)frequency;
-
-        if (f < 0) f = 0;
-
-        G->selection.e->properties[0].v.i = (uint32_t)f;
-
-        ui::messagef("Frequency set to %u", G->selection.e->properties[0].v.i);
-
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
-}
-
-JNI_FUNC(void, setFrequencyRange)(JNIEnv *env, jclass _jcls, jlong frequency, jlong range) {
-    if (G->selection.e && G->selection.e->g_id == 125) {
-        int64_t f, r;
-        f = (int64_t)frequency;
-        r = (int64_t)range;
-
-        if (f < 0) f = 0;
-        if (r < 0) r = 0;
-
-        G->selection.e->properties[0].v.i = (uint32_t)f;
-        G->selection.e->properties[1].v.i = (uint32_t)r;
-
-        ui::messagef("Frequency set to %u (+%u)", G->selection.e->properties[0].v.i, G->selection.e->properties[1].v.i);
-
-        P.add_action(ACTION_HIGHLIGHT_SELECTED, 0);
-        P.add_action(ACTION_RESELECT, 0);
-    }
 }
 
 /** ++Export **/

@@ -20,10 +20,6 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
     <string name="delim">/</string>
-    <string name="frequency">Frequency</string>
-    <string name="frequency_requirements">Min frequency: 0 Max frequency: 4,294,967,295</string>
-    <string name="frequency_start">Frequency start</string>
-    <string name="frequency_range">Frequency range</string>
     <string name="insert">Insert</string>
     <string name="append">Append</string>
     <string name="object_name">Object name</string>
@@ -92,7 +88,6 @@
     <string name="locked_description">Disallow players from seeing or playing this level outside of packages.</string>
     <string name="password">Password</string>
     <string name="username">Username</string>
-    <string name="dont_show_again">Don\'t show this dialog again</string>
     <string name="disable_3rd_layer">Disable third layer</string>
     <string name="confirm_password">Confirm password</string>
     <string name="password_limits">Your password must contain a minimum of 6 characters.</string>
@@ -131,7 +126,6 @@
     <string name="border_scroll_speed">Border scroll speed</string>
     <string name="code">insert_code_here();</string>
     <string name="save">Save</string>
-    <string name="quickadd">Object name (will add to center of screen)</string>
     <string name="confirm_level_upgrade"><b>Are you sure you want to upgrade the version of this level?</b>\n\nTo get access to new features the version associated with this level must be upgraded. This action can not be undone. Please save a copy before upgrading your level.\n\nBy upgrading this level, some object properties such as density, restitution, friction and applied forces might differ from earlier versions and affect how your level is simulated.</string>
     <string name="confirm_cancel_script_dialog">Are you sure you want to cancel the LuaScript dialog? Any unsaved changes will be lost!</string>
     <string name="close">Close</string>
@@ -195,19 +189,4 @@
     <string name="confirm_quit_level">Are you sure you want to quit this level?</string>
     <string name="display_fps">Display FPS</string>
     <string name="selfdestruct">Self-destruct</string>
-
-    <string name="joint_strength">Joint strength</string>
-    <string name="plastic_color">Plastic color</string>
-    <string name="plastic_density">Plastic density</string>
-    <string name="connection_render_type">Connection render type</string>
-    <string name="misc">Miscellaneous</string>
-    <string name="unlock_all">Unlock all</string>
-    <string name="disconnect_all">Disconnect all</string>
-    <string name="render_type">Render type</string>
-    <string name="normal">Normal</string>
-    <string name="small">Small</string>
-    <string name="hidden">Hidden</string>
-    <string name="apply">Apply</string>
-    <string name="dec_zero">0.0</string>
-    <string name="amount">Amount</string>
 </resources>

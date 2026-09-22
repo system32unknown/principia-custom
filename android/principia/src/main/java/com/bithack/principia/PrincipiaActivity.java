@@ -6,8 +6,6 @@ import com.bithack.principia.shared.ConfirmDialog;
 import com.bithack.principia.shared.ConfirmDialog.OnOptionSelectedListener;
 import com.bithack.principia.shared.ExportDialog;
 import com.bithack.principia.shared.FactoryDialog;
-import com.bithack.principia.shared.FrequencyDialog;
-import com.bithack.principia.shared.FrequencyRangeDialog;
 import com.bithack.principia.shared.InfoDialog;
 import com.bithack.principia.shared.ImportDialog;
 import com.bithack.principia.shared.JumperDialog;
@@ -20,15 +18,12 @@ import com.bithack.principia.shared.PromptDialog;
 import com.bithack.principia.shared.PromptSettingsDialog;
 import com.bithack.principia.shared.PublishDialog;
 import com.bithack.principia.shared.PublishedDialog;
-import com.bithack.principia.shared.QuickaddDialog;
 import com.bithack.principia.shared.RegisterDialog;
 import com.bithack.principia.shared.RobotDialog;
-import com.bithack.principia.shared.SandboxTipsDialog;
 import com.bithack.principia.shared.SaveAsDialog;
 import com.bithack.principia.shared.ScriptDialog;
 import com.bithack.principia.shared.SettingsDialog;
 import com.bithack.principia.shared.StickyDialog;
-import com.bithack.principia.shared.MultiSelectDialog;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -264,9 +259,7 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
 
         this.handle_intent(this.getIntent());
 
-        open_adapter = new ArrayAdapter<Level>(SDLActivity.mSingleton,
-                android.R.layout.select_dialog_item);
-        QuickaddDialog.object_adapter = new ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line);
+        open_adapter = new ArrayAdapter<Level>(SDLActivity.mSingleton, android.R.layout.select_dialog_item);
     }
 
 
@@ -281,25 +274,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
                     last_toast = Toast.makeText(SDLActivity.mSingleton, s, longd==1?Toast.LENGTH_LONG:Toast.LENGTH_SHORT);
                 }
                 last_toast.show();
-        }
-        });
-    }
-
-    public static void emit_signal(final int signal_id)
-    {
-        SDLActivity.mSingleton.runOnUiThread(new Runnable(){
-            public void run() {
-                if (signal_id == 200) { // SIGNAL_QUICKADD_REFRESH
-                    Log.v("Principia", "Quickadd refresh.");
-                    QuickaddDialog.object_adapter.clear();
-                    String[] objects = PrincipiaBackend.getObjects().split(",");
-
-                    Log.v("Principia", String.format("Number of objects: %d", objects.length));
-
-                    for (String name : objects) {
-                        QuickaddDialog.object_adapter.add(name);
-                    }
-                }
             }
         });
     }
@@ -502,16 +476,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
         });
     }
 
-    public static void showSandboxTips()
-    {
-        SDLActivity.mSingleton.runOnUiThread(new Runnable(){
-            public void run() {
-                try {SDLActivity.mSingleton.removeDialog(DIALOG_SANDBOX_TIPS);} catch(Exception e){};
-                SDLActivity.mSingleton.showDialog(DIALOG_SANDBOX_TIPS);
-            }
-        });
-    }
-
     @Override
     protected Dialog onCreateDialog(int num)
     {
@@ -574,7 +538,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
             }
             break;
 
-        case DIALOG_QUICKADD:           d = QuickaddDialog.get_dialog(); break;
         case DIALOG_OPEN:               d = (new OpenDialog(false)).get_dialog(); break;
         case DIALOG_LEVEL_PROPERTIES:   d = LevelDialog.get_dialog(); break;
         case DIALOG_SAVE_COPY:          d = SaveAsDialog.get_dialog(); break;
@@ -585,8 +548,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
         case DIALOG_PIXEL_COLOR:        d = ColorChooserDialog.get_dialog(); break;
         case DIALOG_BEAM_COLOR:         d = ColorChooserDialog.get_dialog(); break;
         case DIALOG_POLYGON_COLOR:      d = ColorChooserDialog.get_dialog(); break;
-        case DIALOG_SET_FREQUENCY:      d = FrequencyDialog.get_dialog(); break;
-        case DIALOG_SET_FREQ_RANGE:     d = FrequencyRangeDialog.get_dialog(); break;
         case DIALOG_EXPORT:             d = ExportDialog.get_dialog(); break;
         case DIALOG_MULTIEMITTER:       d = (new ImportDialog(true)).get_dialog(); break;
         case DIALOG_OPEN_OBJECT:        d = (new ImportDialog(false)).get_dialog(); break;
@@ -596,15 +557,12 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
         case DIALOG_PROMPT:             d = (new PromptDialog()).get_dialog(); break;
         case DIALOG_JUMPER:             d = JumperDialog.get_dialog(); break;
         case DIALOG_LUASCRIPT:          d = ScriptDialog.get_dialog(); break;
-        case DIALOG_MULTI_CONFIG:       d = MultiSelectDialog.get_dialog(); break;
-
         case DIALOG_FACTORY:            d = FactoryDialog.get_dialog(); break;
         case DIALOG_OPEN_STATE:         d = (new OpenDialog(true)).get_dialog(); break;
 
         case DIALOG_PUBLISH:            d = PublishDialog.get_dialog(); break;
         case DIALOG_PUBLISHED:          d = (new PublishedDialog()).get_dialog(); break;
         case DIALOG_LOGIN:              d = LoginDialog.get_dialog(); break;
-        case DIALOG_SANDBOX_TIPS:       d = (new SandboxTipsDialog()).get_dialog(); break;
         case DIALOG_REGISTER:           d = RegisterDialog.get_dialog(); break;
 
         case CLOSE_ALL_DIALOGS:         break; /* do nothing */
@@ -729,7 +687,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
                 }
                 break;
 
-            case DIALOG_QUICKADD:           QuickaddDialog.prepare(dialog); break;
             case DIALOG_LEVEL_PROPERTIES:   LevelDialog.prepare(dialog); break;
             case DIALOG_SAVE:               SaveAsDialog.prepare(dialog); break;
             case DIALOG_SAVE_COPY:          SaveAsDialog.prepare(dialog); break;
@@ -737,15 +694,11 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
             case DIALOG_PIXEL_COLOR:        ColorChooserDialog.prepare(dialog, true); break;
             case DIALOG_BEAM_COLOR:         ColorChooserDialog.prepare(dialog, false); break;
             case DIALOG_POLYGON_COLOR:      ColorChooserDialog.prepare(dialog, false); break;
-            case DIALOG_SET_FREQUENCY:      FrequencyDialog.prepare(dialog); break;
-            case DIALOG_SET_FREQ_RANGE:     FrequencyRangeDialog.prepare(dialog); break;
             case DIALOG_EXPORT:             ExportDialog.prepare(dialog); break;
             case DIALOG_STICKY:             StickyDialog.prepare(dialog); break;
             case DIALOG_PROMPT_SETTINGS:    PromptSettingsDialog.prepare(dialog); break;
             case DIALOG_JUMPER:             JumperDialog.prepare(dialog); break;
             case DIALOG_LUASCRIPT:          ScriptDialog.prepare(dialog); break;
-            case DIALOG_MULTI_CONFIG:       MultiSelectDialog.prepare(dialog); break;
-
             case DIALOG_FACTORY:            FactoryDialog.prepare(dialog); break;
             case DIALOG_PUBLISH:            PublishDialog.prepare(dialog); break;
             case DIALOG_LOGIN:              LoginDialog.prepare(dialog); break;
@@ -753,10 +706,8 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
 
         /* Dialogs that need a separate onShowListener */
         switch (d) {
-            case DIALOG_QUICKADD:
             case DIALOG_PUBLISH:
             case DIALOG_LOGIN:
-            case DIALOG_SANDBOX_TIPS:
             case DIALOG_REGISTER:
             case DIALOG_PROMPT_SETTINGS:
             case DIALOG_OPEN:

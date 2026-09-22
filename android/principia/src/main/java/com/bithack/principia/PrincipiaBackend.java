@@ -53,7 +53,6 @@ public class PrincipiaBackend
     public static native void setSetting(String setting_name, boolean value);
     public static native void focusGL(boolean f);
 
-    public static native String getSandboxTip();
     public static native void setNextAction(int action_id);
     public static native void login(String username, String password);
     public static native void register(String username, String email, String password);
@@ -104,9 +103,6 @@ public class PrincipiaBackend
     public static native float getEntityAlpha();
     public static native void setEntityAlpha(float alpha);
 
-    public static native int setFrequency(long frequency);
-    public static native int setFrequencyRange(long frequency, long range);
-
     public static native int saveObject(String name);
 
     public static native int getRobotState();
@@ -132,8 +128,6 @@ public class PrincipiaBackend
 
     public static native void updateJumper(float value);
     public static native String getLevelPage();
-    public static native String getObjects();
-    public static native void createObject(String str);
     public static native int getMaxLevelVersion();
     public static native String getCurrentCommunityUrl();
 
