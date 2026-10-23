@@ -114,7 +114,7 @@ void _settings::init() {
     this->add("display_wireless_frequency", S_BOOL, true);
     this->add("disable_overloader", S_BOOL, true);
 
-#ifdef SDL_PLATFORM_ANDROID
+#if defined(SDL_PLATFORM_IOS) || defined(SDL_PLATFORM_ANDROID)
     this->add("touch_controls",     S_BOOL, true);
 #else
     this->add("touch_controls",     S_BOOL, false);

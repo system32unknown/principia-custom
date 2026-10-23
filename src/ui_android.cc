@@ -262,16 +262,25 @@ void ui::open_dialog(int num, void *data/*=0*/) {
             UiQuickadd::open();
             break;
 
-        case DIALOG_LEVEL_INFO: {
-            jmethodID mid = env->GetStaticMethodID(cls, "showInfoDialog", "(Ljava/lang/String;)V");
-
-            if (mid) {
-                jstring d = env->NewStringUTF((char *)data);
-                env->CallStaticVoidMethod(cls, mid, (jvalue*)d);
-            } else
-                tms_errorf("could not run showInfoDialog");
+        case DIALOG_PLAY_MENU:
+            UiPlayMenu::open();
             break;
-        }
+
+        case DIALOG_SANDBOX_MENU:
+            UiSandboxMenu::open();
+            break;
+
+        case DIALOG_SAVE:
+            UiSave::open(false);
+            break;
+
+        case DIALOG_SAVE_COPY:
+            UiSave::open(true);
+            break;
+
+        case DIALOG_LEVEL_INFO:
+            UiMessage::open((char *)data, MessageType::LevelInfo);
+            break;
 
         default: {
             jmethodID mid = env->GetStaticMethodID(cls, "open_dialog", "(IZ)V");
@@ -320,6 +329,10 @@ void ui::render() {
     UiFrequency::layout();
     UiTips::layout();
     UiQuickadd::layout();
+    UiPlayMenu::layout();
+    UiSandboxMenu::layout();
+    UiSave::layout();
+    UiMessage::layout();
 
     imgui_driver.post_render();
 }

@@ -6,21 +6,18 @@ import com.bithack.principia.shared.ConfirmDialog;
 import com.bithack.principia.shared.ConfirmDialog.OnOptionSelectedListener;
 import com.bithack.principia.shared.ExportDialog;
 import com.bithack.principia.shared.FactoryDialog;
-import com.bithack.principia.shared.InfoDialog;
 import com.bithack.principia.shared.ImportDialog;
 import com.bithack.principia.shared.JumperDialog;
 import com.bithack.principia.shared.Level;
 import com.bithack.principia.shared.LevelDialog;
 import com.bithack.principia.shared.LoginDialog;
 import com.bithack.principia.shared.OpenDialog;
-import com.bithack.principia.shared.PlayDialog;
 import com.bithack.principia.shared.PromptDialog;
 import com.bithack.principia.shared.PromptSettingsDialog;
 import com.bithack.principia.shared.PublishDialog;
 import com.bithack.principia.shared.PublishedDialog;
 import com.bithack.principia.shared.RegisterDialog;
 import com.bithack.principia.shared.RobotDialog;
-import com.bithack.principia.shared.SaveAsDialog;
 import com.bithack.principia.shared.ScriptDialog;
 import com.bithack.principia.shared.SettingsDialog;
 import com.bithack.principia.shared.StickyDialog;
@@ -443,17 +440,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
 
     private List<Dialog> open_dialogs = new ArrayList<Dialog>();
 
-    public static void showInfoDialog(final String description)
-    {
-        SDLActivity.mSingleton.runOnUiThread(new Runnable(){
-            public void run() {
-                try {SDLActivity.mSingleton.removeDialog(DIALOG_LEVEL_INFO);} catch(Exception e){};
-                InfoDialog.description = description;
-                SDLActivity.mSingleton.showDialog(DIALOG_LEVEL_INFO);
-            }
-        });
-    }
-
     public static void confirm(final String text, final String button1, final int action1, final long action1_data, final String button2, final int action2, final long action2_data, final String button3, final int action3, final long action3_data, final boolean dna_sandbox)
     {
         SDLActivity.mSingleton.runOnUiThread(new Runnable(){
@@ -482,55 +468,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
         Dialog d = null;
 
         switch (num) {
-        case DIALOG_SANDBOX_MENU:
-            {
-                AlertDialog.Builder bld = new AlertDialog.Builder(this);
-
-                final CharSequence[] items;
-
-                items = new CharSequence[] {
-                    "Level properties",
-                    "New level",
-                    "Save",
-                    "Save a copy",
-                    "Open",
-                    "Publish online",
-                    "Settings",
-                    "Log in",
-                    "Help: Getting started",
-                    "Help: Principia Wiki",
-                    "Browse levels online",
-                    "Back to menu",
-                    "Quit"
-                };
-
-                bld.setItems(items, new DialogInterface.OnClickListener(){
-                    public void onClick(DialogInterface dialog, int which) {
-                        /* TODO: Use dialog fragments */
-                        switch (which) {
-                            case 0: showDialog(DIALOG_LEVEL_PROPERTIES); break;
-                            case 1: PrincipiaBackend.openDialog(DIALOG_NEW_LEVEL); break;
-                            case 2: if (PrincipiaBackend.getLevelName().isEmpty()) {SaveAsDialog.refresh_name=true; SaveAsDialog.copy=false; showDialog(DIALOG_SAVE);} else PrincipiaBackend.triggerSave(false);  break;
-                            case 3: SaveAsDialog.refresh_name = true; SaveAsDialog.copy = true; showDialog(DIALOG_SAVE_COPY); break;
-                            case 4: try {SDLActivity.mSingleton.removeDialog(DIALOG_OPEN);} catch(Exception e){}; showDialog(DIALOG_OPEN); break;
-                            case 5: showDialog(DIALOG_PUBLISH); break;
-                            case 6: showDialog(DIALOG_SETTINGS); break;
-                            case 7: showDialog(DIALOG_LOGIN); break;
-                            case 8: open_url("https://principia-web.se/wiki/Getting_Started"); break;
-                            case 9: open_url("https://principia-web.se/wiki/Main_Page"); break;
-                            case 10: open_url("https://principia-web.se/"); break;
-                            case 11: PrincipiaBackend.addActionAsInt(ACTION_GOTO_MAINMENU, 0); break;
-                            // why
-                            case 12: android.os.Process.killProcess(android.os.Process.myPid()); break;
-                        }
-
-                        dialog.dismiss();
-                    }
-                });
-
-                d = bld.create();
-                break;
-            }
 
         case DIALOG_SETTINGS:
             if (settings_dialog == null) {
@@ -540,9 +477,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
 
         case DIALOG_OPEN:               d = (new OpenDialog(false)).get_dialog(); break;
         case DIALOG_LEVEL_PROPERTIES:   d = LevelDialog.get_dialog(); break;
-        case DIALOG_SAVE_COPY:          d = SaveAsDialog.get_dialog(); break;
-        case DIALOG_SAVE:               d = SaveAsDialog.get_dialog(); break;
-        case DIALOG_LEVEL_INFO:         d = (new InfoDialog()).get_dialog(); break;
         case DIALOG_STICKY:             d = StickyDialog.get_dialog(); break;
         case DIALOG_ROBOT:              d = RobotDialog.get_dialog(); break;
         case DIALOG_PIXEL_COLOR:        d = ColorChooserDialog.get_dialog(); break;
@@ -551,7 +485,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
         case DIALOG_EXPORT:             d = ExportDialog.get_dialog(); break;
         case DIALOG_MULTIEMITTER:       d = (new ImportDialog(true)).get_dialog(); break;
         case DIALOG_OPEN_OBJECT:        d = (new ImportDialog(false)).get_dialog(); break;
-        case DIALOG_PLAY_MENU:          d = (PlayDialog.create_dialog()); break;
         case DIALOG_COMMUNITY:          d = (new CommunityDialog()).get_dialog(); break;
         case DIALOG_PROMPT_SETTINGS:    d = PromptSettingsDialog.get_dialog(); break;
         case DIALOG_PROMPT:             d = (new PromptDialog()).get_dialog(); break;
@@ -688,8 +621,6 @@ public class PrincipiaActivity extends SDLActivity implements View.OnSystemUiVis
                 break;
 
             case DIALOG_LEVEL_PROPERTIES:   LevelDialog.prepare(dialog); break;
-            case DIALOG_SAVE:               SaveAsDialog.prepare(dialog); break;
-            case DIALOG_SAVE_COPY:          SaveAsDialog.prepare(dialog); break;
             case DIALOG_ROBOT:              RobotDialog.prepare(dialog); break;
             case DIALOG_PIXEL_COLOR:        ColorChooserDialog.prepare(dialog, true); break;
             case DIALOG_BEAM_COLOR:         ColorChooserDialog.prepare(dialog, false); break;
