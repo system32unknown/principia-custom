@@ -236,6 +236,10 @@ endif()
 # Use a safe subset of fast math flags
 set(COMMON_FLAGS "-fno-math-errno -fno-trapping-math -fno-signed-zeros")
 
+if(NINTENDO_SWITCH)
+    set(COMMON_FLAGS "-D_REENT_H_")
+endif()
+
 if(EMSCRIPTEN)
 	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "--preload-file ../data/")
 	set(LIBRARY_FLAGS "-sUSE_FREETYPE=1 -sUSE_LIBJPEG=1 -sUSE_LIBPNG=1 -sUSE_ZLIB=1 -pthread")
@@ -295,8 +299,8 @@ if(APPLE)
 
 	install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data" DESTINATION "${SHAREDIR}")
 
-	install(FILES "packaging/principia.icns" DESTINATION "${SHAREDIR}")
-	install(FILES "packaging/Info.plist" DESTINATION "${BUNDLE_PATH}/Contents")
+	install(FILES "packaging/macos/principia.icns" DESTINATION "${SHAREDIR}")
+	install(FILES "packaging/macos/Info.plist" DESTINATION "${BUNDLE_PATH}/Contents")
 
 elseif(EMSCRIPTEN)
 
@@ -332,6 +336,7 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 if(APPLE)
+	set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-macos")
 	set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY 0)
 	set(CPACK_GENERATOR ZIP)
 	include(CPack)
