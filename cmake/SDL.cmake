@@ -8,12 +8,12 @@ if(NINTENDO_SWITCH)
 		"SKIP"
 	)
 else()
-	set(DEP_SDL_VER "3.4.14")
+	set(DEP_SDL_VER "3.4.20")
 	download_dep_tarball(
 		"SDL"
 		"${DEP_SDL_VER}"
 		"https://github.com/libsdl-org/SDL/releases/download/release-${DEP_SDL_VER}/SDL3-${DEP_SDL_VER}.tar.gz"
-		"30d4aa2b3037718142b32dffd4e72f917ebb6cc5227150e7bb9c45efb2153aeb"
+		"f3bb06f55bed9557227a700af2ea62e49497ebdf58037732a731a5fb3ef8581f"
 	)
 endif()
 
@@ -24,6 +24,12 @@ set(DISABLED_FEATURES CAMERA GPU HAPTIC POWER RENDER SENSOR TESTS VULKAN)
 
 if(SCREENSHOT_BUILD)
 	list(APPEND DISABLED_FEATURES AUDIO DIALOG HIDAPI JOYSTICK OPENGLES WAYLAND)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
+    # Doing static linking with a library that contains dlopen notes causes a segfault
+    # in the ELF loader on NetBSD, unsure if this may happen on other BSDs.
+    list(APPEND DISABLED_FEATURES DLOPEN_NOTES)
 endif()
 
 foreach(feature ${DISABLED_FEATURES})

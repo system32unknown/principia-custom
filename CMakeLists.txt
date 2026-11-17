@@ -47,7 +47,7 @@ endif()
 if(ANDROID)
 	cmake_minimum_required(VERSION 3.20)
 	include(PrincipiaAndroidLibs)
-elseif(NOT NINTENDO_SWITCH)
+elseif(NOT NINTENDO_SWITCH AND NOT IOS)
 	set(OpenGL_GL_PREFERENCE GLVND)
 	find_package(OpenGL REQUIRED)
 endif()
@@ -63,7 +63,7 @@ endif()
 # Determine platform and backend
 # ------------------------------
 
-if(ANDROID OR SCREENSHOT_BUILD)
+if(SCREENSHOT_BUILD)
 	set(BACKEND_IMGUI FALSE)
 else()
 	set(BACKEND_IMGUI TRUE)
@@ -73,7 +73,7 @@ if(LINUX)
 	option(USE_GLES "Use OpenGL ES on Linux (Experimental)" FALSE)
 endif()
 
-if(USE_GLES OR ANDROID OR EMSCRIPTEN OR NINTENDO_SWITCH)
+if(USE_GLES OR ANDROID OR EMSCRIPTEN OR NINTENDO_SWITCH OR IOS)
 	set(SHOULD_USE_GLES TRUE)
 else()
 	set(SHOULD_USE_GLES FALSE)
@@ -193,7 +193,12 @@ endif()
 
 list(APPEND LIBS SDL3::SDL3)
 
-if(SHOULD_USE_GLES)
+if(IOS)
+	list(APPEND LIBS
+		"-framework OpenGLES"
+		"-framework Security"
+		"-framework CoreFoundation")
+elseif(SHOULD_USE_GLES)
 	list(APPEND LIBS GLESv2)
 else()
 	list(APPEND LIBS OpenGL::GL)
@@ -225,15 +230,15 @@ elseif(SCREENSHOT_BUILD)
 endif()
 
 if(BACKEND_IMGUI)
-	add_definitions(-DPRINCIPIA_BACKEND_IMGUI -DIMGUI_DEFINE_MATH_OPERATORS)
-
-	if(SHOULD_USE_GLES)
-		add_definitions(-DIMGUI_IMPL_OPENGL_ES2)
-	endif()
+	add_definitions(-DPRINCIPIA_BACKEND_IMGUI)
 endif()
 
 # Use a safe subset of fast math flags
 set(COMMON_FLAGS "-fno-math-errno -fno-trapping-math -fno-signed-zeros")
+
+if(NINTENDO_SWITCH)
+    set(COMMON_FLAGS "-D_REENT_H_")
+endif()
 
 if(EMSCRIPTEN)
 	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "--preload-file ../data/")
@@ -266,6 +271,13 @@ if(NOT APPLE)
 	string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE "-Wl,-s ")
 endif()
 
+if(ANDROID)
+	# Try to trim the size of the Android binary (TODO: do this for other platforms too)
+	target_compile_options(${PROJECT_NAME} PRIVATE -ffunction-sections -fdata-sections -fvisibility=hidden)
+
+	target_link_options(${PROJECT_NAME} PRIVATE -Wl,--gc-sections)
+endif()
+
 # Register protocol handler util on Windows
 # -----------------------------------------
 
@@ -287,8 +299,8 @@ if(APPLE)
 
 	install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data" DESTINATION "${SHAREDIR}")
 
-	install(FILES "packaging/principia.icns" DESTINATION "${SHAREDIR}")
-	install(FILES "packaging/Info.plist" DESTINATION "${BUNDLE_PATH}/Contents")
+	install(FILES "packaging/macos/principia.icns" DESTINATION "${SHAREDIR}")
+	install(FILES "packaging/macos/Info.plist" DESTINATION "${BUNDLE_PATH}/Contents")
 
 elseif(EMSCRIPTEN)
 
@@ -324,6 +336,7 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 if(APPLE)
+	set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-macos")
 	set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY 0)
 	set(CPACK_GENERATOR ZIP)
 	include(CPack)

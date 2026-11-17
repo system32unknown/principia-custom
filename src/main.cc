@@ -383,7 +383,7 @@ void tproject_set_args(int argc, char **argv) {
 }
 
 void tproject_window_size_changed() {
-    if (!settings["window_maximized"]->v.b && settings["autosave_screensize"]->v.b) {
+    if (!settings["window_maximized"]->v.b  && !settings["window_fullscreen"]->v.b && settings["autosave_screensize"]->v.b) {
         settings["window_width"]->v.i = _tms.window_width;
         settings["window_height"]->v.i = _tms.window_height;
     }
@@ -1735,8 +1735,6 @@ static int initial_loader(int step) {
 
             tms_infof("%27s: %u", "Total", total);
 #endif
-
-            ui::emit_signal(SIGNAL_QUICKADD_REFRESH);
             return LOAD_DONE;
         }
 

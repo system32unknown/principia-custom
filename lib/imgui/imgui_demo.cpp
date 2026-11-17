@@ -87,6 +87,7 @@ Index of this file:
 // [SECTION] DemoWindowWidgetsImages()
 // [SECTION] DemoWindowWidgetsListBoxes()
 // [SECTION] DemoWindowWidgetsLiveEdit()
+// [SECTION] DemoWindowWidgetsMixedValues()
 // [SECTION] DemoWindowWidgetsMultiComponents()
 // [SECTION] DemoWindowWidgetsPlotting()
 // [SECTION] DemoWindowWidgetsProgressBars()
@@ -395,6 +396,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool no_background = false;
     static bool no_bring_to_front = false;
     static bool unsaved_document = false;
+    static bool no_glide = false;
 
     ImGuiWindowFlags window_flags = 0;
     if (no_titlebar)        window_flags |= ImGuiWindowFlags_NoTitleBar;
@@ -407,6 +409,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (no_background)      window_flags |= ImGuiWindowFlags_NoBackground;
     if (no_bring_to_front)  window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
     if (unsaved_document)   window_flags |= ImGuiWindowFlags_UnsavedDocument;
+    if (no_glide)           window_flags |= ImGuiWindowFlags_NoGlide;
     if (no_close)           p_open = NULL; // Don't pass our bool* to Begin
 
     // We specify a default position/size in case there's no data in the .ini file.
@@ -561,6 +564,20 @@ void ImGui::ShowDemoWindow(bool* p_open)
             if (!io.ConfigErrorRecoveryEnableAssert && !io.ConfigErrorRecoveryEnableDebugLog && !io.ConfigErrorRecoveryEnableTooltip)
                 io.ConfigErrorRecoveryEnableAssert = io.ConfigErrorRecoveryEnableDebugLog = io.ConfigErrorRecoveryEnableTooltip = true;
 
+            ImGui::SeparatorText("Dragging and scrolling");
+            ImGui::Checkbox("io.ConfigDragScroll", &io.ConfigDragScroll);
+            ImGui::SameLine(); HelpMarker("Enable drag-to-scroll interactions.");
+            ImGui::PushItemWidth(-ImGui::GetContentRegionAvail().x * 0.5f);
+            ImGui::DragFloat("io.MouseDragThreshold", &io.MouseDragThreshold, 0.5f, 0.0f, 100.0f, "%.0f");
+            ImGui::SameLine(); HelpMarker("Distance threshold before considering we are dragging.");
+            ImGui::DragFloat("io.DragScrollDecel", &io.DragScrollDecel, 10.0f, 0.0f, 10000.0f, "%.0f");
+            ImGui::SameLine(); HelpMarker("How much of the scroll speed decelerates, in pixels per second.");
+            ImGui::DragFloat("io.DragScrollMinSpeed", &io.DragScrollMinSpeed, 1.0f, 0.0f, 1000.0f, "%.0f");
+            ImGui::SameLine(); HelpMarker("Minimum kinetic scroll speed, in pixels per second, before the scroll is stopped.");
+            ImGui::DragFloat("io.DragFlickThreshold", &io.DragFlickThreshold, 1.0f, 0.0f, 10000.0f, "%.0f");
+            ImGui::SameLine(); HelpMarker("Minimum speed to consider a drag scroll as a flick action.");
+            ImGui::PopItemWidth();
+
             // Also read: https://github.com/ocornut/imgui/wiki/Debug-Tools
             ImGui::SeparatorText("Debug");
             ImGui::Checkbox("io.ConfigDebugIsDebuggerPresent", &io.ConfigDebugIsDebuggerPresent);
@@ -648,6 +665,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TableNextColumn(); ImGui::Checkbox("No background", &no_background);
             ImGui::TableNextColumn(); ImGui::Checkbox("No bring to front", &no_bring_to_front);
             ImGui::TableNextColumn(); ImGui::Checkbox("Unsaved document", &unsaved_document);
+            ImGui::TableNextColumn(); ImGui::Checkbox("No glide", &no_glide);
             ImGui::EndTable();
         }
     }
@@ -1745,8 +1763,11 @@ static void DemoWindowWidgetsDragAndDrop()
                 const char* item = item_names[n];
                 ImGui::Selectable(item);
 
+                if (ImGui::IsItemHovered())
+                    ImGui::SuppressDragScroll();
                 if (ImGui::IsItemActive() && !ImGui::IsItemHovered())
                 {
+                    ImGui::SuppressDragScroll();
                     int n_next = n + (ImGui::GetMouseDragDelta(0).y < 0.0f ? -1 : 1);
                     if (n_next >= 0 && n_next < IM_COUNTOF(item_names))
                     {
@@ -2020,7 +2041,7 @@ static void DemoWindowWidgetsLiveEdit(ImGuiDemoWindowData* demo_data)
 {
     if (ImGui::TreeNode("Live Edit Flags"))
     {
-        IMGUI_DEMO_MARKER("Widgets/Live Edit Flgs");
+        IMGUI_DEMO_MARKER("Widgets/Live Edit Flags");
 
         ImGui::TextWrapped("Select whether to apply keyboard edits to backing variables _while_ typing.");
 
@@ -2045,6 +2066,65 @@ static void DemoWindowWidgetsLiveEdit(ImGuiDemoWindowData* demo_data)
         static float f = 0.0f;
         ImGui::SliderFloat("float", &f, 0.0f, 100.0f);
         ImGui::Text("Backing value: %f", f);
+
+        ImGui::TreePop();
+    }
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsMixedValues()
+//-----------------------------------------------------------------------------
+
+static void DemoWindowWidgetsMixedValues()
+{
+    if (ImGui::TreeNode("Mixed Values"))
+    {
+        // This is designed for advanced property editors which are generally reusable and data-driven.
+        HelpMarker("Using ImGuiItemFlags_MixedValue.");
+
+        static bool use_liveedit = false;
+        static float items[3] = { 12.0f, 0.0f, 0.0f };
+        float* item_ref = &items[0];
+        ImGui::Checkbox("ImGuiItemFlags_LiveEditOnInput", &use_liveedit);
+
+        ImGui::SeparatorText("Scalar/Text Widgets");
+        const bool is_mixed = memcmp(&items[0], &items[1], sizeof(float)) != 0 || memcmp(&items[0], &items[2], sizeof(float)) != 0;
+
+        // Demonstrate Drags, Sliders, Inputs
+        ImGui::PushItemFlag(ImGuiItemFlags_LiveEditOnInput, use_liveedit);
+        ImGui::PushItemFlag(ImGuiItemFlags_MixedValue, is_mixed);
+        bool edited = false;
+        edited |= ImGui::DragFloat("DragFloat", item_ref);
+        edited |= ImGui::SliderFloat("SliderFloat", item_ref, 0.0f, 100.0f);
+        edited |= ImGui::InputFloat("InputFloat", item_ref, 1.0f);
+        if (edited)
+            for (float& item : items)
+                if (&item != item_ref)
+                    item = *item_ref;
+        ImGui::PopItemFlag();
+
+        ImGui::Text("Underlying data:");
+        ImGui::InputFloat("item 0 (ref)", &items[0]);
+        ImGui::InputFloat("item 1", &items[1]);
+        ImGui::InputFloat("item 2", &items[2]);
+        ImGui::PopItemFlag();
+
+        // Demonstrate Checkbox(), RadioButton(), Combo(), ColorEdit4()
+        ImGui::SeparatorText("Others Widgets");
+        ImGui::Text("(note: edits are not applied in this demo)"); // <-- Would need more state tracking.
+        bool b_on = true, b_off = false;
+        ImGui::Checkbox("Checkbox On", &b_on);
+        ImGui::Checkbox("Checkbox Off", &b_off);
+        ImGui::PushItemFlag(ImGuiItemFlags_MixedValue, true);
+        ImGui::Checkbox("Checkbox Mixed", &b_off);
+        ImGui::RadioButton("RadioButton Mixed", true);
+        ImGui::SameLine();
+        ImGui::RadioButton("RadioButton Mixed##2", true); // Showing 2 radio buttons makes the example more clear
+        int combo_idx = 0;
+        ImGui::Combo("Combo", &combo_idx, "One\0Two\0Three\0");
+        ImVec4 color(0.5f, 0.5f, 0.5f, 0.5f);
+        ImGui::ColorEdit4("ColorEdit4", &color.x);
+        ImGui::PopItemFlag();
 
         ImGui::TreePop();
     }
@@ -2230,12 +2310,14 @@ static void DemoWindowWidgetsQueryingStatuses()
         };
         static int item_type = 4;
         static bool item_disabled = false;
+        static bool item_mixedvalue = false;
         static bool liveedit_flags_override = false;
         static ImGuiItemFlags liveedit_flags = 0;
         ImGui::Combo("Item Type", &item_type, item_names, IM_COUNTOF(item_names), IM_COUNTOF(item_names));
         ImGui::SameLine();
         HelpMarker("Testing how various types of items are interacting with the IsItemXXX functions. Note that the bool return value of most ImGui function is generally equivalent to calling ImGui::IsItemHovered().");
         ImGui::Checkbox("Item Disabled", &item_disabled);
+        ImGui::Checkbox("Item MixedValue", &item_mixedvalue);
         ImGui::Checkbox("Override LiveEdit:", &liveedit_flags_override);
         ImGui::SameLine();
         if (!liveedit_flags_override)
@@ -2260,6 +2342,8 @@ static void DemoWindowWidgetsQueryingStatuses()
         static char str[16] = {};
         if (item_disabled)
             ImGui::BeginDisabled(true);
+        if (item_mixedvalue)
+            ImGui::PushItemFlag(ImGuiItemFlags_MixedValue, true);
         if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
         if (item_type == 1) { ret = ImGui::Button("ITEM: Button"); }                                    // Testing button
         if (item_type == 2) { ImGui::PushItemFlag(ImGuiItemFlags_ButtonRepeat, true); ret = ImGui::Button("ITEM: Button"); ImGui::PopItemFlag(); } // Testing button (with repeater)
@@ -2343,6 +2427,8 @@ static void DemoWindowWidgetsQueryingStatuses()
             ImGui::PopItemFlag();
             ImGui::PopItemFlag();
         }
+        if (item_mixedvalue)
+            ImGui::PopItemFlag();
         if (item_disabled)
             ImGui::EndDisabled();
 
@@ -3678,11 +3764,13 @@ static void DemoWindowWidgetsTabs()
             // but they tend to make more sense together)
             static bool show_leading_button = true;
             static bool show_trailing_button = true;
+            static bool show_leading_trailing_tabs = false;
             ImGui::Checkbox("Show Leading TabItemButton()", &show_leading_button);
             ImGui::Checkbox("Show Trailing TabItemButton()", &show_trailing_button);
+            ImGui::Checkbox("Show Leading+Trailing TabItem()", &show_leading_trailing_tabs);
 
             // Expose some other flags which are useful to showcase how they interact with Leading/Trailing tabs
-            static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyShrink;
+            static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyMixed;
             EditTabBarFittingPolicyFlags(&tab_bar_flags);
 
             if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
@@ -3695,6 +3783,15 @@ static void DemoWindowWidgetsTabs()
                 {
                     ImGui::Selectable("Hello!");
                     ImGui::EndPopup();
+                }
+
+                // Demo Leading/Trailing Tabs
+                if (show_leading_trailing_tabs)
+                {
+                    if (ImGui::BeginTabItem("Leading", NULL, ImGuiTabItemFlags_Leading))
+                        ImGui::EndTabItem();
+                    if (ImGui::BeginTabItem("Trailing", NULL, ImGuiTabItemFlags_Trailing))
+                        ImGui::EndTabItem();
                 }
 
                 // Demo Trailing Tabs: click the "+" button to add a new tab.
@@ -4505,6 +4602,7 @@ static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     DemoWindowWidgetsImages();
     DemoWindowWidgetsListBoxes();
     DemoWindowWidgetsLiveEdit(demo_data);
+    DemoWindowWidgetsMixedValues();
     DemoWindowWidgetsMultiComponents();
     DemoWindowWidgetsPlotting();
     DemoWindowWidgetsProgressBars();
@@ -8710,10 +8808,14 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                     CheckboxFlags("ImGuiHoveredFlags_NoSharedDelay", p, ImGuiHoveredFlags_NoSharedDelay);
                     TreePop();
                 }
+            SliderFloat("HoverDelayShort", &style.HoverDelayShort, 0.0f, 2.0f, "%.2f");
+            SliderFloat("HoverDelayNormal", &style.HoverDelayNormal, 0.0f, 2.0f, "%.2f");
+            SliderFloat("HoverStationaryDelay", &style.HoverStationaryDelay, 0.0f, 2.0f, "%.2f");
 
             SeparatorText("Misc");
             SliderFloat2("DisplayWindowPadding", (float*)&style.DisplayWindowPadding, 0.0f, 30.0f, "%.0f"); SameLine(); HelpMarker("Apply to regular windows: amount which we enforce to keep visible when moving near edges of your screen.");
             SliderFloat2("DisplaySafeAreaPadding", (float*)&style.DisplaySafeAreaPadding, 0.0f, 30.0f, "%.0f"); SameLine(); HelpMarker("Apply to every windows, menus, popups, tooltips: amount where we avoid displaying contents. Adjust if you cannot see the edges of your screen (e.g. on a TV where scaling has not been configured).");
+            SliderFloat("InputTextCursorSize", &style.InputTextCursorSize, 1.0f, 5.0f, "%.0f");
 
             EndTabItem();
         }

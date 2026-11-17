@@ -24,8 +24,6 @@ public class PrincipiaBackend
     public static native void setPropertyFloat(int property_index, float value);
     public static native String getAvailableBgs();
 
-    public static native void setResourceType(long value);
-
     public static native void setSettings(
             boolean enable_shadows,
             boolean enable_ao,
@@ -55,7 +53,6 @@ public class PrincipiaBackend
     public static native void setSetting(String setting_name, boolean value);
     public static native void focusGL(boolean f);
 
-    public static native String getSandboxTip();
     public static native void setNextAction(int action_id);
     public static native void login(String username, String password);
     public static native void register(String username, String email, String password);
@@ -101,34 +98,10 @@ public class PrincipiaBackend
     public static native int getStickySize();
     public static native void setStickyStuff(String text, boolean center_horiz, boolean center_vert, int size);
 
-    public static native int getCamTargeterFollowMode();
-    public static native void setCamTargeterFollowMode(int follow_mode);
-
-    public static native int getCommandPadCommand();
-    public static native void setCommandPadCommand(int command);
-
-    public static native String getFxEmitterEffects();
-    public static native void setFxEmitterEffects(int effect_1, int effect_2, int effect_3, int effect_4);
-
-    public static native int getEventListenerEventType();
-    public static native void setEventListenerEventType(int event_type);
-
-    public static native int getPkgItemLevelId();
-    public static native void setPkgItemLevelId(int pkg_level_id);
-
     public static native int getEntityColor();
     public static native void setEntityColor(int color);
     public static native float getEntityAlpha();
     public static native void setEntityAlpha(float alpha);
-
-    public static native void setDigitalDisplayStuff(boolean wrap_around, int initial_position, String symbols);
-
-    public static native int setFrequency(long frequency);
-    public static native int setFrequencyRange(long frequency, long range);
-
-    public static native int saveObject(String name);
-
-    public static native void setTimerData(int seconds, int milliseconds, int num_ticks, boolean use_system_time);
 
     public static native int getRobotState();
     public static native boolean getRobotRoam();
@@ -138,42 +111,23 @@ public class PrincipiaBackend
     public static native void setLevelName(String name);
     public static native void setLevelDescription(String descr);
     public static native void triggerSave(boolean save_copy);
-    public static native void triggerCreateLevel(int level_type);
     public static native boolean isPaused();
     public static native void setPaused(boolean b);
 
-    public static native void setPromptResponse(int response);
     public static native void setPromptPropertyString(int property_index, String str);
     public static native String getPromptPropertyString(int property_index);
     public static native void refreshPrompt();
 
-    public static native void resetVariable(String variable_name);
-    public static native void resetAllVariables();
-
-    public static native String getSfxSounds();
-    public static native String getSynthWaveforms();
-
-    public static native int getSelectionGid();
-
     public static native void setLevelType(int type);
     public static native int getLevelType();
-    public static native void setSequencerData(String sequence, int seconds, int milliseconds, boolean wrap_around);
 
     public static native boolean isAdventure();
 
     public static native void updateJumper(float value);
     public static native String getLevelPage();
-    public static native String getObjects();
-    public static native void createObject(String str);
     public static native int getMaxLevelVersion();
-    public static native int getConsumableType();
-    public static native String getConsumables();
-    public static native void setConsumableType(int consumable_type);
     public static native String getCurrentCommunityUrl();
-    public static native void setGameMode(int i);
 
-    public static native void updateRubberEntity(float restitution, float friction);
-    public static native void updateShapeExtruder(float v_right, float v_up, float v_left, float v_down);
     public static native String getResources();
     public static native String getFactoryResources();
     public static native String getRecipes();
@@ -196,10 +150,7 @@ public class PrincipiaBackend
 
     public static native void fixed();
 
-    public static native String getKeys();
-    public static native String getDecorations();
-    public static native String getAnimals();
-    public static native String getSounds();
-
     public static native void openState(int level_type, int level_id, int save_id, boolean from_menu);
+
+    public static native void openDialog(int dialog_id);
 }

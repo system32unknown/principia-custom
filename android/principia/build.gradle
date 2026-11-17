@@ -4,19 +4,19 @@ plugins {
 }
 
 android {
-    compileSdk 35
-    ndkVersion "27.2.12479018"
-    namespace 'com.bithack.principia'
+    compileSdk = 35
+    ndkVersion = "30.0.16248370"
+    namespace = 'com.bithack.principia'
 
     defaultConfig {
         applicationId "com.bithack.principia"
-        minSdk 21
-        targetSdk 35
-        versionCode 44
-        versionName "2026.08.16"
+        minSdk = 21
+        targetSdk = 35
+        versionCode 46
+        versionName "2026.10.22"
 
         externalNativeBuild {
-            cmake.arguments "-DUSE_VENDORED_SDL3=1", "-DUNITY_BUILD=1"
+            cmake.arguments "-DUSE_VENDORED_SDL3=1"
         }
 
         ndk {
@@ -24,8 +24,6 @@ android {
             //abiFilters "arm64-v8a" // debugging on phone
             //abiFilters "x86_64"    // debugging on emulator
         }
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     externalNativeBuild {
@@ -46,20 +44,18 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
-}
 
-dependencies {
-    implementation 'androidx.appcompat:appcompat:1.3.0'
+    enableKotlin = false
 }
 
 // get precompiled deps
-def depsVersion = '2026-08-19'
+def depsVersion = '2026-11-12'
 def depsZipName = "deps-${depsVersion}.zip"
 def depsUrl = "https://dl.principia-web.se/deps/android/${depsZipName}"
-def depsSha256 = '1349d086ef09197babb9a60ca23439c2d9be235512c88179f33be4daab9391c6'
+def depsSha256 = '38bf591ad1e4d7cf29004296d62cf2cd3f0adfb46a4076f5baceb4cbf2f61a0a'
 
 def depsZip = new File(buildDir, depsZipName)
 def depsDir = new File(buildDir.parent, '../deps')
