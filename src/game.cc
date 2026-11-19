@@ -1045,6 +1045,10 @@ void game::init_framebuffers() {
         tms_fb_enable_depth(this->icon_fb, GL_DEPTH_COMPONENT16);
     }
 
+    init_postprocess_framebuffers();
+}
+
+void game::init_postprocess_framebuffers() {
     if (this->main_fb) {
         tms_fb_free(this->main_fb);
         this->main_fb = 0;
@@ -1056,7 +1060,6 @@ void game::init_framebuffers() {
     }
 
     if (settings["postprocess"]->v.b) {
-        tms_infof("Postprocess time");
         this->main_fb = tms_fb_alloc(_tms.window_width, _tms.window_height, 0);
         tms_fb_add_texture(this->main_fb, GL_RGBA, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST);
         tms_fb_enable_depth(this->main_fb, GL_DEPTH_COMPONENT16);
@@ -2856,13 +2859,8 @@ int game::render() {
         render_caveview_after_postprocess();
 
         glBindTexture(GL_TEXTURE_2D, this->main_fb->fb_texture[0][0]);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        if (glad_glGenerateMipmap)
-            glGenerateMipmap(GL_TEXTURE_2D);
-        else
-            glGenerateMipmapEXT(GL_TEXTURE_2D);
 
         tms_assertf((ierr = glGetError()) == 0, "gl error %d after postprocess", ierr);
 
@@ -2876,10 +2874,6 @@ int game::render() {
             glDisable(GL_DEPTH_TEST);
 
             glBindTexture(GL_TEXTURE_2D, this->bloom_fb->fb_texture[this->bloom_fb->toggle][0]);
-            if (glad_glGenerateMipmap)
-                glGenerateMipmap(GL_TEXTURE_2D);
-            else
-                glGenerateMipmapEXT(GL_TEXTURE_2D);
 
             for (int x=0; x<7; x++) {
                 glBlendColor(1.f, 1.f, 1.f, .05f);
@@ -10310,6 +10304,8 @@ void game::window_size_changed() {
         tmat4_set_ortho(projection, 0, _tms.window_width, 0, _tms.window_height, 1, -1);
         tms_ddraw_set_matrices(this->get_surface()->ddraw, 0, projection);
     }
+
+    this->init_postprocess_framebuffers();
 
     this->refresh_gui();
 }
